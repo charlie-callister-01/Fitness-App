@@ -126,41 +126,8 @@ internal static class PlanReader
         return sessions;
     }
 
-    private static List<SessionExercise> ReadRows(FieldReader parent, Context context)
-    {
-        var rows = new List<SessionExercise>();
-        foreach (var (reader, _) in parent.OptionalObjectArray("exercises") ?? [])
-        {
-            var errorsBefore = context.Sink.Errors.Count;
-            var exerciseId = ReadExerciseReference(reader, context);
-            var sets = reader.RequiredInt("sets", min: 1);
-            var repsErrorsBefore = context.Sink.Errors.Count;
-            var reps = reader.OptionalInt("reps", min: 1);
-            var repsAreValid = context.Sink.Errors.Count == repsErrorsBefore;
-            var repsMax = ReadRepsMax(reader, context, reps, repsAreValid);
-            var cue = reader.OptionalString("cue");
-            reader.WarnAboutUnknownFields();
-
-            if (context.Sink.Errors.Count == errorsBefore)
-            {
-                rows.Add(new SessionExercise(exerciseId, sets, reps, repsMax, cue));
-            }
-        }
-
-        return rows;
-    }
-
-    private static int? ReadRepsMax(FieldReader row, Context context, int? reps, bool repsAreValid)
-    {
-        var repsMax = row.OptionalInt("repsMax", min: reps ?? 1);
-        if (repsMax is not null && reps is null && repsAreValid)
-        {
-            context.Sink.Error(row.ChildPath("repsMax"), "invalid_value",
-                $"{row.ChildPath("repsMax")} is the top of a rep range, so {row.ChildPath("reps")} (the bottom of the range) is required too.");
-        }
-
-        return repsMax;
-    }
+    private static List<SessionExercise> ReadRows(FieldReader parent, Context context) =>
+        SessionRowReader.ReadRows(parent, "exercises", context.Sink, context.ExerciseIds);
 
     private static List<Phase> ReadPhases(FieldReader plan, Context context, HashSet<string> sessionIds)
     {
@@ -262,17 +229,8 @@ internal static class PlanReader
         return overrides;
     }
 
-    private static string ReadExerciseReference(FieldReader reader, Context context)
-    {
-        var id = reader.RequiredId("exerciseId");
-        if (id.Length > 0 && context.ExerciseIds is { } known && !known.Contains(id))
-        {
-            var path = reader.ChildPath("exerciseId");
-            context.Sink.Error(path, "unknown_exercise", $"{path} \"{id}\" is not in the Exercise library. Add it to exercises or use an existing ID.");
-        }
-
-        return id;
-    }
+    private static string ReadExerciseReference(FieldReader reader, Context context) =>
+        SessionRowReader.ReadExerciseReference(reader, "exerciseId", context.Sink, context.ExerciseIds);
 
     /// <summary>Shared state for one read: where errors go, the Exercise IDs references are checked against, and IDs seen so far.</summary>
     private sealed class Context(IssueSink sink, HashSet<string>? exerciseIds)

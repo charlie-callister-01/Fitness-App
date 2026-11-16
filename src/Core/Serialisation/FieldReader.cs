@@ -182,6 +182,12 @@ internal sealed partial class FieldReader
             return default;
         }
 
+        return ParseEnum<T>(path, value);
+    }
+
+    /// <summary>Reads an enum written as its camelCase name; reports and returns the default when it isn't one.</summary>
+    private T ParseEnum<T>(string path, JsonElement value) where T : struct, Enum
+    {
         if (value.ValueKind != JsonValueKind.String)
         {
             _sink.Error(path, "wrong_type", $"{path} must be one of: {AllowedValues<T>()}.");

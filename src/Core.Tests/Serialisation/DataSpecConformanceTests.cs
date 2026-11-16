@@ -50,6 +50,23 @@ public partial class DataSpecConformanceTests
     }
 
     [Fact]
+    public void Workout_example_in_the_data_spec_is_read_cleanly_by_the_real_reader()
+    {
+        var example = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).Single(j => j.Contains("\"workouts\""));
+
+        var result = ExchangeFormat.Read(example);
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(e => $"{e.Path}: {e.Message}")));
+        Assert.Empty(result.Warnings);
+        var workouts = result.Document!.Workouts!;
+        Assert.Equal(2, workouts.Count);
+        Assert.Equal(3, workouts[0].Entries.Count);
+        Assert.True(workouts[0].Entries[0].Sets[1].IsMax);
+        Assert.Equal(Core.Model.PainStatus.Reported, workouts[0].PainCheck!.Status);
+        Assert.True(workouts[1].LoggedAfterwards);
+    }
+
+    [Fact]
     public void Worked_example_covers_weigh_ins_breaks_badges_and_guides()
     {
         var example = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).First(j => j.Contains("\"exportedAt\""));

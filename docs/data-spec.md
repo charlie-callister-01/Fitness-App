@@ -2,7 +2,7 @@
 
 The written definition of the app's data and its one JSON exchange format (the Backup, the LLM analysis Export and the Plan/Guide Import are all this same document). The code in `Core` matches this document; a conformance test parses the example below with the real reader, so the two cannot drift. Terms follow [`../GLOSSARY.md`](../GLOSSARY.md).
 
-Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise, Settings, Plan/Phase/Session, Weigh-in, Break, Badge and Guide are specified. Workouts and Pain checks are added by later A1 tickets.**
+Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise, Settings, Plan/Phase/Session, Weigh-in, Break, Badge, Guide, Workout, Set and Pain check are specified.**
 
 ## Conventions
 
@@ -27,6 +27,7 @@ Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise
 | `breaks` | array of Break | no | |
 | `badges` | array of Badge | no | |
 | `guides` | array of Guide | no | |
+| `workouts` | array of Workout | no | Each holds its Sets and Pain check. See Workout. |
 
 An absent collection means "not part of this document". That is how partial documents (Plan-only, Guides-only) work with no second format. A present-but-empty collection means "none".
 
@@ -263,6 +264,128 @@ The reference page for one Exercise. A Guide has no ID of its own: it is keyed b
 | `videoUrl` | string | no | Absolute `http://` or `https://` URL, else `invalid_value`. |
 | `personalNotes` | string | no | The owner's own notes. Not Guide content: an Import that replaces a Guide's content leaves existing personal notes alone, and a Guide written by an LLM normally omits this field. |
 
+## Workout
+
+One real occurrence of training on a date. Its Sets and its Pain check live inside it, because they have no meaning outside it.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among Workouts. |
+| `date` | date | yes | The calendar day trained. |
+| `sessionId` | string | no | The Session it was made from. Absent for a Custom workout. A Session ID is unique across the whole document, so it is checked against every Plan's Sessions (`unknown_session`); when the document has no `plans` the check is left to Import. |
+| `loggedAfterwards` | boolean | no | Default `false`. `true` for a back-dated, catch-up entry. |
+| `startedAt`, `endedAt` | timestamp | no | Duration is worked out from them. `endedAt` before `startedAt` is `end_before_start`. |
+| `planned` | array of Exercise row | no | Snapshot of the planned rows copied when the Workout was created, so editing the Plan later never changes history. Same shape as a Session's Exercise row (see Exercise row). Empty or absent for a Custom workout. It is stored, never recomputed from the Plan. |
+| `entries` | array of entry | no | What was actually done, in order. |
+| `painCheck` | Pain check | no | Absent means unanswered. |
+
+### Entry
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `exerciseId` | string | yes | Must be in `exercises` when the document has them. For a skipped entry it is the planned Exercise left undone; for a swapped entry it is the Exercise actually done. |
+| `status` | enum | yes | `done`, `skipped` or `swapped`. |
+| `skipReason` | string | no | Only on a `skipped` entry (else `invalid_value`). |
+| `swappedFromExerciseId` | string | when `swapped` | The planned Exercise it replaced; required for `swapped` (`missing_field`) and not allowed otherwise. Must be in `exercises` when the document has them. |
+| `rpe` | integer 1 to 10 | no | Rate of perceived exertion; outside 1 to 10 is `out_of_range`. |
+| `sets` | array of Set | no | A `skipped` entry must have none (`invalid_value`). |
+
+### Set
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among all Sets in the document. |
+| `weightKg` | number >= 0 | no | Negative is `out_of_range`; 0 is allowed (an unweighted set). |
+| `reps` | integer >= 1 | no | 0 reps is `out_of_range`. |
+| `distanceKm` | number > 0 | no | Cardio distance. |
+| `distanceM` | number > 0 | no | Carry distance. Not allowed together with `distanceKm` (`invalid_value`). |
+| `durationSeconds` | integer >= 1 | no | |
+| `isMax` | boolean | no | Default `false`. A Max set (a 1 or 3 rep max attempt). |
+
+Which fields a Set should have for an Exercise's log kind is behaviour (stage A2), not checked on read.
+
+### Pain check
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among Pain checks. |
+| `status` | enum | yes | `none` (answered: no pain) or `reported`. A Workout with no `painCheck` is unanswered, which is different from `none`. |
+| `areas` | array of body area | when `reported` | At least one (`missing_field`); not allowed for `none`. Body areas: `neck`, `shoulder`, `elbow`, `wrist`, `upperBack`, `lowerBack`, `hip`, `knee`, `ankle`, `foot`, `other`. |
+| `severity` | enum | when `reported` | `mild`, `moderate` or `sharp`; not allowed for `none`. |
+| `note` | string | no | |
+| `exerciseId` | string | no | The Exercise it happened on. Must be in `exercises` when the document has them. |
+
+### Workout example
+
+This block is parsed and validated by the real reader in the test suite. It has no `plans`, so its `sessionId` is not resolved here.
+
+```json
+{
+  "formatVersion": 1,
+  "exercises": [
+    { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load" },
+    { "id": "farmers-carry", "name": "Farmers carry", "logKind": "carry" },
+    { "id": "5k-run", "name": "5 km run", "logKind": "time" },
+    { "id": "rdl", "name": "Romanian deadlift", "logKind": "load" }
+  ],
+  "workouts": [
+    {
+      "id": "w-2026-11-16",
+      "date": "2026-11-16",
+      "sessionId": "a-lower",
+      "loggedAfterwards": false,
+      "startedAt": "2026-11-16T17:30:00+00:00",
+      "endedAt": "2026-11-16T18:25:00+00:00",
+      "planned": [
+        { "exerciseId": "goblet-squat", "sets": 3, "reps": 8, "repsMax": 12, "cue": "Chest tall" },
+        { "exerciseId": "farmers-carry", "sets": 3 },
+        { "exerciseId": "rdl", "sets": 3, "reps": 8 }
+      ],
+      "entries": [
+        {
+          "exerciseId": "goblet-squat",
+          "status": "done",
+          "rpe": 8,
+          "sets": [
+            { "id": "s-1", "weightKg": 24, "reps": 10 },
+            { "id": "s-2", "weightKg": 28, "reps": 3, "isMax": true }
+          ]
+        },
+        { "exerciseId": "farmers-carry", "status": "skipped", "skipReason": "Grip was gone" },
+        {
+          "exerciseId": "5k-run",
+          "status": "swapped",
+          "swappedFromExerciseId": "rdl",
+          "rpe": 6,
+          "sets": [{ "id": "s-3", "distanceKm": 5, "durationSeconds": 1530 }]
+        }
+      ],
+      "painCheck": {
+        "id": "p-1",
+        "status": "reported",
+        "areas": ["knee", "lowerBack"],
+        "severity": "moderate",
+        "note": "Twinge on the way up",
+        "exerciseId": "goblet-squat"
+      }
+    },
+    {
+      "id": "w-2026-11-10",
+      "date": "2026-11-10",
+      "loggedAfterwards": true,
+      "entries": [
+        {
+          "exerciseId": "farmers-carry",
+          "status": "done",
+          "sets": [{ "id": "s-4", "weightKg": 32, "distanceM": 40, "durationSeconds": 60 }]
+        }
+      ],
+      "painCheck": { "id": "p-2", "status": "none" }
+    }
+  ]
+}
+```
+
 ## Worked example
 
 This block is parsed and validated by the real reader in the test suite.
@@ -342,9 +465,9 @@ This block is parsed and validated by the real reader in the test suite.
 | `invalid_value`, `out_of_range` | The value is malformed or outside its allowed range. |
 | `unknown_value` | An enum value that isn't one of the allowed values (the message lists them). |
 | `invalid_id`, `duplicate_id` | ID has bad characters, or is reused within its record kind. |
-| `unknown_exercise`, `unknown_session` | A reference (Plan row, Phase goal, Guide) to an Exercise or Session ID that does not exist. |
+| `unknown_exercise`, `unknown_session` | A reference (Plan row, Phase goal, Guide, Workout entry, planned snapshot row, Pain check) to an Exercise or Session ID that does not exist. |
 | `no_active_plan`, `multiple_active_plans` | Plans present but not exactly one active. |
 | `phase_gap`, `phase_overlap` | Phase week ranges leave a week uncovered or share a week. |
-| `end_before_start` | A Break's `endDate` is before its `startDate`. |
+| `end_before_start` | A Break's `endDate` is before its `startDate`, or a Workout's `endedAt` is before its `startedAt`. |
 | `invalid_version`, `unsupported_version` | See Versioning. |
 | `unknown_field` | Warning only: an unrecognised field was ignored. |

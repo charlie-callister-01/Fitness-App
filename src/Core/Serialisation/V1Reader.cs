@@ -18,11 +18,12 @@ internal static class V1Reader
         var settings = ReadSettings(fields);
         var bodyAndGuides = BodyAndGuideReader.Read(fields, sink, exercises);
         var plans = PlanReader.Read(fields, exercises, sink);
+        var workouts = WorkoutReader.Read(fields, exercises, plans, sink);
         fields.WarnAboutUnknownFields();
 
         return ReadResult.From(
             new ExchangeDocument(version, exportedAt, exportedFrom, exercises, settings,
-                bodyAndGuides.WeighIns, bodyAndGuides.Breaks, bodyAndGuides.Badges, bodyAndGuides.Guides, plans),
+                bodyAndGuides.WeighIns, bodyAndGuides.Breaks, bodyAndGuides.Badges, bodyAndGuides.Guides, plans, workouts),
             sink);
     }
 
