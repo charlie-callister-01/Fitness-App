@@ -8,7 +8,7 @@ internal sealed partial class FieldReader
     /// <summary>An optional number that, when present, must be zero or more (zero is allowed: an unweighted set).</summary>
     public double? OptionalNonNegativeDouble(string name)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return null;
         }
@@ -45,7 +45,7 @@ internal sealed partial class FieldReader
     /// <summary>An optional enum; null when absent or invalid (invalid is reported).</summary>
     public T? OptionalEnum<T>(string name) where T : struct, Enum
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return null;
         }
@@ -56,7 +56,7 @@ internal sealed partial class FieldReader
     /// <summary>An optional array of enum values; each bad item is reported at its own index.</summary>
     public IReadOnlyList<T> OptionalEnumList<T>(string name) where T : struct, Enum
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return [];
         }

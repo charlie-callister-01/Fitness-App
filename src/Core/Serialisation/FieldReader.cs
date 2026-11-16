@@ -30,10 +30,16 @@ internal sealed partial class FieldReader
 
     public string Path { get; }
 
-    /// <summary>The state shared by every reader of this document: issue sink, reference scopes and unique-ID tracking.</summary>
+    /// <summary>The state shared by every reader of this document: the issue sink and what the parse phase could not read.</summary>
     public ReadContext Context { get; }
 
     private IssueSink Sink => Context.Sink;
+
+    /// <summary>Opens a reader on the document's top-level object, which the caller has already checked is an object.</summary>
+    public static FieldReader OpenRoot(JsonElement root, ReadContext context) =>
+        root.ValueKind == JsonValueKind.Object
+            ? new FieldReader(root, "$", context)
+            : throw new ArgumentException("The document root must be a JSON object.", nameof(root));
 
     /// <summary>Opens a reader on an object, or reports a wrong-type error and returns null.</summary>
     public static FieldReader? Open(JsonElement element, string path, ReadContext context)
@@ -59,7 +65,7 @@ internal sealed partial class FieldReader
     public void Ignore(params string[] names) => _asked.UnionWith(names);
 
     /// <summary>True when the field is present and not null. Counts as asking for it.</summary>
-    public bool Has(string name) => TryAskFor(name, out _);
+    public bool Has(string name) => TryTakeField(name, out _);
 
     /// <summary>
     /// Runs a record-reading function in this object's scope: warns about unknown fields afterwards, and returns the record (even one that reported errors: the validate phase still needs its IDs),
@@ -72,6 +78,16 @@ internal sealed partial class FieldReader
         return attempt.Value;
     }
 
+    /// <summary>
+    /// Reads an optional array of objects as records (see <see cref="ReadRecord{T}"/>), dropping any element that isn't an object or reads as null.
+    /// Null when the array is absent, so callers can tell "not in the document" from "empty".
+    /// </summary>
+    public List<T>? ReadRecords<T>(string name, Func<FieldReader, T?> read) where T : class =>
+        OptionalObjectArray(name)?
+            .Select(item => item.Reader.ReadRecord(read))
+            .OfType<T>()
+            .ToList();
+
     /// <summary>Runs a group of reads and says whether they all came out clean. The value is returned even when they didn't. Doesn't warn about unknown fields.</summary>
     public ReadAttempt<T> Attempt<T>(Func<T> read)
     {
@@ -83,7 +99,7 @@ internal sealed partial class FieldReader
     public string RequiredString(string name)
     {
         var path = ChildPath(name);
-        if (!TryAskFor(name, out var value) || (value.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(value.GetString())))
+        if (!TryTakeField(name, out var value) || (value.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(value.GetString())))
         {
             Sink.Error(path, "missing_field", $"{path} is required and can't be blank.");
             return "";
@@ -126,7 +142,7 @@ internal sealed partial class FieldReader
 
     public string? OptionalString(string name)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return null;
         }
@@ -142,7 +158,7 @@ internal sealed partial class FieldReader
 
     public bool OptionalBool(string name, bool defaultValue)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return defaultValue;
         }
@@ -158,7 +174,7 @@ internal sealed partial class FieldReader
 
     public bool RequiredBool(string name)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             Sink.Error(ChildPath(name), "missing_field", $"{ChildPath(name)} is required.");
             return false;
@@ -176,7 +192,7 @@ internal sealed partial class FieldReader
     public int RequiredInt(string name, int min)
     {
         var path = ChildPath(name);
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             Sink.Error(path, "missing_field", $"{path} is required.");
             return 0;
@@ -187,7 +203,7 @@ internal sealed partial class FieldReader
 
     /// <summary>An optional whole number; null when absent or invalid (invalid is reported).</summary>
     public int? OptionalInt(string name, int min) =>
-        TryAskFor(name, out var value) ? ParseInt(ChildPath(name), value, min) : null;
+        TryTakeField(name, out var value) ? ParseInt(ChildPath(name), value, min) : null;
 
     private int? ParseInt(string path, JsonElement value, int min)
     {
@@ -210,7 +226,7 @@ internal sealed partial class FieldReader
     public double RequiredPositiveDouble(string name)
     {
         var path = ChildPath(name);
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             Sink.Error(path, "missing_field", $"{path} is required.");
             return 0;
@@ -222,7 +238,7 @@ internal sealed partial class FieldReader
     /// <summary>An optional number that, when present, must be greater than zero.</summary>
     public double? OptionalPositiveDouble(string name)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return null;
         }
@@ -234,7 +250,7 @@ internal sealed partial class FieldReader
     public T RequiredEnum<T>(string name) where T : struct, Enum
     {
         var path = ChildPath(name);
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             Sink.Error(path, "missing_field", $"{path} is required.");
             return default;
@@ -267,7 +283,7 @@ internal sealed partial class FieldReader
 
     public DateTimeOffset? OptionalTimestamp(string name)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return null;
         }
@@ -286,7 +302,7 @@ internal sealed partial class FieldReader
     /// <summary>An optional array of non-blank strings.</summary>
     public IReadOnlyList<string> OptionalStringList(string name)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return [];
         }
@@ -319,11 +335,11 @@ internal sealed partial class FieldReader
 
     /// <summary>Opens an optional nested object; null when absent or invalid (invalid is reported).</summary>
     public FieldReader? OptionalObject(string name) =>
-        TryAskFor(name, out var value) ? Open(value, ChildPath(name), Context) : null;
+        TryTakeField(name, out var value) ? Open(value, ChildPath(name), Context) : null;
 
     public FieldReader? RequiredObject(string name)
     {
-        if (TryAskFor(name, out var value))
+        if (TryTakeField(name, out var value))
         {
             return Open(value, ChildPath(name), Context);
         }
@@ -335,7 +351,7 @@ internal sealed partial class FieldReader
     /// <summary>The elements of an optional array of objects, or null when the array is absent (or not an array, which is reported).</summary>
     public IReadOnlyList<(FieldReader Reader, int Index)>? OptionalObjectArray(string name)
     {
-        if (!TryAskFor(name, out var value))
+        if (!TryTakeField(name, out var value))
         {
             return null;
         }
@@ -395,8 +411,8 @@ internal sealed partial class FieldReader
     private static string AllowedValues<T>() where T : struct, Enum =>
         string.Join(", ", Enum.GetValues<T>().Select(v => JsonNamingPolicy.CamelCase.ConvertName(v.ToString())));
 
-    /// <summary>Looks up a field and records that it was asked for (so it isn't reported as unknown). JSON null counts as absent.</summary>
-    private bool TryAskFor(string name, out JsonElement value)
+    /// <summary>Looks up a field and takes it: marks it as known (so it is not reported as unknown). JSON null counts as absent.</summary>
+    private bool TryTakeField(string name, out JsonElement value)
     {
         _asked.Add(name);
         return _object.TryGetProperty(name, out value) && value.ValueKind != JsonValueKind.Null;

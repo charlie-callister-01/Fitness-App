@@ -40,4 +40,6 @@ internal sealed class IssueSink
     public List<FormatIssue> Warnings { get; } = [];
 
     public void Error(string path, string code, string message) => Errors.Add(new FormatIssue(path, code, message));
+
+    public void ReportAll(IEnumerable<FormatIssue> issues) => Errors.AddRange(issues);
 }

@@ -99,11 +99,36 @@ public class DocumentValidatorTests
     }
 
     [Fact]
-    public void Phase_with_an_invalid_range_is_reported_once_and_the_plan_is_not_judged_for_gaps()
+    public void Phase_with_an_invalid_range_is_reported_once_with_no_gap_at_its_neighbour()
     {
         var document = WithPlan(Valid(), p => p with { Phases = [p.Phases[0], p.Phases[1] with { EndWeek = 3 }, p.Phases[2]] });
 
         Assert.Equal(("plans[0].phases[1].endWeek", "out_of_range"), Only(document));
+    }
+
+    private static readonly Phase BadRangePhase = new("extra", "Extra", 30, 25, [], []);
+
+    private static IEnumerable<(string Path, string Code)> Issues(ExchangeDocument document) =>
+        ExchangeFormat.Validate(document).Select(i => (i.Path, i.Code)).OrderBy(i => i.Path, StringComparer.Ordinal);
+
+    [Fact]
+    public void A_gap_between_valid_phases_is_still_reported_when_another_phase_has_a_bad_range()
+    {
+        var document = WithPlan(Valid(), p => p with { Phases = [p.Phases[0], p.Phases[1], p.Phases[2] with { StartWeek = 21 }, BadRangePhase] });
+
+        Assert.Equal(
+            [("plans[0].phases[2].startWeek", "phase_gap"), ("plans[0].phases[3].endWeek", "out_of_range")],
+            Issues(document));
+    }
+
+    [Fact]
+    public void An_overlap_between_valid_phases_is_still_reported_when_another_phase_has_a_bad_range()
+    {
+        var document = WithPlan(Valid(), p => p with { Phases = [p.Phases[0], p.Phases[1], p.Phases[2] with { StartWeek = 18 }, BadRangePhase] });
+
+        Assert.Equal(
+            [("plans[0].phases[2].startWeek", "phase_overlap"), ("plans[0].phases[3].endWeek", "out_of_range")],
+            Issues(document));
     }
 
     [Fact]

@@ -13,27 +13,21 @@ internal sealed record BodyAndGuideData(
 internal static class BodyAndGuideReader
 {
     public static BodyAndGuideData Read(FieldReader root) => new(
-        ReadRecords(root, "weighIns",
+        root.ReadRecords("weighIns",
             r => new WeighIn(r.RequiredId("id"), r.RequiredDate("date"), r.RequiredPositiveDouble("weightKg"))),
-        ReadRecords(root, "breaks", ReadBreak),
-        ReadRecords(root, "badges",
+        root.ReadRecords("breaks", ReadBreak),
+        root.ReadRecords("badges",
             r => new Badge(r.RequiredId("id"), r.RequiredString("name"), r.RequiredString("metric"), r.RequiredPositiveDouble("target"))),
-        ReadRecords(root, "guides", ReadGuide));
-
-    private static List<T>? ReadRecords<T>(FieldReader root, string collection, Func<FieldReader, T> read) where T : class =>
-        root.OptionalObjectArray(collection)?
-            .Select(item => item.Reader.ReadRecord(read))
-            .OfType<T>()
-            .ToList();
+        root.ReadRecords("guides", ReadGuide));
 
     private static Break ReadBreak(FieldReader r)
     {
         var id = r.RequiredId("id");
-        var start = r.RequiredDate("startDate");
-        var end = r.RequiredDate("endDate");
+        var start = r.RequiredDateOrNull("startDate");
+        var end = r.RequiredDateOrNull("endDate");
         var reason = r.RequiredString("reason");
         r.CheckDateOrder("startDate", "endDate", start, end);
-        return new Break(id, start, end, reason);
+        return new Break(id, start ?? default, end ?? default, reason);
     }
 
     private static Guide ReadGuide(FieldReader r) => new(

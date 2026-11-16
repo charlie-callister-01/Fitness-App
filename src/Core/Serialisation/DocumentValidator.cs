@@ -6,33 +6,68 @@ namespace Core.Serialisation;
 /// The validate phase: every cross-record rule of the exchange format, run over an <see cref="ExchangeDocument"/>. Pure: it reads the document
 /// and returns issues, so it works on a document parsed from JSON and on one built in memory (an Import, or the app's own state).
 /// <para>
-/// It tolerates the placeholders the parse phase leaves behind for fields that failed to read (blank IDs, zero weeks): those are skipped, never
-/// reported again. Exercise and Session references are checked only when the document contains the referenced collection;
+/// It tolerates the placeholders the parse phase leaves behind for fields that failed to read: blank IDs are skipped, and the placeholders
+/// listed in <see cref="ParseFindings"/> (a Phase's weeks, a Plan's active flag) are left alone, so nothing is reported twice.
+/// Exercise and Session references are checked only when the document contains the referenced collection;
 /// otherwise they are resolved when the document is imported.
 /// </para>
 /// </summary>
 internal static class DocumentValidator
 {
-    public static IReadOnlyList<FormatIssue> Validate(ExchangeDocument document)
+    public static IReadOnlyList<FormatIssue> Validate(ExchangeDocument document) => Validate(document, ParseFindings.None);
+
+    /// <summary>Validates a document the parse phase produced: <paramref name="findings"/> says which placeholders were unreadable.</summary>
+    public static IReadOnlyList<FormatIssue> Validate(ExchangeDocument document, ParseFindings findings)
     {
-        var run = new Run(document);
-        run.CheckExercises();
-        run.CheckBodyAndGuides();
-        run.CheckPlans();
-        run.CheckWorkouts();
-        return run.Issues;
+        var checker = new Checker(document, findings);
+        checker.CheckExercises();
+        checker.CheckBodyAndGuides();
+        checker.CheckPlans();
+        checker.CheckWorkouts();
+        return checker.Issues;
     }
 
-    private sealed class Run
+    /// <summary>The kinds of record whose IDs must be unique. The label is the name used in messages.</summary>
+    private enum RecordKind
+    {
+        Exercise,
+        WeighIn,
+        Break,
+        Badge,
+        Guide,
+        Plan,
+        Session,
+        Phase,
+        Workout,
+        Set,
+        PainCheck,
+    }
+
+    private static string Label(RecordKind kind) => kind switch
+    {
+        RecordKind.WeighIn => "Weigh-in",
+        RecordKind.PainCheck => "Pain check",
+        _ => kind.ToString(),
+    };
+
+    /// <summary>A real ID: not null and not the blank placeholder the parse phase leaves for an unreadable one.</summary>
+    private static bool IsSet(string? id) => id is { Length: > 0 };
+
+    /// <summary>The Exercise a skipped or swapped entry names, which must come from the Workout's planned rows.</summary>
+    private sealed record PlannedReference(string Field, string? ExerciseId, string Verb);
+
+    private sealed class Checker
     {
         private readonly ExchangeDocument _document;
+        private readonly ParseFindings _findings;
         private readonly HashSet<string>? _exerciseIds;
         private readonly HashSet<string>? _sessionIds;
-        private readonly Dictionary<string, HashSet<string>> _seenIds = [];
+        private readonly Dictionary<RecordKind, HashSet<string>> _seenIds = [];
 
-        public Run(ExchangeDocument document)
+        public Checker(ExchangeDocument document, ParseFindings findings)
         {
             _document = document;
+            _findings = findings;
             _exerciseIds = document.Exercises?.Select(e => e.Id).ToHashSet();
             _sessionIds = document.Plans?.SelectMany(p => p.Sessions).Select(s => s.Id).ToHashSet();
         }
@@ -42,9 +77,9 @@ internal static class DocumentValidator
         private void Error(string path, string code, string message) => Issues.Add(new FormatIssue(path, code, message));
 
         /// <summary>IDs are unique per record kind across the whole document. Blank IDs (unreadable in the parse phase) are skipped.</summary>
-        private void CheckUnique(string kind, string path, string field, string id)
+        private void CheckUnique(RecordKind kind, string path, string field, string id)
         {
-            if (id.Length == 0)
+            if (!IsSet(id))
             {
                 return;
             }
@@ -58,11 +93,11 @@ internal static class DocumentValidator
             if (!seen.Add(id))
             {
                 var what = field == "id" ? "ID" : field;
-                Error(path, "duplicate_id", $"{path} \"{id}\" is used by more than one {kind}. Every {kind} needs its own {what}.");
+                Error(path, "duplicate_id", $"{path} \"{id}\" is used by more than one {Label(kind)}. Every {Label(kind)} needs its own {what}.");
             }
         }
 
-        private bool IsUnknownExercise(string? id) => id is { Length: > 0 } && _exerciseIds is not null && !_exerciseIds.Contains(id);
+        private bool IsUnknownExercise(string? id) => IsSet(id) && _exerciseIds is not null && !_exerciseIds.Contains(id!);
 
         private void CheckExercise(string path, string? id)
         {
@@ -76,7 +111,7 @@ internal static class DocumentValidator
         {
             foreach (var (exercise, i) in Indexed(_document.Exercises))
             {
-                CheckUnique("Exercise", $"exercises[{i}].id", "id", exercise.Id);
+                CheckUnique(RecordKind.Exercise, $"exercises[{i}].id", "id", exercise.Id);
             }
         }
 
@@ -84,24 +119,24 @@ internal static class DocumentValidator
         {
             foreach (var (weighIn, i) in Indexed(_document.WeighIns))
             {
-                CheckUnique("Weigh-in", $"weighIns[{i}].id", "id", weighIn.Id);
+                CheckUnique(RecordKind.WeighIn, $"weighIns[{i}].id", "id", weighIn.Id);
             }
 
             foreach (var (b, i) in Indexed(_document.Breaks))
             {
-                CheckUnique("Break", $"breaks[{i}].id", "id", b.Id);
+                CheckUnique(RecordKind.Break, $"breaks[{i}].id", "id", b.Id);
             }
 
             foreach (var (badge, i) in Indexed(_document.Badges))
             {
-                CheckUnique("Badge", $"badges[{i}].id", "id", badge.Id);
+                CheckUnique(RecordKind.Badge, $"badges[{i}].id", "id", badge.Id);
             }
 
             foreach (var (guide, i) in Indexed(_document.Guides))
             {
                 var path = $"guides[{i}].exerciseId";
                 CheckExercise(path, guide.ExerciseId);
-                CheckUnique("Guide", path, "exerciseId", guide.ExerciseId);
+                CheckUnique(RecordKind.Guide, path, "exerciseId", guide.ExerciseId);
             }
         }
 
@@ -114,7 +149,7 @@ internal static class DocumentValidator
 
             foreach (var (plan, i) in Indexed(plans))
             {
-                CheckUnique("Plan", $"plans[{i}].id", "id", plan.Id);
+                CheckUnique(RecordKind.Plan, $"plans[{i}].id", "id", plan.Id);
                 CheckSessions(plan, i);
                 CheckPhases(plan, i);
             }
@@ -127,7 +162,11 @@ internal static class DocumentValidator
             var active = plans.Select((plan, index) => (plan, index)).Where(p => p.plan.IsActive).ToList();
             if (active.Count == 0)
             {
-                Error("plans", "no_active_plan", "plans must contain exactly one active Plan, but none has \"isActive\": true.");
+                if (!_findings.ActiveFlagUnreadable)
+                {
+                    Error("plans", "no_active_plan", "plans must contain exactly one active Plan, but none has \"isActive\": true.");
+                }
+
                 return;
             }
 
@@ -143,7 +182,7 @@ internal static class DocumentValidator
             foreach (var (session, i) in Indexed(plan.Sessions))
             {
                 var path = $"plans[{planIndex}].sessions[{i}]";
-                CheckUnique("Session", $"{path}.id", "id", session.Id);
+                CheckUnique(RecordKind.Session, $"{path}.id", "id", session.Id);
                 CheckRows(session.Exercises, $"{path}.exercises");
             }
         }
@@ -159,11 +198,21 @@ internal static class DocumentValidator
         private void CheckPhases(Plan plan, int planIndex)
         {
             var planSessionIds = plan.Sessions.Select(s => s.Id).ToHashSet();
+            var judgeable = new List<(Phase Phase, int Index)>();
+            var excluded = new List<Phase>();
             foreach (var (phase, i) in Indexed(plan.Phases))
             {
                 var path = $"plans[{planIndex}].phases[{i}]";
-                CheckUnique("Phase", $"{path}.id", "id", phase.Id);
-                CheckWeekRange(phase, path);
+                CheckUnique(RecordKind.Phase, $"{path}.id", "id", phase.Id);
+                if (HasJudgeableWeeks(phase, path))
+                {
+                    judgeable.Add((phase, i));
+                }
+                else
+                {
+                    excluded.Add(phase);
+                }
+
                 foreach (var (goal, g) in Indexed(phase.Goals))
                 {
                     CheckExercise($"{path}.goals[{g}].exerciseId", goal.ExerciseId);
@@ -172,7 +221,33 @@ internal static class DocumentValidator
                 CheckOverrides(phase, path, planSessionIds);
             }
 
-            CheckWeekCoverage(plan.Phases, planIndex);
+            CheckWeekCoverage(judgeable, excluded, planIndex);
+        }
+
+        /// <summary>
+        /// The one home of the Phase week-range rule: it starts at week 1 or later and ends no earlier than it starts. A range that breaks it is
+        /// reported here, once, and the Phase is left out of the coverage check. A Phase whose weeks the parse phase couldn't read was already reported.
+        /// </summary>
+        private bool HasJudgeableWeeks(Phase phase, string path)
+        {
+            if (_findings.AreWeeksUnreadable(phase))
+            {
+                return false;
+            }
+
+            if (phase.StartWeek < 1)
+            {
+                Error($"{path}.startWeek", "out_of_range", $"{path}.startWeek must be 1 or more (it was {phase.StartWeek}).");
+                return false;
+            }
+
+            if (phase.EndWeek < phase.StartWeek)
+            {
+                Error($"{path}.endWeek", "out_of_range", $"{path}.endWeek must be {phase.StartWeek} or more (it was {phase.EndWeek}).");
+                return false;
+            }
+
+            return true;
         }
 
         private void CheckOverrides(Phase phase, string phasePath, HashSet<string> planSessionIds)
@@ -182,12 +257,12 @@ internal static class DocumentValidator
             {
                 var path = $"{phasePath}.sessionOverrides[{i}]";
                 var sessionPath = $"{path}.sessionId";
-                if (item.SessionId.Length > 0 && !planSessionIds.Contains(item.SessionId))
+                if (IsSet(item.SessionId) && !planSessionIds.Contains(item.SessionId))
                 {
                     Error(sessionPath, "unknown_session", $"{sessionPath} \"{item.SessionId}\" is not a Session in this Plan.");
                 }
 
-                if (item.SessionId.Length > 0 && !overridden.Add(item.SessionId))
+                if (IsSet(item.SessionId) && !overridden.Add(item.SessionId))
                 {
                     Error(sessionPath, "duplicate_id", $"{sessionPath} \"{item.SessionId}\" is overridden more than once in this Phase.");
                 }
@@ -196,38 +271,18 @@ internal static class DocumentValidator
             }
         }
 
-        /// <summary>A Phase's range is valid when it starts at week 1 or later and ends no earlier than it starts.</summary>
-        private static bool HasValidRange(Phase phase) => phase.StartWeek >= 1 && phase.EndWeek >= phase.StartWeek;
-
-        /// <summary>Reports an invalid range once, so a document built in memory is covered. For parsed JSON the reader drops this when the parse phase already reported the field.</summary>
-        private void CheckWeekRange(Phase phase, string path)
-        {
-            if (phase.StartWeek < 1)
-            {
-                Error($"{path}.startWeek", "out_of_range", $"{path}.startWeek must be 1 or more (it was {phase.StartWeek}).");
-            }
-            else if (phase.EndWeek < phase.StartWeek)
-            {
-                Error($"{path}.endWeek", "out_of_range", $"{path}.endWeek must be {phase.StartWeek} or more (it was {phase.EndWeek}).");
-            }
-        }
-
         /// <summary>
         /// Phases may be listed in any order but, by week, must start at week 1 and follow each other with no gap and no overlap.
-        /// A Plan with a Phase whose range is invalid is not checked: that Phase is reported once, and without it the coverage can't be judged.
+        /// Only Phases with a valid range are compared. A gap before a Phase is excused when an excluded Phase starts inside it (or has no usable
+        /// start), because that Phase's real weeks can't be known; an overlap between two valid Phases is always real.
         /// </summary>
-        private void CheckWeekCoverage(IReadOnlyList<Phase> phases, int planIndex)
+        private void CheckWeekCoverage(List<(Phase Phase, int Index)> phases, List<Phase> excluded, int planIndex)
         {
-            if (phases.Any(p => !HasValidRange(p)))
-            {
-                return;
-            }
-
             var expectedStart = 1;
-            foreach (var (phase, original) in phases.Select((phase, index) => (phase, index)).OrderBy(p => p.phase.StartWeek))
+            foreach (var (phase, original) in phases.OrderBy(p => p.Phase.StartWeek))
             {
                 var path = $"plans[{planIndex}].phases[{original}].startWeek";
-                if (phase.StartWeek > expectedStart)
+                if (phase.StartWeek > expectedStart && !GapIsExcused(excluded, expectedStart, phase.StartWeek - 1))
                 {
                     var missing = phase.StartWeek - 1 == expectedStart ? $"week {expectedStart}" : $"weeks {expectedStart} to {phase.StartWeek - 1}";
                     Error(path, "phase_gap", $"{path} is {phase.StartWeek}, which leaves {missing} in no Phase. Phases must cover every week from week 1 with no gaps.");
@@ -241,12 +296,15 @@ internal static class DocumentValidator
             }
         }
 
+        private static bool GapIsExcused(List<Phase> excluded, int firstMissing, int lastMissing) =>
+            excluded.Any(p => p.StartWeek < 1 || (p.StartWeek >= firstMissing && p.StartWeek <= lastMissing));
+
         public void CheckWorkouts()
         {
             foreach (var (workout, i) in Indexed(_document.Workouts))
             {
                 var path = $"workouts[{i}]";
-                CheckUnique("Workout", $"{path}.id", "id", workout.Id);
+                CheckUnique(RecordKind.Workout, $"{path}.id", "id", workout.Id);
                 CheckWorkoutSession(workout, path);
                 CheckRows(workout.Planned, $"{path}.planned");
                 CheckEntries(workout, path);
@@ -256,9 +314,9 @@ internal static class DocumentValidator
 
         private void CheckWorkoutSession(Workout workout, string path)
         {
-            if (workout.SessionId is { Length: > 0 } id && _sessionIds is not null && !_sessionIds.Contains(id))
+            if (IsSet(workout.SessionId) && _sessionIds is not null && !_sessionIds.Contains(workout.SessionId!))
             {
-                Error($"{path}.sessionId", "unknown_session", $"{path}.sessionId \"{id}\" is not a Session in any Plan in this document.");
+                Error($"{path}.sessionId", "unknown_session", $"{path}.sessionId \"{workout.SessionId}\" is not a Session in any Plan in this document.");
             }
         }
 
@@ -274,7 +332,7 @@ internal static class DocumentValidator
 
                 foreach (var (set, s) in Indexed(entry.Sets))
                 {
-                    CheckUnique("Set", $"{path}.sets[{s}].id", "id", set.Id);
+                    CheckUnique(RecordKind.Set, $"{path}.sets[{s}].id", "id", set.Id);
                 }
             }
         }
@@ -285,24 +343,24 @@ internal static class DocumentValidator
         /// </summary>
         private void CheckAgainstPlanned(WorkoutEntry entry, string path, HashSet<string> planned)
         {
-            if (planned.Count == 0)
+            if (planned.Count == 0 || PlannedReferenceOf(entry) is not { } reference)
             {
                 return;
             }
 
-            var (field, id, what) = entry.Status switch
+            if (IsSet(reference.ExerciseId) && !planned.Contains(reference.ExerciseId!) && !IsUnknownExercise(reference.ExerciseId))
             {
-                EntryStatus.Skipped => ("exerciseId", entry.ExerciseId, "skipped"),
-                EntryStatus.Swapped => ("swappedFromExerciseId", entry.SwappedFromExerciseId, "swapped"),
-                _ => default((string, string?, string)),
-            };
-
-            if (id is { Length: > 0 } && !planned.Contains(id) && !IsUnknownExercise(id))
-            {
-                Error($"{path}.{field}", "not_in_planned",
-                    $"{path}.{field} \"{id}\" is not in this Workout's planned rows, so it can't be {what}. Name an Exercise from planned.");
+                Error($"{path}.{reference.Field}", "not_in_planned",
+                    $"{path}.{reference.Field} \"{reference.ExerciseId}\" is not in this Workout's planned rows, so it can't be {reference.Verb}. Name an Exercise from planned.");
             }
         }
+
+        private static PlannedReference? PlannedReferenceOf(WorkoutEntry entry) => entry.Status switch
+        {
+            EntryStatus.Skipped => new PlannedReference("exerciseId", entry.ExerciseId, "skipped"),
+            EntryStatus.Swapped => new PlannedReference("swappedFromExerciseId", entry.SwappedFromExerciseId, "swapped"),
+            _ => null,
+        };
 
         private void CheckPainCheck(PainCheck? pain, string workoutPath)
         {
@@ -312,7 +370,7 @@ internal static class DocumentValidator
             }
 
             var path = $"{workoutPath}.painCheck";
-            CheckUnique("Pain check", $"{path}.id", "id", pain.Id);
+            CheckUnique(RecordKind.PainCheck, $"{path}.id", "id", pain.Id);
             CheckExercise($"{path}.exerciseId", pain.ExerciseId);
         }
 

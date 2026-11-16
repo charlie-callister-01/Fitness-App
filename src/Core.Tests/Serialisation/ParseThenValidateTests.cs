@@ -48,6 +48,21 @@ public class ParseThenValidateTests
     }
 
     [Fact]
+    public void A_real_gap_between_valid_phases_is_reported_beside_a_phase_with_a_bad_range()
+    {
+        var errors = Errors(r =>
+        {
+            var phases = PlanTestData.Plan0(r)["phases"]!.AsArray();
+            phases[2]!["startWeek"] = 21;
+            phases.Add(new JsonObject { ["id"] = "extra", ["focus"] = "Extra", ["startWeek"] = 30, ["endWeek"] = 25 });
+        });
+
+        Assert.Equal(
+            [("plans[0].phases[2].startWeek", "phase_gap"), ("plans[0].phases[3].endWeek", "out_of_range")],
+            errors.Select(e => (e.Path, e.Code)).OrderBy(e => e.Path, StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void Wrong_type_for_is_active_does_not_cause_no_active_plan()
     {
         var errors = Errors(r => PlanTestData.Plan0(r)["isActive"] = "yes");

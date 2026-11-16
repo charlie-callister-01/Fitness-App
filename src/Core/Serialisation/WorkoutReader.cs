@@ -8,19 +8,7 @@ namespace Core.Serialisation;
 /// </summary>
 internal static class WorkoutReader
 {
-    public static List<Workout>? Read(FieldReader root)
-    {
-        var items = root.OptionalObjectArray("workouts");
-        if (items is null)
-        {
-            return null;
-        }
-
-        return items
-            .Select(item => item.Reader.ReadRecord(ReadWorkout))
-            .OfType<Workout>()
-            .ToList();
-    }
+    public static List<Workout>? Read(FieldReader root) => root.ReadRecords("workouts", ReadWorkout);
 
     private static Workout ReadWorkout(FieldReader reader)
     {
@@ -39,11 +27,7 @@ internal static class WorkoutReader
         return new Workout(id, date, sessionId, loggedAfterwards, startedAt, endedAt, planned, entries, painCheck);
     }
 
-    private static List<WorkoutEntry> ReadEntries(FieldReader workout) =>
-        (workout.OptionalObjectArray("entries") ?? [])
-            .Select(item => item.Reader.ReadRecord(ReadEntry))
-            .OfType<WorkoutEntry>()
-            .ToList();
+    private static List<WorkoutEntry> ReadEntries(FieldReader workout) => workout.ReadRecords("entries", ReadEntry) ?? [];
 
     private static WorkoutEntry ReadEntry(FieldReader reader)
     {
@@ -84,11 +68,7 @@ internal static class WorkoutReader
         return null;
     }
 
-    private static List<WorkoutSet> ReadSets(FieldReader entry) =>
-        (entry.OptionalObjectArray("sets") ?? [])
-            .Select(item => item.Reader.ReadRecord(ReadSet))
-            .OfType<WorkoutSet>()
-            .ToList();
+    private static List<WorkoutSet> ReadSets(FieldReader entry) => entry.ReadRecords("sets", ReadSet) ?? [];
 
     private static WorkoutSet ReadSet(FieldReader reader)
     {
@@ -125,8 +105,11 @@ internal static class WorkoutReader
                 return new PainCheck(id, status, areas, severity, note, exerciseId);
             });
 
-            var pain = fields.Value;
-            PainCheckRules.Check(reader, pain.Status, pain.Areas, pain.Severity, fields.IsValid);
-            return pain;
+            if (fields.IsValid)
+            {
+                PainCheckRules.Check(reader, fields.Value);
+            }
+
+            return fields.Value;
         });
 }

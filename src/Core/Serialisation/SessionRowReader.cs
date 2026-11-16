@@ -9,10 +9,7 @@ namespace Core.Serialisation;
 internal static class SessionRowReader
 {
     public static List<SessionExercise> ReadRows(FieldReader parent, string arrayName) =>
-        (parent.OptionalObjectArray(arrayName) ?? [])
-            .Select(item => item.Reader.ReadRecord(ReadRow))
-            .OfType<SessionExercise>()
-            .ToList();
+        parent.ReadRecords(arrayName, ReadRow) ?? [];
 
     private static SessionExercise ReadRow(FieldReader reader)
     {

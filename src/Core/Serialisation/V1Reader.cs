@@ -16,7 +16,7 @@ internal static class V1Reader
     public static ReadResult Read(JsonElement root)
     {
         var context = new ReadContext();
-        var fields = FieldReader.Open(root, "$", context)!;
+        var fields = FieldReader.OpenRoot(root, context);
 
         var version = fields.RequiredInt("formatVersion", 1);
         fields.Ignore(ExchangeReadMe.Field);
@@ -31,43 +31,20 @@ internal static class V1Reader
 
         var document = new ExchangeDocument(version, exportedAt, exportedFrom, exercises, settings,
             bodyAndGuides.WeighIns, bodyAndGuides.Breaks, bodyAndGuides.Badges, bodyAndGuides.Guides, plans, workouts);
-        context.Sink.Errors.AddRange(CrossRecordIssues(document, context.Sink.Errors));
+        context.Sink.ReportAll(DocumentValidator.Validate(document, context.Findings));
         return ReadResult.From(document, context.Sink);
     }
 
-    /// <summary>
-    /// The validate phase, minus what the parse phase already explained. A field that failed to read holds a placeholder, so two kinds of
-    /// follow-on issue are dropped: one at a path the parse phase already reported, and "no active Plan" when a Plan's <c>isActive</c> was unreadable.
-    /// </summary>
-    private static IEnumerable<FormatIssue> CrossRecordIssues(ExchangeDocument document, IReadOnlyList<FormatIssue> parseErrors)
-    {
-        var parsePaths = parseErrors.Select(e => e.Path).ToHashSet();
-        var isActiveUnreadable = parsePaths.Any(p => p.StartsWith("plans[", StringComparison.Ordinal) && p.EndsWith("].isActive", StringComparison.Ordinal));
-        return DocumentValidator.Validate(document)
-            .Where(issue => !parsePaths.Contains(issue.Path) && !(isActiveUnreadable && issue.Code == "no_active_plan"));
-    }
-
-    private static List<Exercise>? ReadExercises(FieldReader root)
-    {
-        var items = root.OptionalObjectArray("exercises");
-        if (items is null)
+    private static List<Exercise>? ReadExercises(FieldReader root) =>
+        root.ReadRecords("exercises", reader =>
         {
-            return null;
-        }
-
-        return items
-            .Select(item => item.Reader.ReadRecord(reader =>
-            {
-                var id = reader.RequiredId("id");
-                var name = reader.RequiredString("name");
-                var logKind = reader.RequiredEnum<LogKind>("logKind");
-                var isBenchmark = reader.OptionalBool("isBenchmark", defaultValue: false);
-                var tags = ReadTags(reader);
-                return new Exercise(id, name, logKind, tags, isBenchmark);
-            }))
-            .OfType<Exercise>()
-            .ToList();
-    }
+            var id = reader.RequiredId("id");
+            var name = reader.RequiredString("name");
+            var logKind = reader.RequiredEnum<LogKind>("logKind");
+            var isBenchmark = reader.OptionalBool("isBenchmark", defaultValue: false);
+            var tags = ReadTags(reader);
+            return new Exercise(id, name, logKind, tags, isBenchmark);
+        });
 
     private static ExerciseTags? ReadTags(FieldReader exercise) =>
         exercise.OptionalObject("tags")?.ReadRecord(reader => new ExerciseTags(
