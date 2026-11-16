@@ -2,7 +2,7 @@
 
 The written definition of the app's data and its one JSON exchange format (the Backup, the LLM analysis Export and the Plan/Guide Import are all this same document). The code in `Core` matches this document; a conformance test parses the example below with the real reader, so the two cannot drift. Terms follow [`../GLOSSARY.md`](../GLOSSARY.md).
 
-Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise, Settings and Plan/Phase/Session are specified. Guides, Workouts, Weigh-ins, Pain checks, Breaks and Badges are added by later A1 tickets.**
+Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise, Settings, Plan/Phase/Session, Weigh-in, Break, Badge and Guide are specified. Workouts and Pain checks are added by later A1 tickets.**
 
 ## Conventions
 
@@ -23,6 +23,10 @@ Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise
 | `exercises` | array of Exercise | no | |
 | `settings` | Settings | no | |
 | `plans` | array of Plan | no | Exactly one active when non-empty. See Plan. |
+| `weighIns` | array of Weigh-in | no | |
+| `breaks` | array of Break | no | |
+| `badges` | array of Badge | no | |
+| `guides` | array of Guide | no | |
 
 An absent collection means "not part of this document". That is how partial documents (Plan-only, Guides-only) work with no second format. A present-but-empty collection means "none".
 
@@ -215,6 +219,49 @@ This block is also parsed and validated by the real reader in the test suite.
   ]
 }
 ```
+## Weigh-in
+
+A body-weight entry on any day, independent of any Workout (weight has exactly one home).
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among Weigh-ins. |
+| `date` | date | yes | `yyyy-MM-dd`. |
+| `weightKg` | number > 0 | yes | Always kg; display unit is a Setting. |
+
+## Break
+
+A date range excused from the weekly target and Streak. Both ends are inclusive, so a one-day Break has equal dates.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among Breaks. |
+| `startDate` | date | yes | |
+| `endDate` | date | yes | Not before `startDate`, else `end_before_start` at `endDate`. |
+| `reason` | string | yes | Non-blank label, such as "Holiday" or "Flu". |
+
+## Badge
+
+A user-editable achievement. Only its definition is stored; progress is always worked out from history, so there is no progress field.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among Badges. |
+| `name` | string | yes | Non-blank. |
+| `metric` | string | yes | Non-blank name of what is measured. The set of metrics and how progress is computed belong to stage A2, so A1 does not restrict the value. |
+| `target` | number > 0 | yes | Value the metric must reach. |
+
+## Guide
+
+The reference page for one Exercise. A Guide has no ID of its own: it is keyed by `exerciseId`, so there is at most one per Exercise (`duplicate_id` at the second).
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `exerciseId` | string | yes | The Exercise it describes. When the same document has `exercises`, it must be one of them (`unknown_exercise`). A Guides-only document has no Exercises to check against, so that check is left to Import (A4), which compares against the library. |
+| `works`, `whyInPlan`, `setup`, `howTo`, `easier`, `harder` | string | no | Guide content. |
+| `cues`, `commonMistakes`, `watchOuts` | array of non-blank strings | no | Guide content. |
+| `videoUrl` | string | no | Absolute `http://` or `https://` URL, else `invalid_value`. |
+| `personalNotes` | string | no | The owner's own notes. Not Guide content: an Import that replaces a Guide's content leaves existing personal notes alone, and a Guide written by an LLM normally omits this field. |
 
 ## Worked example
 
@@ -256,7 +303,32 @@ This block is parsed and validated by the real reader in the test suite.
     "goalWeightKg": 82.5,
     "streakMinWorkoutsPerWeek": 3,
     "streakCountsCustomWorkouts": true
-  }
+  },
+  "weighIns": [
+    { "id": "w-2026-11-16", "date": "2026-11-16", "weightKg": 84.35 }
+  ],
+  "breaks": [
+    { "id": "xmas", "startDate": "2026-12-20", "endDate": "2027-01-02", "reason": "Holiday" }
+  ],
+  "badges": [
+    { "id": "squat-100", "name": "100 kg squat", "metric": "maxWeightKg", "target": 100 }
+  ],
+  "guides": [
+    {
+      "exerciseId": "goblet-squat",
+      "works": "Quads and glutes",
+      "whyInPlan": "Builds the squat strength HYROX wall balls and lunges need",
+      "setup": "Hold the kettlebell at your chest, feet shoulder-width",
+      "howTo": "Sit down between your heels, then stand tall",
+      "cues": ["Chest up", "Knees out"],
+      "commonMistakes": ["Heels lifting"],
+      "easier": "Box squat",
+      "harder": "Heavier kettlebell",
+      "watchOuts": ["Lower back rounding"],
+      "videoUrl": "https://example.com/goblet-squat",
+      "personalNotes": "Left knee clicks at the bottom"
+    }
+  ]
 }
 ```
 
@@ -270,8 +342,9 @@ This block is parsed and validated by the real reader in the test suite.
 | `invalid_value`, `out_of_range` | The value is malformed or outside its allowed range. |
 | `unknown_value` | An enum value that isn't one of the allowed values (the message lists them). |
 | `invalid_id`, `duplicate_id` | ID has bad characters, or is reused within its record kind. |
-| `unknown_exercise`, `unknown_session` | A reference to an Exercise or Session ID that doesn't exist. |
+| `unknown_exercise`, `unknown_session` | A reference (Plan row, Phase goal, Guide) to an Exercise or Session ID that does not exist. |
 | `no_active_plan`, `multiple_active_plans` | Plans present but not exactly one active. |
 | `phase_gap`, `phase_overlap` | Phase week ranges leave a week uncovered or share a week. |
+| `end_before_start` | A Break's `endDate` is before its `startDate`. |
 | `invalid_version`, `unsupported_version` | See Versioning. |
 | `unknown_field` | Warning only: an unrecognised field was ignored. |

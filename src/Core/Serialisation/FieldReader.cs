@@ -201,21 +201,6 @@ internal sealed partial class FieldReader
         return default;
     }
 
-    public DateOnly RequiredDate(string name)
-    {
-        var path = ChildPath(name);
-        if (!TryGet(name, out var value))
-        {
-            _sink.Error(path, "missing_field", $"{path} is required.");
-            return default;
-        }
-
-        return ParseDate(path, value) ?? default;
-    }
-
-    public DateOnly? OptionalDate(string name) =>
-        TryGet(name, out var value) ? ParseDate(ChildPath(name), value) : null;
-
     /// <summary>An optional whole number; null when absent or invalid (invalid is reported).</summary>
     public int? OptionalInt(string name, int min)
     {
@@ -337,18 +322,6 @@ internal sealed partial class FieldReader
                 _sink.Warnings.Add(new FormatIssue(path, "unknown_field", $"{path} is not a known field and was ignored."));
             }
         }
-    }
-
-    private DateOnly? ParseDate(string path, JsonElement value)
-    {
-        if (value.ValueKind == JsonValueKind.String
-            && DateOnly.TryParseExact(value.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-        {
-            return parsed;
-        }
-
-        _sink.Error(path, "invalid_value", $"{path} must be a calendar date written yyyy-MM-dd, like 2026-10-19.");
-        return null;
     }
 
     private double PositiveDouble(string path, JsonElement value)
