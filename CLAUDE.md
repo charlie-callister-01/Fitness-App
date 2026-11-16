@@ -14,7 +14,7 @@ Work is cut into stages. For each stage, in order:
 2. `/to-tickets`: break the spec into tickets.
    **Ticket sizing:** each ticket must be a chunk one agent can finish within roughly 150-200k tokens of context (reading, writing, tests and fixes). Split anything bigger; don't bundle unrelated work to save tickets.
 3. Implement the tickets.
-4. `/code-review`: normal review of the stage's changes.
+4. `/mattpocock-skills:code-review`: review of the stage's changes (Standards and Spec axes, in parallel sub-agents). Always use this exact skill, not the built-in `/code-review`. The same applies when `/mattpocock-skills:implement-spec` calls for a code review: invoke `mattpocock-skills:code-review`.
 5. `/thermo-nuclear-code-quality-review`: the strict maintainability review (`.claude/skills/thermo-nuclear-code-quality-review/SKILL.md`). It's user-invoked only, so if it can't be run as a skill, read that file and apply it to the stage's changes. Its rules are written with TypeScript in mind (`any`, `unknown`); apply the same intent to C# (nullable abuse, `object`, casts).
 6. Apply the fixes from both reviews.
 7. `/pr`: write the PR body, with extra explanation of what changed and why, and any non-obvious decisions.
