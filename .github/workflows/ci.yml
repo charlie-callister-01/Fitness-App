@@ -1,0 +1,33 @@
+name: CI
+
+# Build and test every pull request. No secrets are used.
+# Deploy lives in its own workflow file.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installs the SDK pinned in global.json.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Same commands as local. Warnings are errors via Directory.Build.props,
+      # so any warning or failing test fails the job.
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Test
+        run: dotnet test -c Release --no-build
