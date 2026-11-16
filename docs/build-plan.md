@@ -21,7 +21,7 @@ Don't skip or merge steps, and don't start the next stage until the current stag
 ## Proposed stages (each gets its own `/to-spec`; boundaries are a starting proposal)
 
 ### Track A
-- **A0: Scaffold and delivery.** The four-project solution, .NET LTS confirmed, PWA shell that installs and works offline, CI (build and test on PR), GitHub Pages deploy. First task: confirm the current .NET LTS and the Blazor + shared Razor class library setup.
+- **A0: Scaffold and delivery. DONE (PR #7 merged, 16 Nov 2026).** The four-project solution, .NET LTS confirmed, PWA shell that installs and works offline, CI (build and test on PR), GitHub Pages deploy. First task: confirm the current .NET LTS and the Blazor + shared Razor class library setup.
 - **A1: Data model and spec.** Entities and relationships (Plan, Phase, Session, Exercise, Workout, Set, Weigh-in, Pain check, Break, Badge, Guide, settings), permanent IDs, tags, canonical units, format version, JSON serialisation, validation. Written spec first.
 - **A2: Core rules.** Log kinds and input parsing, PRs and Max sets, Suggested target with RPE, weeks/Streak/consistency, Missed/Partial/Skipped/Swapped handling, Badges, benchmark logic, unit conversion, week-rearrangement suggestions, Nudge rules.
 - **A3: Storage.** The storage interface, an in-memory implementation, the IndexedDB implementation, persistent-storage request, load-into-memory model.
@@ -41,11 +41,13 @@ Likely stages, to be re-cut once the design exists: Workout log and home dashboa
 
 None of these block A0 to A4.
 
-## First step in the next session
-Run `/to-spec` for **A0 (scaffold and delivery)**, or A0 plus A1 if the owner prefers one larger spec, then `/to-tickets` with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
+## Status and next step
+**A0 is merged** (spec #1, tickets #2 to #6, PR #7). Still to confirm by hand, because they need GitHub or a phone: set Settings > Pages > Source to "GitHub Actions" so the deploy job can pass; check the live app at `/Fitness-App/` (deep-link refresh, install, offline open, update pickup, per `pwa-manual-checks.md`); and that CI fails on a deliberately failing test.
+
+**Next:** run `/to-spec` for **A1 (data model and spec)**, then `/to-tickets` with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
 
 ## Open items to settle during specs
 - ~~The exact .NET LTS version and Blazor template details.~~ Settled: .NET 10 LTS, standalone Blazor WebAssembly PWA template ([ADR 0004](adr/0004-dotnet-10-lts-pinned.md)).
 - UI library and styling (waits for Track B).
 - The precise JSON schema and version number scheme (A1).
-- Whether `/to-spec` should treat A0 and A1 as one spec or two.
+- ~~Whether `/to-spec` should treat A0 and A1 as one spec or two.~~ Settled: two; A0 is done.

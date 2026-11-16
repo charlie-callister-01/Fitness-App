@@ -1,6 +1,6 @@
 # Fitness App: documentation index
 
-Start here in a new session. The grilling session (usage, then practical, then technical) is **complete**. The next step is `/to-spec` for the first build stage.
+Start here in a new session. The grilling session (usage, then practical, then technical) is **complete**. Stage A0 (scaffold and delivery) is merged. The next step is `/to-spec` for A1 (data model and spec); see `build-plan.md`.
 
 | Read this | For |
 |---|---|
