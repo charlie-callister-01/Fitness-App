@@ -16,7 +16,7 @@ Don't skip or merge steps, and don't start the next stage until the current stag
 
 **Track A: no UI (can start immediately).** Data spec and core logic, storage, export/import, starter data.
 
-**Track B: UX and design (owner-led).** The owner will produce a design document with Claude Design, covering screens, key flows (log a Workout, make up a missed Session, import a Plan, weekly review), a clickable prototype of the log screen to try on a phone, and the UI library/styling choice. It will be added to the build plan when ready. **No UI stage starts until Track B is finished.**
+**Track B: UX and design (owner-led).** Give [`design-brief.md`](design-brief.md) to the design agent; it lists requirements, constraints and exactly what to return (a `design-document.md` plus an `assets/` folder). When it comes back, put both under `docs/design/` and add them to this plan. The owner will produce a design document with Claude Design, covering screens, key flows (log a Workout, make up a missed Session, import a Plan, weekly review), a clickable prototype of the log screen to try on a phone, and the UI library/styling choice. It will be added to the build plan when ready. **No UI stage starts until Track B is finished.**
 
 ## Proposed stages (each gets its own `/to-spec`; boundaries are a starting proposal)
 
