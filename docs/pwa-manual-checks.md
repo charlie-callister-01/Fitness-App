@@ -7,7 +7,7 @@ Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (d
 - On publish, .NET generates `service-worker-assets.js`: every published asset (runtime, assemblies, `_content/Ui/ui.css`, icons, `index.html`, manifest) with a hash, plus a `version` that is a hash of the whole set. It changes whenever any asset changes.
 - The cache is named `offline-cache-<version>`. Install downloads the full list into the new cache. Activate deletes every other `offline-cache-*` cache.
 - A new build installs in the background but **waits** (no `skipWaiting`) until the old version's tabs/windows are closed, then activates. So a page never mixes old shell with new assemblies. Practically: after deploying, open the app once online (it fetches the update), close it fully, open it again: you now have the new build. The placeholder shows the build identifier so you can tell.
-- The worker derives its base path from its own URL, so hosting under a sub-path needs no edit to it. `index.html`'s `<base href>` is handled by the deploy work.
+- The worker derives its base path from its own URL, so hosting under a sub-path needs no edit to it. `index.html`'s `<base href>` is rewritten at publish time by `scripts/publish-pages.sh`, which also updates `index.html`'s hash in `service-worker-assets.js` (the worker checks it, so skipping that would break the offline install). See the README Deploy section.
 - No permissions are requested and no data is collected.
 
 ## Automated or inspectable checks (no phone)

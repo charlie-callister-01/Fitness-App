@@ -7,3 +7,6 @@ TestResults/
 *.user
 *.suo
 .claude/worktrees/
+
+# Local publish output (scripts/publish-pages.sh)
+/out*/
