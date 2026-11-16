@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,csproj,props,targets,razor,html,css,js,webmanifest}]
+indent_size = 2
+
+# Web assets derived from the Blazor template (and the 404 page / ui.css written to match)
+# use 4-space indents; keep them that way rather than reformatting template files.
+[{src/Web/wwwroot/**,src/Ui/wwwroot/**,deploy/**}.{html,css,js}]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_sort_system_directives_first = true

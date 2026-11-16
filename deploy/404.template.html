@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Fitness App</title>
+    <script>
+        // GitHub Pages serves this file for any unknown path. Turn the requested path into
+        // a query string on the app root (/repo/?/the/path) so index.html can restore it.
+        // segmentCount is the number of base-path segments: 1 for a project site, 0 for a root host.
+        // Based on the spa-github-pages technique. publish-pages.sh fills in the count.
+        // The decoding half is the restore script in src/Web/wwwroot/index.html: keep the two in sync.
+        const segmentCount = __SEGMENT_COUNT__;
+        const l = window.location;
+        l.replace(
+            l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+            l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?/' +
+            l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+            l.hash
+        );
+    </script>
+</head>
+<body></body>
+</html>

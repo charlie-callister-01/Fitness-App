@@ -1,0 +1,14 @@
+<Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="UiAssemblies">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <p>Page not found.</p>
+    </NotFound>
+</Router>
+
+@code {
+    // Pages live in the Ui assembly; the router must be told to scan it.
+    private static readonly System.Reflection.Assembly[] UiAssemblies = [typeof(Ui.Pages.Home).Assembly];
+}

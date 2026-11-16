@@ -1,0 +1,48 @@
+name: Deploy
+
+# On every push to main: build and test, then publish and deploy to GitHub Pages.
+# Needs the repo setting Settings > Pages > Source = "GitHub Actions" (one-time owner step).
+# Until that is set, the deploy job fails; build-and-test still runs.
+on:
+  push:
+    branches: [main]
+
+env:
+  # The single base-path value. GitHub Pages project sites live at /<repo-name>/.
+  # Moving to a root host (for example Cloudflare Pages) means changing this to "/".
+  BASE_PATH: /Fitness-App/
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/build-and-test.yml
+    permissions:
+      contents: read
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/configure-pages@v5
+      - name: Publish
+        run: scripts/publish-pages.sh "$BASE_PATH" out "$GITHUB_SHA"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out/wwwroot
+      - id: deployment
+        uses: actions/deploy-pages@v4

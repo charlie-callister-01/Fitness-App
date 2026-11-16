@@ -10,6 +10,7 @@ Start here in a new session. The grilling session (usage, then practical, then t
 | [`technical-brief.md`](technical-brief.md) | Stack, solution layout, storage, data exchange, testing, hosting |
 | [`build-plan.md`](build-plan.md) | The two tracks, proposed stages, inputs still needed, the first step |
 | [`design-brief.md`](design-brief.md) | Self-contained brief to give the UI/UX design agent (requirements, constraints, and the design document and assets we want back) |
+| [`pwa-manual-checks.md`](pwa-manual-checks.md) | How the PWA caches and updates, and the manual phone checks (install, airplane mode, update) |
 | [`grilling-log.md`](grilling-log.md) | The essence of every question and answer (Q1 to Q78) |
 | [`adr/`](adr/) | Hard-to-reverse decisions: 0001 data foundation, 0002 stack, 0003 storage |
 | [`agents/`](agents/) | Skill config: GitHub issues, triage labels, domain docs layout |

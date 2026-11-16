@@ -1,0 +1,17 @@
+name: CI
+
+# Build and test every pull request. No secrets are used.
+# Deploy lives in its own workflow file.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/build-and-test.yml
