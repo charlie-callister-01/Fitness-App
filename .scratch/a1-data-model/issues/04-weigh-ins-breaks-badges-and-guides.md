@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Spec sections and example for the four entities added; conformance test updated
 - [ ] Round trip of each entity is identical, personal notes kept separate from Guide content

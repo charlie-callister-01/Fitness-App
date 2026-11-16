@@ -35,4 +35,17 @@ public partial class DataSpecConformanceTests
         Assert.Equal(3, result.Document!.Exercises!.Count);
         Assert.NotNull(result.Document.Settings);
     }
+
+    [Fact]
+    public void Worked_example_covers_weigh_ins_breaks_badges_and_guides()
+    {
+        var example = JsonBlock().Match(File.ReadAllText(SpecPath())).Groups["json"].Value;
+
+        var document = ExchangeFormat.Read(example).Document!;
+
+        Assert.Single(document.WeighIns!);
+        Assert.Single(document.Breaks!);
+        Assert.Single(document.Badges!);
+        Assert.Equal("goblet-squat", Assert.Single(document.Guides!).ExerciseId);
+    }
 }

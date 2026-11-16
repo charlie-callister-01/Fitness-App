@@ -9,4 +9,8 @@ public sealed record ExchangeDocument(
     DateTimeOffset? ExportedAt,
     string? ExportedFrom,
     IReadOnlyList<Exercise>? Exercises,
-    Settings? Settings);
+    Settings? Settings,
+    IReadOnlyList<WeighIn>? WeighIns = null,
+    IReadOnlyList<Break>? Breaks = null,
+    IReadOnlyList<Badge>? Badges = null,
+    IReadOnlyList<Guide>? Guides = null);
