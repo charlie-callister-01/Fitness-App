@@ -5,12 +5,15 @@ namespace Core.Serialisation;
 
 /// <summary>
 /// Reads and validates the <c>plans</c> collection of a version 1 document: Plans, their Phases and Sessions, and every cross-reference
-/// between them. Exercise references are checked against the document's Exercise library when it has one; a Plan-only document
-/// (no <c>exercises</c>) can't be checked here, so its Exercise IDs are resolved when it is imported.
+/// between them. Exercise references are checked against the document's Exercise library when it has one (the context's Exercise scope);
+/// a Plan-only document (no <c>exercises</c>) can't be checked here, so its Exercise IDs are resolved when it is imported.
 /// </summary>
 internal static class PlanReader
 {
-    public static List<Plan>? Read(FieldReader root, IReadOnlyList<Exercise>? exercises, IssueSink sink)
+    /// <summary>The fields that decide whether a Phase takes part in the week-range check.</summary>
+    private readonly record struct PhaseHeader(string Id, string Focus, int StartWeek, int EndWeek);
+
+    public static List<Plan>? Read(FieldReader root)
     {
         var items = root.OptionalObjectArray("plans");
         if (items is null)
@@ -18,29 +21,30 @@ internal static class PlanReader
             return null;
         }
 
-        var context = new Context(sink, exercises?.Select(e => e.Id).ToHashSet());
         var plans = new List<Plan>();
-        var seenPlanIds = new HashSet<string>();
         var activePlans = new List<(int Index, string Id)>();
         foreach (var (reader, index) in items)
         {
-            var errorsBefore = sink.Errors.Count;
-            var plan = ReadPlan(reader, context);
-
-            sink.CheckUnique(seenPlanIds, reader, "Plan", plan.Id);
-
-            if (plan.IsActive)
+            var plan = reader.ReadRecord(r =>
             {
-                activePlans.Add((index, plan.Id));
-            }
+                var read = ReadPlan(r);
+                r.CheckUnique("Plan", "id", read.Id);
+                if (read.IsActive)
+                {
+                    // Counted even when the Plan has other errors, so one bad field doesn't also cause "no active plan".
+                    activePlans.Add((index, read.Id));
+                }
 
-            if (sink.Errors.Count == errorsBefore)
+                return read;
+            });
+
+            if (plan is not null)
             {
                 plans.Add(plan);
             }
         }
 
-        CheckExactlyOneActive(items.Count, activePlans, sink);
+        CheckExactlyOneActive(items.Count, activePlans, root.Context.Sink);
         return plans;
     }
 
@@ -64,7 +68,7 @@ internal static class PlanReader
         }
     }
 
-    private static Plan ReadPlan(FieldReader reader, Context context)
+    private static Plan ReadPlan(FieldReader reader)
     {
         var id = reader.RequiredId("id");
         var name = reader.RequiredString("name");
@@ -79,84 +83,84 @@ internal static class PlanReader
 
         if (goalDate is { } goalOn && startDate != default && goalOn < startDate)
         {
-            var path = reader.ChildPath("goalDate");
-            context.Sink.Error(path, "out_of_range",
-                $"{path} must be on or after the start date {startDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)} (it was {goalOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}).");
+            reader.Report("goalDate", "out_of_range",
+                $"{reader.ChildPath("goalDate")} must be on or after the start date {startDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)} (it was {goalOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}).");
         }
 
-        var sessions = ReadSessions(reader, context);
-        var phases = ReadPhases(reader, context, context.PlanSessionIds);
-        reader.WarnAboutUnknownFields();
+        // Session IDs are collected even from Sessions with errors, so one bad Session doesn't cause "unknown Session" noise in overrides.
+        var sessionIds = new HashSet<string>();
+        var sessions = ReadSessions(reader, sessionIds);
+        var phases = ReadPhases(reader, ReferenceScope.ForSessionsInPlan(sessionIds));
 
         return new Plan(id, name, isActive, startDate, goal, goalDate, weeklyTarget, streakMin, streakCountsCustom, increment, phases, sessions);
     }
 
-    private static List<Session> ReadSessions(FieldReader plan, Context context)
+    private static List<Session> ReadSessions(FieldReader plan, HashSet<string> planSessionIds) =>
+        (plan.OptionalObjectArray("sessions") ?? [])
+            .Select(item => item.Reader.ReadRecord(reader =>
+            {
+                var id = reader.RequiredId("id");
+                var name = reader.RequiredString("name");
+                var day = reader.RequiredEnum<DayOfWeek>("defaultDay");
+                var type = reader.RequiredEnum<SessionType>("type");
+                var interval = reader.OptionalInt("benchmarkIntervalWeeks", min: 1);
+                var rows = SessionRowReader.ReadRows(reader, "exercises");
+
+                reader.CheckUnique("Session", "id", id);
+                if (id.Length > 0)
+                {
+                    planSessionIds.Add(id);
+                }
+
+                return new Session(id, name, day, type, interval, rows);
+            }))
+            .OfType<Session>()
+            .ToList();
+
+    private static List<Phase> ReadPhases(FieldReader plan, ReferenceScope planSessions)
     {
-        var sessions = new List<Session>();
-        context.PlanSessionIds = [];
-        foreach (var (reader, _) in plan.OptionalObjectArray("sessions") ?? [])
+        var phases = new List<Phase>();
+        var rangedPhases = new List<(PhaseHeader Header, FieldReader Reader)>();
+        foreach (var (phaseReader, _) in plan.OptionalObjectArray("phases") ?? [])
         {
-            var errorsBefore = context.Sink.Errors.Count;
-            var id = reader.RequiredId("id");
-            var name = reader.RequiredString("name");
-            var day = reader.RequiredEnum<DayOfWeek>("defaultDay");
-            var type = reader.RequiredEnum<SessionType>("type");
-            var interval = reader.OptionalInt("benchmarkIntervalWeeks", min: 1);
-            var rows = ReadRows(reader, context);
-            reader.WarnAboutUnknownFields();
-
-            context.Sink.CheckUnique(context.SessionIds, reader, "Session", id);
-            if (id.Length > 0)
+            var phase = phaseReader.ReadRecord(reader =>
             {
-                // Remembered even if the Session itself has errors, so one bad Session doesn't cause "unknown Session" noise.
-                context.PlanSessionIds.Add(id);
-            }
+                var header = reader.Attempt(() =>
+                {
+                    var id = reader.RequiredId("id");
+                    var focus = reader.RequiredString("focus");
+                    var start = reader.RequiredInt("startWeek", min: 1);
+                    var end = reader.RequiredInt("endWeek", min: Math.Max(start, 1));
+                    return new PhaseHeader(id, focus, start, end);
+                });
+                var goals = ReadGoals(reader);
+                var overrides = ReadOverrides(reader, planSessions);
 
-            if (context.Sink.Errors.Count == errorsBefore)
+                reader.CheckUnique("Phase", "id", header.Value.Id);
+                // A Phase with a bad goal or override still takes part in the week-range check, so that bad field doesn't cause gap noise.
+                if (header.IsValid)
+                {
+                    rangedPhases.Add((header.Value, reader));
+                }
+
+                return new Phase(header.Value.Id, header.Value.Focus, header.Value.StartWeek, header.Value.EndWeek, goals, overrides);
+            });
+
+            if (phase is not null)
             {
-                sessions.Add(new Session(id, name, day, type, interval, rows));
+                phases.Add(phase);
             }
         }
 
-        return sessions;
-    }
-
-    private static List<SessionExercise> ReadRows(FieldReader parent, Context context) =>
-        SessionRowReader.ReadRows(parent, "exercises", context.Sink, context.ExerciseIds);
-
-    private static List<Phase> ReadPhases(FieldReader plan, Context context, HashSet<string> sessionIds)
-    {
-        var phases = new List<(Phase Phase, FieldReader Reader)>();
-        foreach (var (reader, _) in plan.OptionalObjectArray("phases") ?? [])
-        {
-            var errorsBefore = context.Sink.Errors.Count;
-            var id = reader.RequiredId("id");
-            var focus = reader.RequiredString("focus");
-            var start = reader.RequiredInt("startWeek", min: 1);
-            var end = reader.RequiredInt("endWeek", min: Math.Max(start, 1));
-            var weeksAreValid = context.Sink.Errors.Count == errorsBefore;
-            var goals = ReadGoals(reader, context);
-            var overrides = ReadOverrides(reader, context, sessionIds);
-            reader.WarnAboutUnknownFields();
-
-            context.Sink.CheckUnique(context.PhaseIds, reader, "Phase", id);
-            // A Phase with other problems still takes part in the week-range check, so one bad field doesn't cause gap noise.
-            if (weeksAreValid)
-            {
-                phases.Add((new Phase(id, focus, start, end, goals, overrides), reader));
-            }
-        }
-
-        CheckWeekRanges(phases, context.Sink);
-        return phases.Select(p => p.Phase).ToList();
+        CheckWeekRanges(rangedPhases, plan.Context.Sink);
+        return phases;
     }
 
     /// <summary>Phases may be listed in any order but, by week, must start at week 1 and follow each other with no gap and no overlap.</summary>
-    private static void CheckWeekRanges(List<(Phase Phase, FieldReader Reader)> phases, IssueSink sink)
+    private static void CheckWeekRanges(List<(PhaseHeader Header, FieldReader Reader)> phases, IssueSink sink)
     {
         var expectedStart = 1;
-        foreach (var (phase, reader) in phases.OrderBy(p => p.Phase.StartWeek))
+        foreach (var (phase, reader) in phases.OrderBy(p => p.Header.StartWeek))
         {
             var path = reader.ChildPath("startWeek");
             if (phase.StartWeek > expectedStart)
@@ -175,72 +179,32 @@ internal static class PlanReader
         }
     }
 
-    private static List<PhaseGoal> ReadGoals(FieldReader phase, Context context)
+    private static List<PhaseGoal> ReadGoals(FieldReader phase) =>
+        (phase.OptionalObjectArray("goals") ?? [])
+            .Select(item => item.Reader.ReadRecord(reader => new PhaseGoal(
+                reader.RequiredExercise("exerciseId"),
+                reader.RequiredPositiveDouble("weightKg"),
+                reader.RequiredInt("reps", min: 1))))
+            .OfType<PhaseGoal>()
+            .ToList();
+
+    private static List<SessionOverride> ReadOverrides(FieldReader phase, ReferenceScope planSessions)
     {
-        var goals = new List<PhaseGoal>();
-        foreach (var (reader, _) in phase.OptionalObjectArray("goals") ?? [])
-        {
-            var errorsBefore = context.Sink.Errors.Count;
-            var exerciseId = ReadExerciseReference(reader, context);
-            var weightKg = reader.RequiredPositiveDouble("weightKg");
-            var reps = reader.RequiredInt("reps", min: 1);
-            reader.WarnAboutUnknownFields();
-
-            if (context.Sink.Errors.Count == errorsBefore)
-            {
-                goals.Add(new PhaseGoal(exerciseId, weightKg, reps));
-            }
-        }
-
-        return goals;
-    }
-
-    private static List<SessionOverride> ReadOverrides(FieldReader phase, Context context, HashSet<string> sessionIds)
-    {
-        var overrides = new List<SessionOverride>();
         var seen = new HashSet<string>();
-        foreach (var (reader, _) in phase.OptionalObjectArray("sessionOverrides") ?? [])
-        {
-            var errorsBefore = context.Sink.Errors.Count;
-            var sessionId = reader.RequiredId("sessionId");
-            var rows = ReadRows(reader, context);
-            reader.WarnAboutUnknownFields();
-
-            var path = reader.ChildPath("sessionId");
-            if (sessionId.Length > 0 && !sessionIds.Contains(sessionId))
+        return (phase.OptionalObjectArray("sessionOverrides") ?? [])
+            .Select(item => item.Reader.ReadRecord(reader =>
             {
-                context.Sink.Error(path, "unknown_session", $"{path} \"{sessionId}\" is not a Session in this Plan.");
-            }
-            else if (sessionId.Length > 0 && !seen.Add(sessionId))
-            {
-                context.Sink.Error(path, "duplicate_id", $"{path} \"{sessionId}\" is overridden more than once in this Phase.");
-            }
+                var sessionId = reader.RequiredReference("sessionId", planSessions);
+                var rows = SessionRowReader.ReadRows(reader, "exercises");
 
-            if (context.Sink.Errors.Count == errorsBefore)
-            {
-                overrides.Add(new SessionOverride(sessionId, rows));
-            }
-        }
+                if (sessionId.Length > 0 && !seen.Add(sessionId))
+                {
+                    reader.Report("sessionId", "duplicate_id", $"{reader.ChildPath("sessionId")} \"{sessionId}\" is overridden more than once in this Phase.");
+                }
 
-        return overrides;
-    }
-
-    private static string ReadExerciseReference(FieldReader reader, Context context) =>
-        SessionRowReader.ReadExerciseReference(reader, "exerciseId", context.Sink, context.ExerciseIds);
-
-    /// <summary>Shared state for one read: where errors go, the Exercise IDs references are checked against, and IDs seen so far.</summary>
-    private sealed class Context(IssueSink sink, HashSet<string>? exerciseIds)
-    {
-        public IssueSink Sink { get; } = sink;
-
-        /// <summary>Null when the document has no Exercise library, which switches reference checking off.</summary>
-        public HashSet<string>? ExerciseIds { get; } = exerciseIds;
-
-        public HashSet<string> SessionIds { get; } = [];
-
-        /// <summary>IDs of the Sessions of the Plan being read.</summary>
-        public HashSet<string> PlanSessionIds { get; set; } = [];
-
-        public HashSet<string> PhaseIds { get; } = [];
+                return new SessionOverride(sessionId, rows);
+            }))
+            .OfType<SessionOverride>()
+            .ToList();
     }
 }

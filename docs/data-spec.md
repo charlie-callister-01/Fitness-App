@@ -18,6 +18,7 @@ The written definition of the app's data and its one JSON exchange format (the B
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `formatVersion` | integer | yes | Starts at 1. See Versioning. |
+| `readMe` | object | no | The "how to read this" block. See below. |
 | `exportedAt` | timestamp | no | When the document was written. |
 | `exportedFrom` | string | no | App build that wrote it. |
 | `exercises` | array of Exercise | no | |
@@ -30,6 +31,10 @@ The written definition of the app's data and its one JSON exchange format (the B
 | `workouts` | array of Workout | no | Each holds its Sets and Pain check. See Workout. |
 
 An absent collection means "not part of this document". That is how partial documents (Plan-only, Guides-only) work with no second format. A present-but-empty collection means "none".
+
+### The `readMe` block
+
+The writer puts a short `readMe` object straight after `formatVersion`, so an LLM or person handed the bare file understands it. It holds plain-text strings: `about` (points at this spec for the given `formatVersion`), `formatVersion` (what the version number means), `units` (kg, km, metres, seconds, date and timestamp formats), `ids` (the ID rules) and `absentFields` (absent versus null, absent collections). The reader accepts a `readMe` of any shape and ignores it: no warning, no error, and it is not kept in the model. Written content is the same in every document, so it never affects round-tripping.
 
 ### Versioning
 

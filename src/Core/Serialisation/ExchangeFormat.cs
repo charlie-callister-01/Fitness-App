@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Core.Model;
 
 namespace Core.Serialisation;
@@ -23,6 +24,9 @@ public static class ExchangeFormat
 
     public static string Write(ExchangeDocument document, bool indented = false)
     {
+        var body = (JsonObject)JsonSerializer.SerializeToNode(document, ExchangeJsonContext.Default.ExchangeDocument)!;
+        var withReadMe = WithReadMeAfterVersion(body);
+
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
         {
@@ -30,10 +34,27 @@ public static class ExchangeFormat
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         }))
         {
-            JsonSerializer.Serialize(writer, document, ExchangeJsonContext.Default.ExchangeDocument);
+            withReadMe.WriteTo(writer);
         }
 
         return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    /// <summary>Puts the "how to read this" block straight after <c>formatVersion</c>, ahead of the data.</summary>
+    private static JsonObject WithReadMeAfterVersion(JsonObject body)
+    {
+        var result = new JsonObject();
+        foreach (var (name, value) in body.ToList())
+        {
+            body.Remove(name);
+            result.Add(name, value);
+            if (name == VersionField)
+            {
+                result.Add(ExchangeReadMe.Field, ExchangeReadMe.Build());
+            }
+        }
+
+        return result;
     }
 
     public static ReadResult Read(string json)
