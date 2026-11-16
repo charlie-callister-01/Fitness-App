@@ -5,7 +5,7 @@ See also: [ADR 0001](adr/0001-schema-first-with-permanent-ids-and-versioned-exch
 ## Stack
 
 - **Platform:** a PWA now (installable from a link, works offline), with an installable native app later. The owner works in C# professionally and prefers it.
-- **Language and UI:** C# on the current .NET LTS (believed to be .NET 10; **confirm in the first stage**). **Blazor WebAssembly** PWA now; **.NET MAUI Blazor Hybrid** later, reusing the same Razor components.
+- **Language and UI:** C# on the current .NET LTS (**.NET 10, confirmed as LTS**; see [ADR 0004](adr/0004-dotnet-10-lts-pinned.md)). **Blazor WebAssembly** PWA now; **.NET MAUI Blazor Hybrid** later, reusing the same Razor components.
 - **Why not TypeScript + Capacitor:** the lowest-friction web-to-app path and a bigger community, but the owner would read unfamiliar code in every review. Trade-offs of the chosen route: a larger runtime download on first load (cached afterwards), a smaller PWA-specific community, and browser storage needs a small JavaScript bridge.
 - **Why PWA first:** instant deploy by pushing, no Apple developer account or Mac needed to test, offline works with a service worker. Moving to a native shell later is cheap only if UI, logic and storage stay separate layers.
 - **UI library / styling:** undecided on purpose. Waits for the owner's Claude Design document.

@@ -45,7 +45,7 @@ None of these block A0 to A4.
 Run `/to-spec` for **A0 (scaffold and delivery)**, or A0 plus A1 if the owner prefers one larger spec, then `/to-tickets` with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
 
 ## Open items to settle during specs
-- The exact .NET LTS version and Blazor template details.
+- ~~The exact .NET LTS version and Blazor template details.~~ Settled: .NET 10 LTS, standalone Blazor WebAssembly PWA template ([ADR 0004](adr/0004-dotnet-10-lts-pinned.md)).
 - UI library and styling (waits for Track B).
 - The precise JSON schema and version number scheme (A1).
 - Whether `/to-spec` should treat A0 and A1 as one spec or two.
