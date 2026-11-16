@@ -15,15 +15,18 @@ base="/${base#/}"
 base="${base%/}/"
 [ "$base" = "//" ] && base="/"
 
-# Number of path segments in the base: 0 for root, 1 for a project site.
+# Number of path segments in the base. Only 0 (root host) or 1 (project site) are supported,
+# which is all GitHub Pages and Cloudflare Pages need; deeper bases would break the 404 redirect.
 trimmed="${base#/}"; trimmed="${trimmed%/}"
-if [ -z "$trimmed" ]; then segments=0; else segments=$(awk -F/ '{print NF}' <<<"$trimmed"); fi
+segments=$(( ${#trimmed} > 0 ? 1 : 0 ))
+case "$trimmed" in */*) echo "base path must have at most 1 segment: $base" >&2; exit 1 ;; esac
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 site="$out/wwwroot"
 rm -rf "$out"
 dotnet publish "$root/src/Web" -c Release -o "$out" -p:InformationalVersion="$version"
 
+# Note: `sed -i` without a suffix assumes GNU sed (CI and Git Bash); BSD/macOS sed needs `-i ''`.
 hash_of() { echo "sha256-$(openssl dgst -sha256 -binary "$1" | openssl base64 -A)"; }
 
 old_hash="$(hash_of "$site/index.html")"

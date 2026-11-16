@@ -5,12 +5,7 @@ namespace Web;
 
 internal sealed class AssemblyBuildInfo : IBuildInfo
 {
-    public string Identifier { get; } = Resolve();
-
-    private static string Resolve()
-    {
-        var version = typeof(AssemblyBuildInfo).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        return version ?? "dev";
-    }
+    public string Identifier { get; } = BuildIdentifier.Shorten(
+        typeof(AssemblyBuildInfo).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
 }

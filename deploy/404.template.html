@@ -8,8 +8,9 @@
         // a query string on the app root (/repo/?/the/path) so index.html can restore it.
         // segmentCount is the number of base-path segments: 1 for a project site, 0 for a root host.
         // Based on the spa-github-pages technique. publish-pages.sh fills in the count.
-        var segmentCount = __SEGMENT_COUNT__;
-        var l = window.location;
+        // The decoding half is the restore script in src/Web/wwwroot/index.html: keep the two in sync.
+        const segmentCount = __SEGMENT_COUNT__;
+        const l = window.location;
         l.replace(
             l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
             l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?/' +

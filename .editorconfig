@@ -11,6 +11,11 @@ indent_size = 4
 [*.{json,yml,yaml,csproj,props,targets,razor,html,css,js,webmanifest}]
 indent_size = 2
 
+# Web assets derived from the Blazor template (and the 404 page / ui.css written to match)
+# use 4-space indents; keep them that way rather than reformatting template files.
+[{src/Web/wwwroot/**,src/Ui/wwwroot/**,deploy/**}.{html,css,js}]
+indent_size = 4
+
 [*.md]
 trim_trailing_whitespace = false
 
