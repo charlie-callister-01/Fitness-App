@@ -4,8 +4,7 @@ namespace Core.Serialisation;
 
 /// <summary>
 /// Reads and validates the <c>workouts</c> collection of a version 1 document: Workouts, their planned snapshot, entries, Sets and Pain check.
-/// Exercise references are checked when the document has an Exercise library, and Session references when it has Plans (the context's
-/// scopes); a Workouts-only document can't be checked here, so those references are resolved when it is imported.
+/// Structure only: references to Exercises and Sessions, and unique IDs, are checked by <see cref="DocumentValidator"/>.
 /// </summary>
 internal static class WorkoutReader
 {
@@ -18,12 +17,7 @@ internal static class WorkoutReader
         }
 
         return items
-            .Select(item => item.Reader.ReadRecord(reader =>
-            {
-                var workout = ReadWorkout(reader);
-                reader.CheckUnique("Workout", "id", workout.Id);
-                return workout;
-            }))
+            .Select(item => item.Reader.ReadRecord(ReadWorkout))
             .OfType<Workout>()
             .ToList();
     }
@@ -32,7 +26,7 @@ internal static class WorkoutReader
     {
         var id = reader.RequiredId("id");
         var date = reader.RequiredDate("date");
-        var sessionId = reader.OptionalSession("sessionId");
+        var sessionId = reader.OptionalId("sessionId");
         var loggedAfterwards = reader.OptionalBool("loggedAfterwards", defaultValue: false);
         var startedAt = reader.OptionalTimestamp("startedAt");
         var endedAt = reader.OptionalTimestamp("endedAt");
@@ -53,7 +47,7 @@ internal static class WorkoutReader
 
     private static WorkoutEntry ReadEntry(FieldReader reader)
     {
-        var exerciseId = reader.RequiredExercise("exerciseId");
+        var exerciseId = reader.RequiredId("exerciseId");
         var status = reader.RequiredEnum<EntryStatus>("status");
         var skipReason = reader.OptionalString("skipReason");
         var swappedFrom = ReadSwappedFrom(reader, status);
@@ -79,7 +73,7 @@ internal static class WorkoutReader
         const string field = "swappedFromExerciseId";
         if (status == EntryStatus.Swapped)
         {
-            return entry.RequiredExercise(field);
+            return entry.RequiredId(field);
         }
 
         if (entry.OptionalString(field) is not null)
@@ -106,7 +100,6 @@ internal static class WorkoutReader
         var distanceM = reader.OptionalPositiveDouble("distanceM");
         var isMax = reader.OptionalBool("isMax", defaultValue: false);
 
-        reader.CheckUnique("Set", "id", id);
         if (distanceKm is not null && distanceM is not null)
         {
             reader.Report("distanceM", "invalid_value",
@@ -125,7 +118,7 @@ internal static class WorkoutReader
                 var status = reader.RequiredEnum<PainStatus>("status");
                 var areas = reader.OptionalEnumList<BodyArea>("areas");
                 var note = reader.OptionalString("note");
-                var exerciseId = reader.OptionalExercise("exerciseId");
+                var exerciseId = reader.OptionalId("exerciseId");
                 var severity = status == PainStatus.Reported
                     ? reader.RequiredEnum<PainSeverity>("severity")
                     : reader.OptionalEnum<PainSeverity>("severity");
@@ -134,7 +127,6 @@ internal static class WorkoutReader
 
             var pain = fields.Value;
             PainCheckRules.Check(reader, pain.Status, pain.Areas, pain.Severity, fields.IsValid);
-            reader.CheckUnique("Pain check", "id", pain.Id);
             return pain;
         });
 }

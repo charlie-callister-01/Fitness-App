@@ -57,6 +57,12 @@ public static class ExchangeFormat
         return result;
     }
 
+    /// <summary>
+    /// Checks every cross-record rule (unique IDs, references, the single active Plan, Phase week coverage, planned rows) on a document that
+    /// is already in memory. Returns the problems found, empty when the document is valid. <see cref="Read"/> runs this after parsing.
+    /// </summary>
+    public static IReadOnlyList<FormatIssue> Validate(ExchangeDocument document) => DocumentValidator.Validate(document);
+
     public static ReadResult Read(string json)
     {
         if (string.IsNullOrWhiteSpace(json))

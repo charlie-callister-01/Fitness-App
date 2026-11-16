@@ -62,14 +62,14 @@ internal sealed partial class FieldReader
     public bool Has(string name) => TryAskFor(name, out _);
 
     /// <summary>
-    /// Runs a record-reading function in this object's scope: warns about unknown fields afterwards, and returns the record,
-    /// or null when the function returned null or reported any new error.
+    /// Runs a record-reading function in this object's scope: warns about unknown fields afterwards, and returns the record (even one that reported errors: the validate phase still needs its IDs),
+    /// or null when the function returned null.
     /// </summary>
     public T? ReadRecord<T>(Func<FieldReader, T?> read) where T : class
     {
         var attempt = Attempt(() => read(this));
         WarnAboutUnknownFields();
-        return attempt.IsValid ? attempt.Value : null;
+        return attempt.Value;
     }
 
     /// <summary>Runs a group of reads and says whether they all came out clean. The value is returned even when they didn't. Doesn't warn about unknown fields.</summary>
@@ -78,17 +78,6 @@ internal sealed partial class FieldReader
         var errorsBefore = Sink.Errors.Count;
         var value = read();
         return new ReadAttempt<T>(value, Sink.Errors.Count == errorsBefore);
-    }
-
-    /// <summary>Reports <c>duplicate_id</c> when <paramref name="id"/> was already used by another record of <paramref name="kind"/> in this document.</summary>
-    public void CheckUnique(string kind, string field, string id)
-    {
-        if (id.Length > 0 && !Context.SeenIds(kind).Add(id))
-        {
-            var path = ChildPath(field);
-            var what = field == "id" ? "ID" : field;
-            Sink.Error(path, "duplicate_id", $"{path} \"{id}\" is used by more than one {kind}. Every {kind} needs its own {what}.");
-        }
     }
 
     public string RequiredString(string name)
@@ -121,36 +110,6 @@ internal sealed partial class FieldReader
         var id = OptionalString(name);
         return id is null ? null : ValidId(name, id);
     }
-
-    /// <summary>A required ID that must name something in <paramref name="scope"/>; an unknown one is reported.</summary>
-    public string RequiredReference(string name, ReferenceScope scope)
-    {
-        var id = RequiredId(name);
-        if (id.Length > 0)
-        {
-            scope.Check(Sink, ChildPath(name), id);
-        }
-
-        return id;
-    }
-
-    /// <summary>An optional ID that, when present, must name something in <paramref name="scope"/>.</summary>
-    public string? OptionalReference(string name, ReferenceScope scope)
-    {
-        var id = OptionalId(name);
-        if (id is not null)
-        {
-            scope.Check(Sink, ChildPath(name), id);
-        }
-
-        return id;
-    }
-
-    public string RequiredExercise(string name) => RequiredReference(name, Context.Exercises);
-
-    public string? OptionalExercise(string name) => OptionalReference(name, Context.Exercises);
-
-    public string? OptionalSession(string name) => OptionalReference(name, Context.Sessions);
 
     /// <summary>The one ID rule: returns <paramref name="id"/> when it is valid, otherwise reports <c>invalid_id</c> and returns null.</summary>
     private string? ValidId(string name, string id)

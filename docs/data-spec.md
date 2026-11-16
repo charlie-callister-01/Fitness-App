@@ -475,6 +475,7 @@ This block is parsed and validated by the real reader in the test suite.
 | `unknown_exercise`, `unknown_session` | A reference (Plan row, Phase goal, Guide, Workout entry, planned snapshot row, Pain check) to an Exercise or Session ID that does not exist. |
 | `no_active_plan`, `multiple_active_plans` | Plans present but not exactly one active. |
 | `phase_gap`, `phase_overlap` | Phase week ranges leave a week uncovered or share a week. |
+| `not_in_planned` | A skipped entry's `exerciseId`, or a swapped entry's `swappedFromExerciseId`, is not one of the Workout's `planned` rows. Only checked when `planned` is not empty. |
 | `end_before_start` | A Break's `endDate` is before its `startDate`, or a Workout's `endedAt` is before its `startedAt`. |
 | `invalid_version`, `unsupported_version` | See Versioning. |
 | `unknown_field` | Warning only: an unrecognised field was ignored. |

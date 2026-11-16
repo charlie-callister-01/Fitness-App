@@ -6,10 +6,9 @@ namespace Core.Serialisation;
 /// <summary>
 /// Reads and validates a format version 1 document. A future version N+1 adds a reader (or a migration from N) beside this one.
 /// <para>
-/// Flow: one <see cref="ReadContext"/> is built here and carried by every <see cref="FieldReader"/>. Collections are read in dependency order
-/// (Exercises, Settings, Body and Guides, Plans, Workouts). After Exercises and Plans are read, their IDs become the context's reference
-/// scopes, so later collections are checked against them. Each record is read through <see cref="FieldReader.ReadRecord{T}"/>, which drops
-/// records that produced errors and always reports unknown fields.
+/// Two phases. Parse: one <see cref="ReadContext"/> is carried by every <see cref="FieldReader"/>, each record is read through
+/// <see cref="FieldReader.ReadRecord{T}"/>, and only structural errors are collected; a record with a bad field is kept, with a placeholder
+/// in that field. Validate: <see cref="DocumentValidator"/> then checks every cross-record rule over the parsed document.
 /// </para>
 /// </summary>
 internal static class V1Reader
@@ -24,18 +23,28 @@ internal static class V1Reader
         var exportedAt = fields.OptionalTimestamp("exportedAt");
         var exportedFrom = fields.OptionalString("exportedFrom");
         var exercises = ReadExercises(fields);
-        context.Exercises = ReferenceScope.ForExercises(exercises);
         var settings = ReadSettings(fields);
         var bodyAndGuides = BodyAndGuideReader.Read(fields);
         var plans = PlanReader.Read(fields);
-        context.Sessions = ReferenceScope.ForSessions(plans);
         var workouts = WorkoutReader.Read(fields);
         fields.WarnAboutUnknownFields();
 
-        return ReadResult.From(
-            new ExchangeDocument(version, exportedAt, exportedFrom, exercises, settings,
-                bodyAndGuides.WeighIns, bodyAndGuides.Breaks, bodyAndGuides.Badges, bodyAndGuides.Guides, plans, workouts),
-            context.Sink);
+        var document = new ExchangeDocument(version, exportedAt, exportedFrom, exercises, settings,
+            bodyAndGuides.WeighIns, bodyAndGuides.Breaks, bodyAndGuides.Badges, bodyAndGuides.Guides, plans, workouts);
+        context.Sink.Errors.AddRange(CrossRecordIssues(document, context.Sink.Errors));
+        return ReadResult.From(document, context.Sink);
+    }
+
+    /// <summary>
+    /// The validate phase, minus what the parse phase already explained. A field that failed to read holds a placeholder, so two kinds of
+    /// follow-on issue are dropped: one at a path the parse phase already reported, and "no active Plan" when a Plan's <c>isActive</c> was unreadable.
+    /// </summary>
+    private static IEnumerable<FormatIssue> CrossRecordIssues(ExchangeDocument document, IReadOnlyList<FormatIssue> parseErrors)
+    {
+        var parsePaths = parseErrors.Select(e => e.Path).ToHashSet();
+        var isActiveUnreadable = parsePaths.Any(p => p.StartsWith("plans[", StringComparison.Ordinal) && p.EndsWith("].isActive", StringComparison.Ordinal));
+        return DocumentValidator.Validate(document)
+            .Where(issue => !parsePaths.Contains(issue.Path) && !(isActiveUnreadable && issue.Code == "no_active_plan"));
     }
 
     private static List<Exercise>? ReadExercises(FieldReader root)
@@ -54,7 +63,6 @@ internal static class V1Reader
                 var logKind = reader.RequiredEnum<LogKind>("logKind");
                 var isBenchmark = reader.OptionalBool("isBenchmark", defaultValue: false);
                 var tags = ReadTags(reader);
-                reader.CheckUnique("Exercise", "id", id);
                 return new Exercise(id, name, logKind, tags, isBenchmark);
             }))
             .OfType<Exercise>()
