@@ -23,9 +23,22 @@ public partial class DataSpecConformanceTests
     }
 
     [Fact]
+    public void Plan_example_in_the_data_spec_is_read_cleanly_by_the_real_reader()
+    {
+        var example = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).Single(j => j.Contains("\"plans\""));
+
+        var result = ExchangeFormat.Read(example);
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(e => $"{e.Path}: {e.Message}")));
+        Assert.Empty(result.Warnings);
+        var plan = Assert.Single(result.Document!.Plans!);
+        Assert.Equal((2, 2), (plan.Phases.Count, plan.Sessions.Count));
+    }
+
+    [Fact]
     public void Worked_example_in_the_data_spec_is_read_cleanly_by_the_real_reader()
     {
-        var example = JsonBlock().Match(File.ReadAllText(SpecPath())).Groups["json"].Value;
+        var example = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).First(j => j.Contains("\"exportedAt\""));
         Assert.NotEmpty(example);
 
         var result = ExchangeFormat.Read(example);

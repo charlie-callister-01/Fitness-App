@@ -9,4 +9,5 @@ public sealed record ExchangeDocument(
     DateTimeOffset? ExportedAt,
     string? ExportedFrom,
     IReadOnlyList<Exercise>? Exercises,
-    Settings? Settings);
+    Settings? Settings,
+    IReadOnlyList<Plan>? Plans = null);

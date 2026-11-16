@@ -16,9 +16,10 @@ internal static class V1Reader
         var exportedFrom = fields.OptionalString("exportedFrom");
         var exercises = ReadExercises(fields, sink);
         var settings = ReadSettings(fields);
+        var plans = PlanReader.Read(fields, exercises, sink);
         fields.WarnAboutUnknownFields();
 
-        return ReadResult.From(new ExchangeDocument(version, exportedAt, exportedFrom, exercises, settings), sink);
+        return ReadResult.From(new ExchangeDocument(version, exportedAt, exportedFrom, exercises, settings, plans), sink);
     }
 
     private static List<Exercise>? ReadExercises(FieldReader root, IssueSink sink)

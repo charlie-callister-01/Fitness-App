@@ -2,7 +2,7 @@
 
 The written definition of the app's data and its one JSON exchange format (the Backup, the LLM analysis Export and the Plan/Guide Import are all this same document). The code in `Core` matches this document; a conformance test parses the example below with the real reader, so the two cannot drift. Terms follow [`../GLOSSARY.md`](../GLOSSARY.md).
 
-Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise and Settings are specified. Guides, Plans, Workouts, Weigh-ins, Pain checks, Breaks and Badges are added by later A1 tickets.**
+Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise, Settings and Plan/Phase/Session are specified. Guides, Workouts, Weigh-ins, Pain checks, Breaks and Badges are added by later A1 tickets.**
 
 ## Conventions
 
@@ -22,6 +22,7 @@ Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise
 | `exportedFrom` | string | no | App build that wrote it. |
 | `exercises` | array of Exercise | no | |
 | `settings` | Settings | no | |
+| `plans` | array of Plan | no | Exactly one active when non-empty. See Plan. |
 
 An absent collection means "not part of this document". That is how partial documents (Plan-only, Guides-only) work with no second format. A present-but-empty collection means "none".
 
@@ -82,6 +83,139 @@ One object holding app-wide settings, so a Backup restores everything.
 | `streakMinWorkoutsPerWeek` | integer >= 1 | yes | Streak rule: Workouts needed in a week. |
 | `streakCountsCustomWorkouts` | boolean | yes | Streak rule: whether Custom workouts count. |
 
+## Plan, Phase and Session
+
+`plans` is an array of Plans. Several can exist; **exactly one has `isActive: true`** whenever the array is non-empty (an empty array means "no Plans"). A Plan is self-contained: it carries its own weekly target, Streak rules and weight increment (the Settings values of the same names are app-wide defaults).
+
+### Plan
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among Plans (`duplicate_id`). |
+| `name` | string | yes | Non-blank label. |
+| `isActive` | boolean | yes | Exactly one Plan is active (`no_active_plan`, `multiple_active_plans`; the latter is reported at the second active Plan). |
+| `startDate` | date | yes | Week 1 of the Plan starts in the week containing this date. |
+| `goal` | string | no | For example "HYROX London Doubles". |
+| `goalDate` | date | no | On or after `startDate` (`out_of_range`). |
+| `weeklyTarget` | integer >= 1 | yes | Workouts planned per week. |
+| `streakMinWorkoutsPerWeek` | integer >= 1 | yes | Streak rule. |
+| `streakCountsCustomWorkouts` | boolean | yes | Streak rule. |
+| `weightIncrementKg` | number > 0 | yes | Weight step for Suggested targets in this Plan. |
+| `phases` | array of Phase | no | See below. |
+| `sessions` | array of Session | no | The Plan's default Sessions. |
+
+### Phase
+
+A block of weeks. Weeks are numbered from 1 and both ends are inclusive.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among all Phases in the document. |
+| `focus` | string | yes | For example "Foundation". |
+| `startWeek` | integer >= 1 | yes | |
+| `endWeek` | integer >= `startWeek` | yes | |
+| `goals` | array of Phase goal | no | Targets that say when to move on early. |
+| `sessionOverrides` | array of Override | no | Replaces a Session's Exercise rows while this Phase is in force. A Session with no Override uses the Plan default. |
+
+Week ranges: when a Plan has Phases, listed in any order, they must start at week 1 and follow each other with no gap (`phase_gap`) and no overlap (`phase_overlap`). Both errors are reported at the `startWeek` of the Phase after the problem. A Plan with no Phases is allowed.
+
+**Phase goal:** `exerciseId` (must exist), `weightKg` (number > 0), `reps` (integer >= 1): "this lift hitting this weight for these reps".
+
+**Override:** `sessionId` (must be a Session of the same Plan, `unknown_session`; at most one Override per Session in a Phase) and `exercises` (rows, see below).
+
+### Session
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | string | yes | Unique among all Sessions in the document. |
+| `name` | string | yes | For example "A: Lower + core". |
+| `defaultDay` | enum | yes | `monday` to `sunday`. |
+| `type` | enum | yes | `strength`, `cardio`, `body` or `test`. |
+| `benchmarkIntervalWeeks` | integer >= 1 | no | Makes this a scheduled benchmark Session (use with `type: test`): repeats every N weeks, pre-filled from Benchmark exercises. |
+| `exercises` | array of row | no | The planned rows, in order. |
+
+### Exercise row
+
+Used by Sessions and Overrides. The array order is the row order.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `exerciseId` | string | yes | Must be in `exercises` (`unknown_exercise`). If the document has no `exercises` collection (a Plan-only document) the check is deferred to Import. |
+| `sets` | integer >= 1 | yes | |
+| `reps` | integer >= 1 | no | Rep target, or the low end of a range. Omit for rows with no rep target (a run). |
+| `repsMax` | integer >= `reps` | no | High end of a rep range; needs `reps`. |
+| `cue` | string | no | Short coaching cue. |
+
+### Plan example
+
+This block is also parsed and validated by the real reader in the test suite.
+
+```json
+{
+  "formatVersion": 1,
+  "exercises": [
+    { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load" },
+    { "id": "farmers-carry", "name": "Farmers carry", "logKind": "carry" },
+    { "id": "rdl", "name": "Romanian deadlift", "logKind": "load" }
+  ],
+  "plans": [
+    {
+      "id": "hyrox-2027",
+      "name": "HYROX London",
+      "isActive": true,
+      "startDate": "2026-10-19",
+      "goal": "HYROX London Doubles",
+      "goalDate": "2027-04-24",
+      "weeklyTarget": 5,
+      "streakMinWorkoutsPerWeek": 4,
+      "streakCountsCustomWorkouts": false,
+      "weightIncrementKg": 2,
+      "phases": [
+        {
+          "id": "foundation",
+          "focus": "Foundation",
+          "startWeek": 1,
+          "endWeek": 8,
+          "goals": [{ "exerciseId": "goblet-squat", "weightKg": 24, "reps": 10 }]
+        },
+        {
+          "id": "build",
+          "focus": "Build",
+          "startWeek": 9,
+          "endWeek": 19,
+          "sessionOverrides": [
+            {
+              "sessionId": "a-lower",
+              "exercises": [{ "exerciseId": "rdl", "sets": 4, "reps": 6, "cue": "Hinge, don't squat" }]
+            }
+          ]
+        }
+      ],
+      "sessions": [
+        {
+          "id": "a-lower",
+          "name": "A: Lower + core",
+          "defaultDay": "monday",
+          "type": "strength",
+          "exercises": [
+            { "exerciseId": "goblet-squat", "sets": 3, "reps": 8, "repsMax": 12, "cue": "Chest tall" },
+            { "exerciseId": "farmers-carry", "sets": 3 }
+          ]
+        },
+        {
+          "id": "benchmark",
+          "name": "Benchmark test",
+          "defaultDay": "saturday",
+          "type": "test",
+          "benchmarkIntervalWeeks": 4,
+          "exercises": [{ "exerciseId": "goblet-squat", "sets": 1, "reps": 5 }]
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Worked example
 
 This block is parsed and validated by the real reader in the test suite.
@@ -136,5 +270,8 @@ This block is parsed and validated by the real reader in the test suite.
 | `invalid_value`, `out_of_range` | The value is malformed or outside its allowed range. |
 | `unknown_value` | An enum value that isn't one of the allowed values (the message lists them). |
 | `invalid_id`, `duplicate_id` | ID has bad characters, or is reused within its record kind. |
+| `unknown_exercise`, `unknown_session` | A reference to an Exercise or Session ID that doesn't exist. |
+| `no_active_plan`, `multiple_active_plans` | Plans present but not exactly one active. |
+| `phase_gap`, `phase_overlap` | Phase week ranges leave a week uncovered or share a week. |
 | `invalid_version`, `unsupported_version` | See Versioning. |
 | `unknown_field` | Warning only: an unrecognised field was ignored. |
