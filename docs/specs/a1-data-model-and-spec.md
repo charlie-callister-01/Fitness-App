@@ -96,6 +96,6 @@ Stage A1 delivers, entirely inside `Core` with no UI and no storage:
 
 ## Further Notes
 
-- `gh` is not installed in the environment that wrote this spec, so it could not be published to GitHub Issues. It is saved here for publishing with the `ready-for-agent` label (`gh issue create --title "A1: Data model and exchange format spec" --label ready-for-agent --body-file docs/specs/a1-data-model-and-spec.md`).
+- `gh` was not on the PATH when this spec was written (it is installed at `C:\Program Files\GitHub CLI\gh.exe`), so it is saved here rather than published to GitHub Issues. Tickets are in `.scratch/a1-data-model/issues/`.
 - Seams assumption: a single seam (the exchange-format reader/writer in `Core`) was chosen without live confirmation because this ran as a background job. Tell the next session if you want a lower seam as well.
 - Likely tickets for `/to-tickets`: (1) written data spec; (2) core entities and enums plus ID generator; (3) JSON serialisation and round trip; (4) validation of structure and ranges; (5) referential and Plan/Phase invariants; (6) versioned reader and spec-conformance test.
