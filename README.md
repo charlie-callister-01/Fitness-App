@@ -19,7 +19,7 @@ The `lan` profile listens on all interfaces at port 5276. Open `http://<your-PC-
 
 `.github/workflows/deploy.yml` runs on every push to `main`: a `build-and-test` job (Release build and tests), then a `deploy` job that runs `scripts/publish-pages.sh`, uploads `out/wwwroot` with `upload-pages-artifact` and publishes it with `deploy-pages`. The deploy job only runs if build and tests pass. The app is served at `https://<owner>.github.io/Fitness-App/`.
 
-**One-time owner step (the deploy job fails until this is done):** in the repo, Settings > Pages > Build and deployment > Source, choose **GitHub Actions**. Re-check this if deploys ever start failing.
+**One-time owner step (done; the deploy job fails without it):** in the repo, Settings > Pages > Build and deployment > Source, choose **GitHub Actions**. Re-check this if deploys ever start failing.
 
 **Base path:** one value, `BASE_PATH` at the top of `.github/workflows/deploy.yml` (`/Fitness-App/`, the repo name). For a root host such as Cloudflare Pages, set it to `/`. Nothing else needs to change; the service worker works out its own base from its URL.
 

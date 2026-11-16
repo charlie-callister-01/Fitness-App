@@ -17,4 +17,4 @@ The app is a Blazor WebAssembly PWA written in C#, with all screens in a Razor c
 - First load downloads a larger runtime (cached afterwards); the PWA-specific community is smaller; browser storage needs a small JavaScript bridge.
 - The rules must stay out of the screens, and platform differences go behind interfaces, or the later MAUI move stops being cheap.
 - Only `index.html`/`App.razor` and the storage implementation differ per host.
-- The exact .NET LTS version and template details are confirmed in the first stage.
+- The exact .NET LTS version and template details were confirmed in stage A0: .NET 10 LTS and the standalone Blazor WebAssembly PWA template ([ADR 0004](0004-dotnet-10-lts-pinned.md)).
