@@ -40,7 +40,7 @@ jobs:
           global-json-file: global.json
       - uses: actions/configure-pages@v5
       - name: Publish
-        run: scripts/publish-pages.sh "$BASE_PATH" out "$GITHUB_SHA"
+        run: bash scripts/publish-pages.sh "$BASE_PATH" out "$GITHUB_SHA"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out/wwwroot
