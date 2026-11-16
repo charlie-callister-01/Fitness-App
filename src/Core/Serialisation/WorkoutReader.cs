@@ -28,7 +28,7 @@ internal static class WorkoutReader
             var workout = ReadWorkout(reader, context);
             reader.WarnAboutUnknownFields();
 
-            context.CheckUnique(context.WorkoutIds, reader, "Workout", workout.Id);
+            context.Sink.CheckUnique(context.WorkoutIds, reader, "Workout", workout.Id);
             if (sink.Errors.Count == errorsBefore)
             {
                 workouts.Add(workout);
@@ -150,7 +150,7 @@ internal static class WorkoutReader
             var isMax = reader.OptionalBool("isMax", defaultValue: false);
             reader.WarnAboutUnknownFields();
 
-            context.CheckUnique(context.SetIds, reader, "Set", id);
+            context.Sink.CheckUnique(context.SetIds, reader, "Set", id);
             if (distanceKm is not null && distanceM is not null)
             {
                 context.Sink.Error(reader.ChildPath("distanceM"), "invalid_value",
@@ -205,7 +205,7 @@ internal static class WorkoutReader
         }
 
         reader.WarnAboutUnknownFields();
-        context.CheckUnique(context.PainCheckIds, reader, "Pain check", id);
+        context.Sink.CheckUnique(context.PainCheckIds, reader, "Pain check", id);
         return context.Sink.Errors.Count == errorsBefore ? new PainCheck(id, status, areas, severity, note, exerciseId) : null;
     }
 
@@ -225,14 +225,5 @@ internal static class WorkoutReader
         public HashSet<string> SetIds { get; } = [];
 
         public HashSet<string> PainCheckIds { get; } = [];
-
-        public void CheckUnique(HashSet<string> seen, FieldReader reader, string kind, string id)
-        {
-            if (id.Length > 0 && !seen.Add(id))
-            {
-                var path = reader.ChildPath("id");
-                Sink.Error(path, "duplicate_id", $"{path} \"{id}\" is used by more than one {kind}. Every {kind} needs its own ID.");
-            }
-        }
     }
 }

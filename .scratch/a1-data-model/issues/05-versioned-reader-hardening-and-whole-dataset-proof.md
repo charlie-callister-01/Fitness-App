@@ -4,9 +4,9 @@
 
 **Blocked by:** 02, 03, 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Version dispatch structure in place with version 1 reader; newer/missing/zero versions rejected clearly
-- [ ] Unknown fields yield warnings with paths; document still accepted
-- [ ] Whole-dataset round trip test passes
-- [ ] Final spec example parsed by the real reader; spec and README index link updated
+- [x] Version dispatch structure in place with version 1 reader; newer/missing/zero versions rejected clearly
+- [x] Unknown fields yield warnings with paths; document still accepted
+- [x] Whole-dataset round trip test passes
+- [x] Final spec example parsed by the real reader; spec and README index link updated

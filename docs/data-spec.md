@@ -2,7 +2,7 @@
 
 The written definition of the app's data and its one JSON exchange format (the Backup, the LLM analysis Export and the Plan/Guide Import are all this same document). The code in `Core` matches this document; a conformance test parses the example below with the real reader, so the two cannot drift. Terms follow [`../GLOSSARY.md`](../GLOSSARY.md).
 
-Stage A1 builds this spec up ticket by ticket. **Status: root document, Exercise, Settings, Plan/Phase/Session, Weigh-in, Break, Badge, Guide, Workout, Set and Pain check are specified.**
+**Status: final for stage A1.** Every entity is specified, and every JSON example below is parsed by the real reader in the test suite.
 
 ## Conventions
 
@@ -41,6 +41,8 @@ An absent collection means "not part of this document". That is how partial docu
 | not a whole number | error `wrong_type` |
 | 0 or negative | error `invalid_version` |
 | newer than the app supports | error `unsupported_version`, message says to update the app |
+
+Unknown extra fields in a known version are warnings (`unknown_field`, with the field's path), never errors; the document is still accepted.
 
 ## Exercise
 

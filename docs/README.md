@@ -9,7 +9,7 @@ Start here in a new session. The grilling session (usage, then practical, then t
 | [`product-brief.md`](product-brief.md) | What the app is, who it's for, how it should feel, features and rules |
 | [`technical-brief.md`](technical-brief.md) | Stack, solution layout, storage, data exchange, testing, hosting |
 | [`build-plan.md`](build-plan.md) | The two tracks, proposed stages, inputs still needed, the first step |
-| [`data-spec.md`](data-spec.md) | The written data spec: entities, fields, units, ID rules, JSON exchange format and versioning (built up during stage A1) |
+| [`data-spec.md`](data-spec.md) | The written data spec: entities, fields, units, ID rules, JSON exchange format and versioning (final for stage A1) |
 | [`design-brief.md`](design-brief.md) | Self-contained brief to give the UI/UX design agent (requirements, constraints, and the design document and assets we want back) |
 | [`pwa-manual-checks.md`](pwa-manual-checks.md) | How the PWA caches and updates, and the manual phone checks (install, airplane mode, update) |
 | [`grilling-log.md`](grilling-log.md) | The essence of every question and answer (Q1 to Q78) |

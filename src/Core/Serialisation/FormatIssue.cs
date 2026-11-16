@@ -40,4 +40,14 @@ internal sealed class IssueSink
     public List<FormatIssue> Warnings { get; } = [];
 
     public void Error(string path, string code, string message) => Errors.Add(new FormatIssue(path, code, message));
+
+    /// <summary>Reports <c>duplicate_id</c> at the record's <c>id</c> field when <paramref name="id"/> was already seen among its kind.</summary>
+    public void CheckUnique(HashSet<string> seen, FieldReader record, string kind, string id)
+    {
+        if (id.Length > 0 && !seen.Add(id))
+        {
+            var path = record.ChildPath("id");
+            Error(path, "duplicate_id", $"{path} \"{id}\" is used by more than one {kind}. Every {kind} needs its own ID.");
+        }
+    }
 }

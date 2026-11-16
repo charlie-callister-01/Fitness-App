@@ -47,11 +47,7 @@ internal static class V1Reader
             var tags = ReadTags(reader);
             reader.WarnAboutUnknownFields();
 
-            if (id.Length > 0 && !seenIds.Add(id))
-            {
-                var path = reader.ChildPath("id");
-                sink.Error(path, "duplicate_id", $"{path} \"{id}\" is used by more than one Exercise. Every Exercise needs its own ID.");
-            }
+            sink.CheckUnique(seenIds, reader, "Exercise", id);
 
             if (sink.Errors.Count == errorsBefore)
             {

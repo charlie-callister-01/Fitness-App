@@ -27,11 +27,7 @@ internal static class PlanReader
             var errorsBefore = sink.Errors.Count;
             var plan = ReadPlan(reader, context);
 
-            if (plan.Id.Length > 0 && !seenPlanIds.Add(plan.Id))
-            {
-                var path = reader.ChildPath("id");
-                sink.Error(path, "duplicate_id", $"{path} \"{plan.Id}\" is used by more than one Plan. Every Plan needs its own ID.");
-            }
+            sink.CheckUnique(seenPlanIds, reader, "Plan", plan.Id);
 
             if (plan.IsActive)
             {
@@ -110,7 +106,7 @@ internal static class PlanReader
             var rows = ReadRows(reader, context);
             reader.WarnAboutUnknownFields();
 
-            context.CheckUnique(context.SessionIds, reader, "Session", id);
+            context.Sink.CheckUnique(context.SessionIds, reader, "Session", id);
             if (id.Length > 0)
             {
                 // Remembered even if the Session itself has errors, so one bad Session doesn't cause "unknown Session" noise.
@@ -144,7 +140,7 @@ internal static class PlanReader
             var overrides = ReadOverrides(reader, context, sessionIds);
             reader.WarnAboutUnknownFields();
 
-            context.CheckUnique(context.PhaseIds, reader, "Phase", id);
+            context.Sink.CheckUnique(context.PhaseIds, reader, "Phase", id);
             // A Phase with other problems still takes part in the week-range check, so one bad field doesn't cause gap noise.
             if (weeksAreValid)
             {
@@ -246,14 +242,5 @@ internal static class PlanReader
         public HashSet<string> PlanSessionIds { get; set; } = [];
 
         public HashSet<string> PhaseIds { get; } = [];
-
-        public void CheckUnique(HashSet<string> seen, FieldReader reader, string kind, string id)
-        {
-            if (id.Length > 0 && !seen.Add(id))
-            {
-                var path = reader.ChildPath("id");
-                Sink.Error(path, "duplicate_id", $"{path} \"{id}\" is used by more than one {kind}. Every {kind} needs its own ID.");
-            }
-        }
     }
 }

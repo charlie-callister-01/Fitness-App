@@ -67,6 +67,19 @@ public partial class DataSpecConformanceTests
     }
 
     [Fact]
+    public void Every_document_example_in_the_data_spec_is_read_cleanly_by_the_real_reader()
+    {
+        var examples = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).Where(j => j.Contains("\"formatVersion\"")).ToList();
+
+        Assert.True(examples.Count >= 3);
+        foreach (var example in examples)
+        {
+            var result = ExchangeFormat.Read(example);
+            Assert.True(result.IsSuccess && result.Warnings.Count == 0, string.Join("; ", result.Errors.Concat(result.Warnings).Select(e => $"{e.Path}: {e.Message}")));
+        }
+    }
+
+    [Fact]
     public void Worked_example_covers_weigh_ins_breaks_badges_and_guides()
     {
         var example = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).First(j => j.Contains("\"exportedAt\""));
