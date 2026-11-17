@@ -1,15 +1,15 @@
 using Core.Model;
 using Core.Rules.Rearrangement;
+using Core.Tests.Rules.TestData;
+using static Core.Tests.Rules.TestData.Dates;
+using static Core.Tests.Rules.TestData.HistoryBuilder;
 
 namespace Core.Tests.Rules.Rearrangement;
 
 public class WeekRearrangementTests
 {
-    private static DateOnly D(int y, int m, int d) => new(y, m, d);
-
     // Week of Mon 2026-11-16. Plan order: legsA (Mon), push (Tue), legsB (Wed), pull (Thu), run (Fri).
     // legsA and legsB share the glutes tag.
-    private static readonly DateOnly Mon = D(2026, 11, 16);
     private static readonly DateOnly Start = D(2026, 1, 5);
 
     private static Exercise Ex(string id, params string[] groups) =>
@@ -22,20 +22,14 @@ public class WeekRearrangementTests
     ];
 
     private static Session S(string id, DayOfWeek day, string exercise) =>
-        new(id, id, day, SessionType.Strength, null, [new SessionExercise(exercise, 3, 5, null, null)]);
+        PlanFixture.Session(id, day, exercises: [PlanFixture.Row(exercise, reps: 5)]);
 
-    private static Plan Plan(params Session[] sessions) => new(
-        "p", "Plan", true, Start, null, null, 3, 2, false, 2, [], sessions);
+    private static Plan Plan(params Session[] sessions) => PlanFixture.Make(start: Start, sessions: sessions);
 
     private static readonly Plan Standard = Plan(
         S("legsA", DayOfWeek.Monday, "squat"), S("push", DayOfWeek.Tuesday, "bench"),
         S("legsB", DayOfWeek.Wednesday, "rdl"), S("pull", DayOfWeek.Thursday, "row"),
         S("run", DayOfWeek.Friday, "jog"));
-
-    private static Workout Made(DateOnly date, string sessionId) =>
-        new($"w{date.DayNumber}{sessionId}", date, sessionId, false, null, null, [], [], null);
-
-    private static Break Brk(DateOnly from, DateOnly to) => new("b", from, to, "x");
 
     private static RearrangementResult Suggest(
         Plan plan, DateOnly today, IReadOnlyList<Break>? breaks = null, IReadOnlyList<Workout>? workouts = null,
@@ -48,14 +42,14 @@ public class WeekRearrangementTests
     [Fact]
     public void A_week_that_is_on_track_has_nothing_to_rearrange()
     {
-        var done = new[] { Made(Mon, "legsA"), Made(Mon.AddDays(1), "push") };
+        var done = new[] { Logged(Mon, "legsA"), Logged(Mon.AddDays(1), "push") };
         Assert.IsType<RearrangementResult.NothingToRearrange>(Suggest(Standard, Mon.AddDays(2), workouts: done));
     }
 
     [Fact]
     public void Nothing_outstanding_means_nothing_to_rearrange()
     {
-        var all = Standard.Sessions.Select((s, i) => Made(Mon.AddDays(i), s.Id)).ToList();
+        var all = Standard.Sessions.Select((s, i) => Logged(Mon.AddDays(i), s.Id)).ToList();
         Assert.IsType<RearrangementResult.NothingToRearrange>(Suggest(Standard, Mon.AddDays(4), workouts: all));
     }
 
@@ -63,14 +57,14 @@ public class WeekRearrangementTests
     public void Sessions_lost_to_an_earlier_break_are_not_outstanding()
     {
         // Break Mon-Wed, today Thursday: the first three are not Missed; pull and run still sit on their days.
-        Assert.IsType<RearrangementResult.NothingToRearrange>(Suggest(Standard, Mon.AddDays(3), [Brk(Mon, Mon.AddDays(2))]));
+        Assert.IsType<RearrangementResult.NothingToRearrange>(Suggest(Standard, Mon.AddDays(3), [BreakOf(Mon, Mon.AddDays(2))]));
     }
 
     [Fact]
     public void A_break_pile_up_moves_sessions_off_break_days_onto_coming_days_in_plan_order()
     {
         // Break Wed-Thu, today Tuesday, Monday done: legsB and pull sit on Break days.
-        var p = Placed(Suggest(Standard, Mon.AddDays(1), [Brk(Mon.AddDays(2), Mon.AddDays(3))], [Made(Mon, "legsA")]));
+        var p = Placed(Suggest(Standard, Mon.AddDays(1), [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], [Logged(Mon, "legsA")]));
         Assert.Equal(Mon.AddDays(1), p["push"]);
         Assert.Equal(Mon.AddDays(4), p["legsB"]);
         Assert.Equal(Mon.AddDays(5), p["pull"]);
@@ -135,11 +129,11 @@ public class WeekRearrangementTests
     [Fact]
     public void Break_days_are_never_used_and_a_week_with_no_free_days_leaves_everything_unplaced()
     {
-        var p = Placed(Suggest(Standard, Mon.AddDays(3), [Brk(Mon.AddDays(4), Mon.AddDays(5))]));
+        var p = Placed(Suggest(Standard, Mon.AddDays(3), [BreakOf(Mon.AddDays(4), Mon.AddDays(5))]));
         Assert.DoesNotContain(Mon.AddDays(4), p.Values);
         Assert.DoesNotContain(Mon.AddDays(5), p.Values);
 
-        var none = Assert.IsType<RearrangementResult.Proposal>(Suggest(Standard, Mon.AddDays(3), [Brk(Mon.AddDays(3), Mon.AddDays(6))]));
+        var none = Assert.IsType<RearrangementResult.Proposal>(Suggest(Standard, Mon.AddDays(3), [BreakOf(Mon.AddDays(3), Mon.AddDays(6))]));
         Assert.Empty(none.Placements);
         Assert.Equal(["legsA", "push", "legsB", "pull", "run"], none.Unplaced);
     }

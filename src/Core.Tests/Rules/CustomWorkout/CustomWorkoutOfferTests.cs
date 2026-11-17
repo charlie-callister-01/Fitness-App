@@ -1,31 +1,27 @@
 using Core.Model;
 using Core.Rules.CustomWorkout;
+using Core.Tests.Rules.TestData;
+using static Core.Tests.Rules.TestData.Dates;
+using static Core.Tests.Rules.TestData.HistoryBuilder;
 
 namespace Core.Tests.Rules.CustomWorkout;
 
 public class CustomWorkoutOfferTests
 {
-    private static DateOnly D(int y, int m, int d) => new(y, m, d);
-
     // Plan starts Mon 2026-01-05. Lower (Mon): squat, lunge. Upper (Wed): press, squat. Run (Fri): run.
     private static readonly DateOnly Start = D(2026, 1, 5);
-    private static readonly DateOnly Mon = D(2026, 11, 16);
 
     private static Exercise Ex(string id) => new(id, id, LogKind.Load, null, false);
     private static readonly Exercise[] Library = [Ex("curl"), Ex("run"), Ex("squat"), Ex("press"), Ex("lunge")];
 
-    private static SessionExercise Row(string id) => new(id, 3, 8, null, null);
+    private static SessionExercise Row(string id) => PlanFixture.Row(id);
 
-    private static Plan Plan(IReadOnlyList<Phase>? phases = null) => new(
-        "p", "Plan", true, Start, null, null, 3, 2, false, 2, phases ?? [],
-        [
-            new Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [Row("squat"), Row("lunge")]),
-            new Session("upper", "Upper", DayOfWeek.Wednesday, SessionType.Strength, null, [Row("press"), Row("squat")]),
-            new Session("run", "Run", DayOfWeek.Friday, SessionType.Cardio, null, [Row("run")]),
-        ]);
-
-    private static Workout Made(DateOnly date, string? sessionId) =>
-        new($"w{date.DayNumber}{sessionId}", date, sessionId, false, null, null, [], [], null);
+    private static Plan Plan(IReadOnlyList<Phase>? phases = null) => PlanFixture.Make(start: Start, phases: phases, sessions:
+    [
+        PlanFixture.Session("lower", DayOfWeek.Monday, name: "Lower", exercises: [Row("squat"), Row("lunge")]),
+        PlanFixture.Session("upper", DayOfWeek.Wednesday, name: "Upper", exercises: [Row("press"), Row("squat")]),
+        PlanFixture.Session("run", DayOfWeek.Friday, SessionType.Cardio, name: "Run", exercises: [Row("run")]),
+    ]);
 
     private static List<string> Ids(IReadOnlyList<Exercise> o) => o.Select(e => e.Id).ToList();
 
@@ -48,7 +44,7 @@ public class CustomWorkoutOfferTests
     [Fact]
     public void A_session_that_was_done_is_not_offered_first()
     {
-        var order = CustomWorkoutOffer.Order(Plan(), [], [], [Made(Mon, "lower")], Library, Mon.AddDays(3));
+        var order = CustomWorkoutOffer.Order(Plan(), [], [], [Logged(Mon, "lower")], Library, Mon.AddDays(3));
 
         Assert.Equal(["press", "squat", "curl", "run", "lunge"], Ids(order));
     }
@@ -56,7 +52,7 @@ public class CustomWorkoutOfferTests
     [Fact]
     public void A_Custom_workout_does_not_clear_a_missed_session_so_its_exercises_stay_first()
     {
-        var order = CustomWorkoutOffer.Order(Plan(), [], [], [Made(Mon.AddDays(1), null)], Library, Mon.AddDays(1));
+        var order = CustomWorkoutOffer.Order(Plan(), [], [], [Logged(Mon.AddDays(1), null)], Library, Mon.AddDays(1));
 
         Assert.Equal(["squat", "lunge", "curl", "run", "press"], Ids(order));
     }

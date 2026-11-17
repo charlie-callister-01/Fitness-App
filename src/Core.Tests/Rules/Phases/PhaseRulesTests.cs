@@ -1,19 +1,20 @@
 using Core.Model;
 using Core.Rules.Phases;
-using Core.Tests.Rules.Performance;
+using Core.Tests.Rules.TestData;
 
 namespace Core.Tests.Rules.Phases;
 
 public class PhaseRulesTests
 {
     // Plan starts Mon 2026-01-05. Phase A = weeks 1-4, Phase B = weeks 5-6.
-    private static readonly DateOnly Start = new(2026, 1, 5);
+    private static readonly DateOnly Start = PlanFixture.DefaultStart;
 
-    private static SessionExercise Row(string id, int sets = 3) => new(id, sets, 8, null, null);
+    private static SessionExercise Row(string id, int sets = 3) => PlanFixture.Row(id, sets);
 
-    private static Plan MakePlan(params Phase[] phases) => new(
-        "p", "Plan", true, Start, null, null, 3, 2, false, 2, phases,
-        [new Session("s1", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [Row("squat"), Row("lunge")])]);
+    private static Plan MakePlan(params Phase[] phases) => PlanFixture.Make(phases: phases, sessions:
+    [
+        PlanFixture.Session("s1", DayOfWeek.Monday, name: "Lower", exercises: [Row("squat"), Row("lunge")]),
+    ]);
 
     private static Phase PhaseOf(string id, int from, int to, PhaseGoal[]? goals = null, SessionOverride[]? overrides = null) =>
         new(id, id, from, to, goals ?? [], overrides ?? []);
@@ -88,12 +89,12 @@ public class PhaseRulesTests
 
     private static readonly PhaseGoal Squat100x5 = new("squat", 100, 5);
 
-    private static PhaseReadiness Readiness(Phase phase, History h) => PhaseRules.GoalReadiness(phase, h.Workouts);
+    private static PhaseReadiness Readiness(Phase phase, HistoryBuilder h) => PhaseRules.GoalReadiness(phase, h.Workouts);
 
     [Fact]
     public void Goal_met_by_exact_set()
     {
-        var h = new History().Done("w1", "2026-02-01", "squat", History.Set(100, 5));
+        var h = new HistoryBuilder().Done("w1", "2026-02-01", "squat", HistoryBuilder.Set(100, 5));
         var r = Readiness(PhaseOf("A", 1, 4, [Squat100x5]), h);
         Assert.True(r.AllMet);
         Assert.True(Assert.Single(r.Goals).Met);
@@ -102,28 +103,28 @@ public class PhaseRulesTests
     [Fact]
     public void Goal_met_by_a_heavier_set_with_enough_reps()
     {
-        var h = new History().Done("w1", "2026-02-01", "squat", History.Set(110, 6));
+        var h = new HistoryBuilder().Done("w1", "2026-02-01", "squat", HistoryBuilder.Set(110, 6));
         Assert.True(Readiness(PhaseOf("A", 1, 4, [Squat100x5]), h).AllMet);
     }
 
     [Fact]
     public void Goal_met_by_a_qualifying_set_even_when_another_set_ranks_higher()
     {
-        var h = new History().Done("w1", "2026-02-01", "squat", History.Set(150, 1), History.Set(100, 5));
+        var h = new HistoryBuilder().Done("w1", "2026-02-01", "squat", HistoryBuilder.Set(150, 1), HistoryBuilder.Set(100, 5));
         Assert.True(Readiness(PhaseOf("A", 1, 4, [Squat100x5]), h).AllMet);
     }
 
     [Fact]
     public void Heavier_but_too_few_reps_or_enough_reps_but_too_light_does_not_meet_it()
     {
-        var h = new History().Done("w1", "2026-02-01", "squat", History.Set(120, 3), History.Set(90, 10));
+        var h = new HistoryBuilder().Done("w1", "2026-02-01", "squat", HistoryBuilder.Set(120, 3), HistoryBuilder.Set(90, 10));
         Assert.False(Readiness(PhaseOf("A", 1, 4, [Squat100x5]), h).AllMet);
     }
 
     [Fact]
     public void Skipped_entries_do_not_count()
     {
-        var h = new History().Skipped("w1", "2026-02-01", "squat");
+        var h = new HistoryBuilder().Skipped("w1", "2026-02-01", "squat");
         Assert.False(Readiness(PhaseOf("A", 1, 4, [Squat100x5]), h).AllMet);
     }
 
@@ -131,13 +132,13 @@ public class PhaseRulesTests
     public void Reports_which_goals_are_met_and_a_message()
     {
         var goals = new[] { Squat100x5, new PhaseGoal("bench", 80, 5) };
-        var h = new History().Done("w1", "2026-02-01", "squat", History.Set(100, 5)).Done("w2", "2026-02-02", "bench", History.Set(70, 5));
+        var h = new HistoryBuilder().Done("w1", "2026-02-01", "squat", HistoryBuilder.Set(100, 5)).Done("w2", "2026-02-02", "bench", HistoryBuilder.Set(70, 5));
         var r = Readiness(PhaseOf("A", 1, 4, goals), h);
         Assert.False(r.AllMet);
         Assert.Equal([true, false], r.Goals.Select(g => g.Met));
         Assert.Contains("1 of 2", r.Message);
 
-        var all = Readiness(PhaseOf("A", 1, 4, goals), h.Done("w3", "2026-02-03", "bench", History.Set(80, 5)));
+        var all = Readiness(PhaseOf("A", 1, 4, goals), h.Done("w3", "2026-02-03", "bench", HistoryBuilder.Set(80, 5)));
         Assert.True(all.AllMet);
         Assert.Contains("move on", all.Message);
     }
@@ -145,7 +146,7 @@ public class PhaseRulesTests
     [Fact]
     public void A_Phase_without_goals_is_never_ready()
     {
-        var r = Readiness(PhaseOf("A", 1, 4), new History());
+        var r = Readiness(PhaseOf("A", 1, 4), new HistoryBuilder());
         Assert.False(r.AllMet);
         Assert.Empty(r.Goals);
         Assert.Contains("no goals", r.Message, StringComparison.OrdinalIgnoreCase);

@@ -1,15 +1,14 @@
 using Core.Model;
 using Core.Rules.Nudges;
-using Core.Tests.Rules.Weeks;
+using Core.Tests.Rules.TestData;
+using static Core.Tests.Rules.TestData.Dates;
+using static Core.Tests.Rules.TestData.HistoryBuilder;
 
 namespace Core.Tests.Rules.Nudges;
 
 public class NudgeRulesTests
 {
-    private static DateOnly D(int y, int m, int d) => new(y, m, d);
-
     // Plan starts Mon 2026-01-05, target 3. Session "a-lower" (Lower) is on Mondays. Mon 2026-11-16 starts the week under test.
-    private static readonly DateOnly Mon = D(2026, 11, 16);
     private static readonly DateOnly Tue = Mon.AddDays(1);
     private static readonly DateOnly Wed = Mon.AddDays(2);
     private static readonly DateOnly Thu = Mon.AddDays(3);
@@ -18,23 +17,18 @@ public class NudgeRulesTests
 
     private static Plan LowerOnly(Plan plan) => plan with { Sessions = [plan.Sessions[0]] };
 
-    private static IReadOnlyList<Nudge> Compute(WeekHistory h, DateOnly today, DateTimeOffset? backup = null,
+    private static IReadOnlyList<Nudge> Compute(HistoryBuilder h, DateOnly today, DateTimeOffset? backup = null,
         params Workout[] extra) =>
         NudgeRules.Compute(LowerOnly(h.Plan), [], h.Breaks, [.. h.Workouts, .. extra], backup ?? RecentBackup, today);
 
-    private static Workout Pain(DateOnly date, params BodyArea[] areas) =>
-        new($"p{date.DayNumber}", date, null, false, null, null, [],
-            [new WorkoutEntry("goblet-squat", EntryStatus.Done, null, null, null, [])],
-            new PainCheck("pc", PainStatus.Reported, areas, PainSeverity.Mild, null, null));
-
-    private static WeekHistory Done(params DateOnly[] dates) => new WeekHistory().Did(dates);
+    private static HistoryBuilder Done(params DateOnly[] dates) => new HistoryBuilder().Did(dates);
 
     [Fact]
     public void A_missed_session_this_week_gets_a_nudge_naming_it()
     {
-        var n = Assert.Single(Compute(new WeekHistory(), Tue));
+        var n = Assert.Single(Compute(new HistoryBuilder(), Tue));
         Assert.Equal(NudgeKind.MissedSession, n.Kind);
-        Assert.Equal(WeekHistory.Strength, n.SessionId);
+        Assert.Equal(PlanFixture.Strength, n.SessionId);
         Assert.Null(n.Area);
         Assert.Contains("Lower", n.Message);
     }
@@ -102,8 +96,8 @@ public class NudgeRulesTests
         // 01:00 on 4 Nov at +10:00 is still 3 Nov in UTC; the owner's calendar day is the 4th, so 14 days is the 18th.
         var backup = new DateTimeOffset(2026, 11, 4, 1, 0, 0, TimeSpan.FromHours(10));
         var h = Done(Mon);
-        Assert.Empty(NudgeRules.Compute(new WeekHistory().Plan with { Sessions = [] }, [], [], h.Workouts, backup, Tue));
-        var n = Assert.Single(NudgeRules.Compute(new WeekHistory().Plan with { Sessions = [] }, [], [], h.Workouts, backup, Wed));
+        Assert.Empty(NudgeRules.Compute(new HistoryBuilder().Plan with { Sessions = [] }, [], [], h.Workouts, backup, Tue));
+        var n = Assert.Single(NudgeRules.Compute(new HistoryBuilder().Plan with { Sessions = [] }, [], [], h.Workouts, backup, Wed));
         Assert.Equal(NudgeKind.NoRecentBackup, n.Kind);
     }
 
@@ -125,7 +119,7 @@ public class NudgeRulesTests
     [Fact]
     public void Order_is_pain_then_missed_by_date_then_short_then_backup_without_duplicates()
     {
-        var plan = new WeekHistory().Plan with
+        var plan = new HistoryBuilder().Plan with
         {
             Sessions =
             [
@@ -134,7 +128,7 @@ public class NudgeRulesTests
             ],
         };
         // Two counted Custom-free Workouts of an unrelated Session keep the target one short without clearing the misses.
-        var counted = new WeekHistory().Did(Tue, Wed).Workouts.Select(w => w with { SessionId = "other" });
+        var counted = new HistoryBuilder().Did(Tue, Wed).Workouts.Select(w => w with { SessionId = "other" });
         Workout[] workouts = [.. counted, Pain(Mon, BodyArea.Knee), Pain(Tue, BodyArea.Knee)];
 
         var nudges = NudgeRules.Compute(plan, [], [], workouts, OldBackup, Thu);

@@ -1,14 +1,12 @@
 using Core.Model;
+using static Core.Tests.Rules.TestData.Dates;
 using Core.Rules.Badges;
-using Core.Tests.Rules.Performance;
-using Core.Tests.Rules.Weeks;
+using Core.Tests.Rules.TestData;
 
 namespace Core.Tests.Rules.Badges;
 
 public class BadgeRulesTests
 {
-    private static DateOnly D(int y, int m, int d) => new(y, m, d);
-    private static readonly DateOnly Mon = D(2026, 11, 16);
     private static readonly DateOnly Today = D(2026, 11, 18);
 
     private static readonly Exercise Squat = new("squat", "Squat", LogKind.Load, null, false);
@@ -16,9 +14,9 @@ public class BadgeRulesTests
     private static readonly Exercise Run = new("run5k", "5 km", LogKind.Time, null, true);
     private static readonly Exercise Waist = new("waist", "Waist", LogKind.BodyMeasurementCm, null, false);
 
-    private static BadgeHistory Hist(WeekHistory? weeks = null, History? lifts = null, params WeighIn[] weighIns)
+    private static BadgeHistory Hist(HistoryBuilder? weeks = null, HistoryBuilder? lifts = null, params WeighIn[] weighIns)
     {
-        weeks ??= new WeekHistory();
+        weeks ??= new HistoryBuilder();
         return new BadgeHistory(
             weeks.Plan,
             [Squat, Pullup, Run, Waist],
@@ -33,7 +31,7 @@ public class BadgeRulesTests
     [Fact]
     public void Sessions_counts_counted_Workouts_across_weeks_ignoring_benchmark_tests()
     {
-        var h = Hist(new WeekHistory().Did(Mon, Mon.AddDays(1), Mon.AddDays(-7)).BenchmarkTest(Mon.AddDays(5)));
+        var h = Hist(new HistoryBuilder().Did(Mon, Mon.AddDays(1), Mon.AddDays(-7)).BenchmarkTest(Mon.AddDays(5)));
         var p = P("sessions", 4, h);
         Assert.Equal(3, p.Value);
         Assert.Equal(75, p.Percent);
@@ -43,7 +41,7 @@ public class BadgeRulesTests
     [Fact]
     public void Streak_uses_the_best_ever_run_and_best_week_the_busiest_week()
     {
-        var h = Hist(new WeekHistory().Did(Mon.AddDays(-14), Mon.AddDays(-13), Mon.AddDays(-7), Mon.AddDays(-6), Mon.AddDays(-5)));
+        var h = Hist(new HistoryBuilder().Did(Mon.AddDays(-14), Mon.AddDays(-13), Mon.AddDays(-7), Mon.AddDays(-6), Mon.AddDays(-5)));
         Assert.Equal(2, P("streak", 2, h).Value);
         Assert.True(P("streak", 2, h).Reached);
         Assert.Equal(3, P("bestweek", 3, h).Value);
@@ -53,11 +51,11 @@ public class BadgeRulesTests
     [Fact]
     public void Prs_counts_PRs_across_all_Exercises()
     {
-        var lifts = new History()
-            .Done("w1", "2026-11-02", "squat", History.Set(80, 5))
-            .Done("w2", "2026-11-09", "squat", History.Set(90, 5))
-            .Done("w3", "2026-11-02", "pullup", History.Set(reps: 5))
-            .Done("w4", "2026-11-09", "pullup", History.Set(reps: 8));
+        var lifts = new HistoryBuilder()
+            .Done("w1", "2026-11-02", "squat", HistoryBuilder.Set(80, 5))
+            .Done("w2", "2026-11-09", "squat", HistoryBuilder.Set(90, 5))
+            .Done("w3", "2026-11-02", "pullup", HistoryBuilder.Set(reps: 5))
+            .Done("w4", "2026-11-09", "pullup", HistoryBuilder.Set(reps: 8));
         var p = P("prs", 4, Hist(lifts: lifts));
         Assert.Equal(2, p.Value);
         Assert.Equal(50, p.Percent);
@@ -66,7 +64,7 @@ public class BadgeRulesTests
     [Fact]
     public void An_Exercise_metric_uses_its_best_value_in_its_own_measure()
     {
-        var lifts = new History().Done("w1", "2026-11-02", "pullup", History.Set(reps: 6), History.Set(reps: 10));
+        var lifts = new HistoryBuilder().Done("w1", "2026-11-02", "pullup", HistoryBuilder.Set(reps: 6), HistoryBuilder.Set(reps: 10));
         var p = P("pullup", 10, Hist(lifts: lifts));
         Assert.Equal(10, p.Value);
         Assert.True(p.Reached);
@@ -76,7 +74,7 @@ public class BadgeRulesTests
     [Fact]
     public void Progress_is_capped_at_100_and_reached_at_or_past_the_target()
     {
-        var lifts = new History().Done("w1", "2026-11-02", "pullup", History.Set(reps: 15));
+        var lifts = new HistoryBuilder().Done("w1", "2026-11-02", "pullup", HistoryBuilder.Set(reps: 15));
         var p = P("pullup", 10, Hist(lifts: lifts));
         Assert.Equal(100, p.Percent);
         Assert.True(p.Reached);
@@ -94,7 +92,7 @@ public class BadgeRulesTests
     [Fact]
     public void A_Time_Exercise_is_reached_by_going_at_or_under_the_target()
     {
-        var lifts = new History().Done("w1", "2026-11-02", "run5k", History.Set(seconds: 1500));
+        var lifts = new HistoryBuilder().Done("w1", "2026-11-02", "run5k", HistoryBuilder.Set(seconds: 1500));
         var slow = P("run5k", 1200, Hist(lifts: lifts));
         Assert.False(slow.Reached);
         Assert.Equal(80, slow.Percent);
@@ -123,9 +121,9 @@ public class BadgeRulesTests
     [Fact]
     public void A_negative_target_on_a_measurement_Exercise_is_a_drop_from_its_start()
     {
-        var lifts = new History()
-            .Done("w1", "2026-10-01", "waist", History.Set(cm: 100))
-            .Done("w2", "2026-11-01", "waist", History.Set(cm: 95));
+        var lifts = new HistoryBuilder()
+            .Done("w1", "2026-10-01", "waist", HistoryBuilder.Set(cm: 100))
+            .Done("w2", "2026-11-01", "waist", HistoryBuilder.Set(cm: 95));
         var p = P("waist", -10, Hist(lifts: lifts));
         Assert.Equal(5, p.Value);
         Assert.Equal(50, p.Percent);
@@ -134,9 +132,9 @@ public class BadgeRulesTests
     [Fact]
     public void A_growing_measurement_gives_no_drop()
     {
-        var lifts = new History()
-            .Done("w1", "2026-10-01", "waist", History.Set(cm: 90))
-            .Done("w2", "2026-11-01", "waist", History.Set(cm: 95));
+        var lifts = new HistoryBuilder()
+            .Done("w1", "2026-10-01", "waist", HistoryBuilder.Set(cm: 90))
+            .Done("w2", "2026-11-01", "waist", HistoryBuilder.Set(cm: 95));
         var p = P("waist", -5, Hist(lifts: lifts));
         Assert.Equal(-5, p.Value);
         Assert.Equal(0, p.Percent);

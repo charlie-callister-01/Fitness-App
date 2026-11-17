@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.Performance;
-using static Core.Tests.Rules.Performance.History;
+using Core.Tests.Rules.TestData;
+using static Core.Tests.Rules.TestData.HistoryBuilder;
 
 namespace Core.Tests.Rules.Performance;
 
@@ -9,18 +10,18 @@ public class SuggestedTargetTests
     private static Exercise Ex(LogKind kind) => new("ex", "ex", kind, null, false);
 
     private static Plan PlanWith(int? reps = 8, int? repsMax = 12, double increment = 2, params string[] otherFirst) =>
-        new("p", "p", true, new DateOnly(2026, 1, 1), null, null, 3, 2, false, increment, [],
+        PlanFixture.Make(start: new DateOnly(2026, 1, 1), incrementKg: increment, sessions:
         [
-            .. otherFirst.Select(id => new Session("o" + id, "o", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(id, 3, 1, 1, null)])),
-            new Session("s1", "s1", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("ex", 3, reps, repsMax, null)]),
-            new Session("s2", "s2", DayOfWeek.Friday, SessionType.Strength, null, [new SessionExercise("ex", 3, 1, 3, null)]),
+            .. otherFirst.Select(id => PlanFixture.Session("o" + id, DayOfWeek.Monday, name: "o", exercises: [PlanFixture.Row(id, reps: 1, repsMax: 1)])),
+            PlanFixture.Session("s1", DayOfWeek.Monday, exercises: [PlanFixture.Row("ex", reps: reps, repsMax: repsMax)]),
+            PlanFixture.Session("s2", DayOfWeek.Friday, exercises: [PlanFixture.Row("ex", reps: 1, repsMax: 3)]),
         ]);
 
-    private static SuggestedTarget? Target(LogKind kind, History h, Plan? plan = null) =>
+    private static SuggestedTarget? Target(LogKind kind, HistoryBuilder h, Plan? plan = null) =>
         ExercisePerformance.Snapshot(Ex(kind), h.Workouts, plan ?? PlanWith()).Target;
 
-    private static History Last(string date, int? rpe, params WorkoutSet[] sets) =>
-        rpe is { } r ? new History().DoneWithRpe("w1", date, "ex", r, sets) : new History().Done("w1", date, "ex", sets);
+    private static HistoryBuilder Last(string date, int? rpe, params WorkoutSet[] sets) =>
+        rpe is { } r ? new HistoryBuilder().DoneWithRpe("w1", date, "ex", r, sets) : new HistoryBuilder().Done("w1", date, "ex", sets);
 
     // Load
 
@@ -93,7 +94,7 @@ public class SuggestedTargetTests
     [Fact]
     public void Load_target_is_based_on_the_last_workout_where_it_was_done_not_a_skip()
     {
-        var h = new History()
+        var h = new HistoryBuilder()
             .Done("w1", "2026-01-01", "ex", Set(kg: 20, reps: 10))
             .Skipped("w2", "2026-01-08", "ex");
 
@@ -169,7 +170,7 @@ public class SuggestedTargetTests
     [Fact]
     public void Time_target_beats_the_best_by_five_seconds()
     {
-        var h = new History()
+        var h = new HistoryBuilder()
             .Done("w1", "2026-01-01", "ex", Set(seconds: 1500))
             .Done("w2", "2026-01-08", "ex", Set(seconds: 1560));
 
@@ -191,7 +192,7 @@ public class SuggestedTargetTests
     [Fact]
     public void Time_rpe_9_holds_the_last_result()
     {
-        var h = new History()
+        var h = new HistoryBuilder()
             .Done("w1", "2026-01-01", "ex", Set(seconds: 1500))
             .DoneWithRpe("w2", "2026-01-08", "ex", 9, Set(seconds: 1560));
 
@@ -260,13 +261,13 @@ public class SuggestedTargetTests
     [Fact]
     public void No_history_means_no_target()
     {
-        Assert.Null(Target(LogKind.Load, new History()));
+        Assert.Null(Target(LogKind.Load, new HistoryBuilder()));
     }
 
     [Fact]
     public void Only_skips_means_no_target()
     {
-        Assert.Null(Target(LogKind.Load, new History().Skipped("w1", "2026-01-01", "ex")));
+        Assert.Null(Target(LogKind.Load, new HistoryBuilder().Skipped("w1", "2026-01-01", "ex")));
     }
 
     [Theory]

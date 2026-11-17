@@ -1,13 +1,14 @@
 using Core.Model;
 using Core.Rules.Benchmarks;
 using Core.Rules.Weeks;
+using Core.Tests.Rules.TestData;
+using static Core.Tests.Rules.TestData.Dates;
+using static Core.Tests.Rules.TestData.HistoryBuilder;
 
 namespace Core.Tests.Rules.Benchmarks;
 
 public class BenchmarkRulesTests
 {
-    private static DateOnly D(int y, int m, int d) => new(y, m, d);
-
     // Plan starts Mon 2026-01-05; benchmark Test session "test" (Saturday) every 4 weeks: Plan weeks 1, 5, 9 ...
     private static readonly DateOnly Start = D(2026, 1, 5);
 
@@ -16,25 +17,18 @@ public class BenchmarkRulesTests
     private static readonly Exercise Curl = new("curl", "Curl", LogKind.Load, null, false);
     private static readonly Exercise[] Library = [Curl, Squat, Run];
 
-    private static Plan Plan() => new(
-        "p", "Plan", true, Start, null, null, 3, 2, false, 2, [],
-        [
-            new Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, []),
-            new Session("test", "Test", DayOfWeek.Saturday, SessionType.Test, 4, []),
-        ]);
-
-    private static WorkoutSet Load(double kg, int reps) => new($"s{kg}x{reps}", kg, reps, null, null, null, false);
-
-    private static Workout W(string id, DateOnly date, string? sessionId, string exerciseId, WorkoutSet set) =>
-        new(id, date, sessionId, false, null, null, [],
-            [new WorkoutEntry(exerciseId, EntryStatus.Done, null, null, null, [set])], null);
+    private static Plan Plan() => PlanFixture.Make(start: Start, sessions:
+    [
+        PlanFixture.Session("lower", DayOfWeek.Monday, name: "Lower"),
+        PlanFixture.Session("test", DayOfWeek.Saturday, SessionType.Test, name: "Test", benchmarkEveryWeeks: 4),
+    ]);
 
     // ---- list
 
     [Fact]
     public void First_benchmark_has_a_best_but_no_previous_result_or_change()
     {
-        var history = new[] { W("w1", D(2026, 1, 10), "test", "squat", Load(100, 1)) };
+        var history = new[] { Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 100, reps: 1)) };
 
         var squat = BenchmarkRules.List(Plan(), Library, history).Single(e => e.Exercise.Id == "squat");
 
@@ -49,8 +43,8 @@ public class BenchmarkRulesTests
     {
         var history = new[]
         {
-            W("w1", D(2026, 1, 10), "test", "squat", Load(100, 1)),
-            W("w2", D(2026, 2, 7), "test", "squat", Load(110, 1)),
+            Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 100, reps: 1)),
+            Lift("w2", D(2026, 2, 7), "test", "squat", Set(kg: 110, reps: 1)),
         };
 
         var squat = BenchmarkRules.List(Plan(), Library, history).Single(e => e.Exercise.Id == "squat");
@@ -65,8 +59,8 @@ public class BenchmarkRulesTests
     {
         var history = new[]
         {
-            W("w1", D(2026, 1, 10), "test", "squat", Load(110, 1)),
-            W("w2", D(2026, 2, 7), "test", "squat", Load(100, 1)),
+            Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 110, reps: 1)),
+            Lift("w2", D(2026, 2, 7), "test", "squat", Set(kg: 100, reps: 1)),
         };
 
         var squat = BenchmarkRules.List(Plan(), Library, history).Single(e => e.Exercise.Id == "squat");
@@ -81,8 +75,8 @@ public class BenchmarkRulesTests
     {
         var history = new[]
         {
-            W("w1", D(2026, 1, 10), "test", "squat", Load(100, 1)),
-            W("w2", D(2026, 1, 13), "lower", "squat", Load(120, 1)),
+            Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 100, reps: 1)),
+            Lift("w2", D(2026, 1, 13), "lower", "squat", Set(kg: 120, reps: 1)),
         };
 
         var list = BenchmarkRules.List(Plan(), Library, history);
@@ -101,9 +95,9 @@ public class BenchmarkRulesTests
     {
         var history = new[]
         {
-            W("w1", D(2026, 1, 10), "test", "squat", Load(100, 1)),
-            W("w2", D(2026, 2, 7), "test", "squat", Load(110, 1)),
-            W("w3", D(2026, 2, 9), "lower", "squat", Load(130, 1)),
+            Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 100, reps: 1)),
+            Lift("w2", D(2026, 2, 7), "test", "squat", Set(kg: 110, reps: 1)),
+            Lift("w3", D(2026, 2, 9), "lower", "squat", Set(kg: 130, reps: 1)),
         };
 
         var rows = BenchmarkRules.PreFill(Plan(), Library, history);
@@ -126,7 +120,7 @@ public class BenchmarkRulesTests
     [Fact]
     public void Next_benchmark_after_a_test_is_the_next_interval_week()
     {
-        var history = new[] { W("w1", D(2026, 1, 10), "test", "squat", Load(100, 1)) };
+        var history = new[] { Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 100, reps: 1)) };
 
         var due = BenchmarkRules.NextDue(Plan(), [], history, D(2026, 1, 12));
 
@@ -175,7 +169,7 @@ public class BenchmarkRulesTests
     [Fact]
     public void A_benchmark_workout_does_not_count_towards_the_week()
     {
-        var history = new[] { W("w1", D(2026, 1, 10), "test", "squat", Load(100, 1)) };
+        var history = new[] { Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 100, reps: 1)) };
 
         Assert.Equal(0, WeekRules.CountedWorkouts(Plan(), history, D(2026, 1, 5)));
     }
