@@ -13,6 +13,8 @@ public enum IndexedDbFailureKind
     Quota,
     /// <summary>IndexedDB is missing or refused (private browsing, security error).</summary>
     Unavailable,
+    /// <summary>The module's connection was closed (another tab upgraded, or the browser closed it); opening again fixes it.</summary>
+    NotOpen,
     /// <summary>Anything else; <see cref="IndexedDbFailure.Detail"/> carries the diagnostics.</summary>
     Unexpected,
 }

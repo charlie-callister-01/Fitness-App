@@ -22,6 +22,8 @@ public sealed class IndexedDbDataStoreContractTests(BrowserFixture browser) : Da
         if (_session is not null) await _session.DisposeAsync();
     }
 
+    protected override int? StampedLayoutVersion => 1;
+
     protected override IDataStore CreateEmptyStore()
     {
         var interop = _session!.NewInterop();

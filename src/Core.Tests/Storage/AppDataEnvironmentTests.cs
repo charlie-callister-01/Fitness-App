@@ -86,14 +86,92 @@ public class AppDataEnvironmentTests
     }
 
     [Fact]
-    public async Task An_empty_store_that_says_it_was_initialised_is_browser_cleared_data()
+    public async Task An_empty_store_that_says_it_was_initialised_is_ready_not_browser_cleared()
     {
         var store = new InMemoryDataStore();
         await store.WriteMetadataAsync(new StoreMetadata(null, null, null, true));
 
+        var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { MarkerPresent = true });
+
+        Assert.Equal(StartupState.Ready, app.Startup.State);
+    }
+
+    [Fact]
+    public async Task A_database_that_is_unavailable_never_consults_the_marker()
+    {
+        var store = new FaultInjectingDataStore(new InMemoryDataStore());
+        store.FailEverything(StoreFailureKind.StorageUnavailable);
+
+        var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { MarkerPresent = true });
+
+        Assert.Equal(StartupState.FirstRun, app.Startup.State);
+        Assert.False(app.Health.DatabaseAvailable);
+    }
+
+    [Fact]
+    public async Task A_record_set_aside_at_startup_cannot_be_overwritten_or_deleted_by_a_commit()
+    {
+        var store = await StoreHolding();
+        var bad = new StoredRecord(RecordKind.Exercise, "rdl", """{"id":"rdl","name":"RDL","logKind":"nonsense"}""");
+        await store.ApplyAsync([new StoreChange.Put(bad)]);
         var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment());
 
+        var put = await app.CommitAsync(Change.Put(Rdl()));
+        var delete = await app.CommitAsync(Change.Delete(RecordKind.Exercise, "rdl"));
+
+        foreach (var result in new[] { put, delete })
+        {
+            var issue = Assert.Single(Assert.IsType<CommitResult.Rejected>(result).Issues);
+            Assert.Equal("record_set_aside", issue.Code);
+            Assert.Contains("rdl", issue.Path);
+        }
+
+        var stored = Assert.IsType<StoreResult<StoredData>.Success>(await store.LoadAllAsync()).Value;
+        Assert.Contains(bad, stored.Records);
+        Assert.Equal(["goblet-squat"], app.Snapshot.Exercises.Select(e => e.Id));
+    }
+
+    [Fact]
+    public async Task Replace_all_still_replaces_a_set_aside_record_and_clears_the_block()
+    {
+        var store = await StoreHolding();
+        await store.ApplyAsync([new StoreChange.Put(new StoredRecord(RecordKind.Exercise, "rdl", "{not json"))]);
+        var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment());
+
+        Assert.IsType<CommitResult.Committed>(await app.ReplaceAllAsync(TestData.Minimal()));
+
+        Assert.IsType<CommitResult.Committed>(await app.CommitAsync(Change.Put(Rdl())));
+    }
+
+    [Fact]
+    public async Task Recording_a_backup_is_refused_when_the_stored_metadata_is_unknown()
+    {
+        var inner = new InMemoryDataStore();
+        var original = new StoreMetadata(null, 1, 1, true);
+        await inner.WriteMetadataAsync(original);
+        var store = new FaultInjectingDataStore(inner);
+        store.FailEverything(StoreFailureKind.Unexpected);
+        var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment());
+        store.Recover();
+
+        var result = await app.RecordBackupAsync(BackupTime);
+
+        Assert.Equal(StoreFailureKind.Unexpected, Assert.IsType<StoreResult<Unit>.Failure>(result).Error.Kind);
+        Assert.Equal(original, Assert.IsType<StoreResult<StoredData>.Success>(await inner.LoadAllAsync()).Value.Metadata);
+    }
+
+    [Fact]
+    public async Task A_marker_with_an_empty_restore_is_not_browser_cleared()
+    {
+        var environment = new InMemoryStorageEnvironment { MarkerPresent = true };
+        var store = new InMemoryDataStore();
+        var app = await AppData.OpenAsync(store, environment);
         Assert.Equal(StartupState.BrowserCleared, app.Startup.State);
+
+        await app.ReplaceAllAsync(TestData.Minimal() with { Exercises = [] });
+        var restarted = await AppData.OpenAsync(store, environment);
+
+        Assert.Equal(StartupState.Ready, restarted.Startup.State);
     }
 
     [Fact]
