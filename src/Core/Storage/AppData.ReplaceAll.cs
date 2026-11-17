@@ -19,6 +19,11 @@ public sealed partial class AppData
             return new CommitResult.Rejected(issues);
         }
 
+        if (WriterLockFailure() is { } lockFailure)
+        {
+            return new CommitResult.StoreFailed(lockFailure);
+        }
+
         await _writer.WaitAsync();
         try
         {
@@ -31,6 +36,7 @@ public sealed partial class AppData
             _snapshot = DataSnapshot.From(document);
             _metadata = metadata;
             Startup = new StartupResult(StartupState.Ready, _snapshot, []);
+            await WriteMarkerAsync();
             Changed?.Invoke();
             return new CommitResult.Committed();
         }

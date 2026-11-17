@@ -47,26 +47,19 @@ public sealed partial class AppData
     /// <summary>When the last Backup was made or restored on this device; null if never. Device bookkeeping, not part of a Backup.</summary>
     public DateTimeOffset? LastBackupAt => _metadata.LastBackupAt;
 
-    public static Task<AppData> OpenAsync(IDataStore store) => OpenAsync(store, ExchangeFormat.CurrentVersion);
+    /// <summary>Opens over <paramref name="store"/> with a default environment (writable, persistence granted, no marker). Tests and tools; the app passes the real one.</summary>
+    public static Task<AppData> OpenAsync(IDataStore store) => OpenAsync(store, new InMemoryStorageEnvironment(), ExchangeFormat.CurrentVersion);
+
+    /// <summary>Opens over <paramref name="store"/> and <paramref name="environment"/>; see <see cref="OpenAsync(IDataStore, IStorageEnvironment, int)"/>.</summary>
+    public static Task<AppData> OpenAsync(IDataStore store, IStorageEnvironment environment) =>
+        OpenAsync(store, environment, ExchangeFormat.CurrentVersion);
 
     /// <summary>
     /// Test seam: <paramref name="currentVersion"/> stands in for the app's record format version, so an older stored version can be
     /// exercised before a real format bump exists. Production code uses <see cref="OpenAsync(IDataStore)"/>.
     /// </summary>
-    internal static async Task<AppData> OpenAsync(IDataStore store, int currentVersion)
-    {
-        switch (await store.LoadAllAsync())
-        {
-            case StoreResult<StoredData>.Success success:
-                var (startup, metadata) = await UpgradeIfOlderAsync(store, success.Value, Read(success.Value, currentVersion), currentVersion);
-                return new AppData(store, startup, metadata, currentVersion);
-            case StoreResult<StoredData>.Failure failure:
-                return new AppData(
-                    store, new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error), StoreMetadata.Empty, currentVersion);
-            default:
-                throw new InvalidOperationException("Unreachable: StoreResult has two cases.");
-        }
-    }
+    internal static Task<AppData> OpenAsync(IDataStore store, int currentVersion) =>
+        OpenAsync(store, new InMemoryStorageEnvironment(), currentVersion);
 
     /// <summary>A commit of one change; see <see cref="CommitAsync(IReadOnlyList{Change})"/>.</summary>
     public Task<CommitResult> CommitAsync(Change change) => CommitAsync([change]);
@@ -83,6 +76,11 @@ public sealed partial class AppData
             return new CommitResult.Blocked(Startup.State);
         }
 
+        if (WriterLockFailure() is { } lockFailure)
+        {
+            return new CommitResult.StoreFailed(lockFailure);
+        }
+
         await _writer.WaitAsync();
         try
         {
@@ -92,6 +90,7 @@ public sealed partial class AppData
                 return new CommitResult.Rejected(issues);
             }
 
+            var firstSave = !_metadata.Initialised;
             var metadata = _metadata is { Initialised: true } && _metadata.RecordFormatVersion == _currentVersion
                 ? null
                 : _metadata with { Initialised = true, RecordFormatVersion = _currentVersion };
@@ -102,6 +101,11 @@ public sealed partial class AppData
 
             _snapshot = candidate;
             _metadata = metadata ?? _metadata;
+            if (firstSave)
+            {
+                await WriteMarkerAsync();
+            }
+
             Changed?.Invoke();
             return new CommitResult.Committed();
         }
@@ -117,6 +121,11 @@ public sealed partial class AppData
     /// </summary>
     public async Task<StoreResult<Unit>> RecordBackupAsync(DateTimeOffset at)
     {
+        if (WriterLockFailure() is { } lockFailure)
+        {
+            return new StoreResult<Unit>.Failure(lockFailure);
+        }
+
         await _writer.WaitAsync();
         try
         {

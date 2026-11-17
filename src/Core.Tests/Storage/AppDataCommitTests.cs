@@ -201,7 +201,7 @@ public class AppDataCommitTests
         var store = new FaultInjectingDataStore(inner);
         if (state == StartupState.StorageFailed)
         {
-            store.FailEverything(StoreFailureKind.StorageUnavailable);
+            store.FailEverything(StoreFailureKind.Unexpected);
         }
         else
         {
