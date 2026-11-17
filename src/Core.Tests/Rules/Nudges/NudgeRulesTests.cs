@@ -97,6 +97,17 @@ public class NudgeRulesTests
     }
 
     [Fact]
+    public void Backup_age_counts_calendar_days_in_the_offset_the_backup_was_made_in()
+    {
+        // 01:00 on 4 Nov at +10:00 is still 3 Nov in UTC; the owner's calendar day is the 4th, so 14 days is the 18th.
+        var backup = new DateTimeOffset(2026, 11, 4, 1, 0, 0, TimeSpan.FromHours(10));
+        var h = Done(Mon);
+        Assert.Empty(NudgeRules.Compute(new WeekHistory().Plan with { Sessions = [] }, [], [], h.Workouts, backup, Tue));
+        var n = Assert.Single(NudgeRules.Compute(new WeekHistory().Plan with { Sessions = [] }, [], [], h.Workouts, backup, Wed));
+        Assert.Equal(NudgeKind.NoRecentBackup, n.Kind);
+    }
+
+    [Fact]
     public void Never_having_backed_up_nudges_for_a_backup()
     {
         var h = Done(Mon);

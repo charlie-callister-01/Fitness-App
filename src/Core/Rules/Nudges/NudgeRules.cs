@@ -45,11 +45,17 @@ public static class NudgeRules
 
         if (lastBackup is null)
             nudges.Add(new(NudgeKind.NoRecentBackup, "No Backup yet. Make one so you don't lose your data."));
-        else if (today.DayNumber - DateOnly.FromDateTime(lastBackup.Value.DateTime).DayNumber >= BackupNudgeDays)
+        else if (today.DayNumber - BackupDay(lastBackup.Value).DayNumber >= BackupNudgeDays)
             nudges.Add(new(NudgeKind.NoRecentBackup, $"No Backup in {BackupNudgeDays} days. Make one so you don't lose your data."));
 
         return nudges;
     }
+
+    /// <summary>
+    /// The calendar day a Backup was made on: its date in the offset it was stamped with (the owner's local clock at the time),
+    /// never converted to UTC or to the device's current zone. The 14-day comparison is then whole calendar days against "today".
+    /// </summary>
+    private static DateOnly BackupDay(DateTimeOffset backup) => DateOnly.FromDateTime(backup.DateTime);
 
     private static IEnumerable<Nudge> RepeatedPain(IReadOnlyList<Workout> workouts, DateOnly monday)
     {
@@ -68,9 +74,6 @@ public static class NudgeRules
         IReadOnlyList<Workout> workouts, DateOnly today) =>
         WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
             .OrderBy(m => m.Date)
-            .Select(m =>
-            {
-                var name = plan.Sessions.First(s => s.Id == m.SessionId).Name;
-                return new Nudge(NudgeKind.MissedSession, $"You missed {name} on {m.Date:dddd}. Make it up this week?", m.SessionId);
-            });
+            .Select(m => new Nudge(
+                NudgeKind.MissedSession, $"You missed {m.SessionName} on {m.Date:dddd}. Make it up this week?", m.SessionId));
 }

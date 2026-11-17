@@ -7,4 +7,4 @@ public sealed record ScheduledSession(string SessionId, DateOnly Date, bool IsMo
 public sealed record WeekLayout(DateOnly Monday, IReadOnlyList<ScheduledSession> Sessions, IReadOnlyList<DateOnly> BreakDays);
 
 /// <summary>A Session whose planned day passed with no Workout made from it that week.</summary>
-public sealed record MissedSession(string SessionId, DateOnly Date);
+public sealed record MissedSession(string SessionId, string SessionName, DateOnly Date);

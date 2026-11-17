@@ -122,7 +122,7 @@ Rules are written to match the product brief's carried-over rules exactly. Where
 
 ### Badges and Benchmarks
 76. As the owner, I want Badge progress (value, target, percentage, reached or not) worked out from history, so that it can never get out of sync.
-77. As the owner, I want the metrics `sessions`, `streak`, `best week`, `prs` and "any Exercise" supported, so that the starter Badges work.
+77. As the owner, I want the metrics `sessions`, `streak`, `bestweek` (also accepted as `best week`), `prs` and "any Exercise" supported, so that the starter Badges work.
 78. As the owner, I want `bodyweight` to be a Badge metric (the Exercise-name-free special case) meaning my latest Weigh-in, so that a weight-goal Badge works.
 79. As the owner, I want a negative target on a measurement to mean "drop by this much from the start", so that weight-loss Badges work.
 80. As the owner, I want an unknown Badge metric to show as "not measurable" with its name, never crash, so that a Badge edited oddly doesn't break the Trophies screen.
@@ -176,6 +176,7 @@ Rules are written to match the product brief's carried-over rules exactly. Where
 
 ### Outcomes
 - A **Missed session** is a Session scheduled in the Week schedule for a date before today, for which no Workout with that `sessionId` exists in the same week. Break days and weeks before Plan start are excluded; benchmark Sessions are only scheduled in their interval weeks. It remains missed even if its Exercises were done in a Custom workout.
+- **Custom workout offer order** (story 64): `CustomWorkoutOffer.Order` returns the Exercise library with the planned Exercises of this week's Missed sessions first (Sessions in Plan order, rows in row order, the current Phase's Override rows when it has one, each Exercise once), then the rest of the library in library order. Tests: `CustomWorkoutOfferTests`.
 - **Per-row outcome** compares a Workout's `planned` snapshot with its entries: done, skipped (reason), swapped (replacement) or, for a planned row with no entry, skipped with no reason. An entry with no matching planned row is an extra Exercise.
 
 ### Phase position

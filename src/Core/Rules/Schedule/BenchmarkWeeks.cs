@@ -6,9 +6,9 @@ namespace Core.Rules.Schedule;
 /// <summary>When a benchmark Session is scheduled. Reusable by Benchmarks (ticket 12).</summary>
 public static class BenchmarkWeeks
 {
-    /// <summary>True for a Test Session with an interval, i.e. a benchmark Session.</summary>
+    /// <summary>True for a Test Session with a positive interval, i.e. a benchmark Session. A missing or zero interval is not a benchmark.</summary>
     public static bool IsBenchmark(Session session) =>
-        session is { Type: SessionType.Test, BenchmarkIntervalWeeks: not null };
+        session is { Type: SessionType.Test, BenchmarkIntervalWeeks: > 0 };
 
     /// <summary>
     /// Whether the Session is scheduled in the week starting on <paramref name="monday"/>. A benchmark Session

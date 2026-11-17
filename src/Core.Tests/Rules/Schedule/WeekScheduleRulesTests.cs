@@ -102,6 +102,22 @@ public class WeekScheduleRulesTests
     }
 
     [Fact]
+    public void A_test_session_with_a_zero_interval_is_not_a_benchmark_and_is_always_scheduled()
+    {
+        var plan = Plan();
+        var odd = new Session("odd", "Odd", DayOfWeek.Saturday, SessionType.Test, 0, []);
+        Assert.False(BenchmarkWeeks.IsBenchmark(odd));
+        Assert.True(BenchmarkWeeks.IsScheduledInWeek(plan, odd, Start.AddDays(7)));
+    }
+
+    [Fact]
+    public void Missed_sessions_carry_the_session_name()
+    {
+        var missed = WeekScheduleRules.MissedInWeek(Plan(), [], [], [], Mon, Mon.AddDays(1));
+        Assert.Equal("Lower", Assert.Single(missed).SessionName);
+    }
+
+    [Fact]
     public void Weeks_before_the_Plan_start_are_empty()
     {
         var l = WeekScheduleRules.Layout(Plan(Mon), [], [], Mon.AddDays(-7));

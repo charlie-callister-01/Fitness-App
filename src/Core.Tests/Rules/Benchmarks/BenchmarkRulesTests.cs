@@ -118,7 +118,7 @@ public class BenchmarkRulesTests
     [Fact]
     public void Next_benchmark_is_due_in_the_first_plan_week_when_never_tested()
     {
-        var due = BenchmarkRules.NextDue(Plan(), [], D(2025, 12, 1));
+        var due = BenchmarkRules.NextDue(Plan(), [], [], D(2025, 12, 1));
 
         Assert.Equal(new BenchmarkDue("test", D(2026, 1, 10)), due);
     }
@@ -128,7 +128,7 @@ public class BenchmarkRulesTests
     {
         var history = new[] { W("w1", D(2026, 1, 10), "test", "squat", Load(100, 1)) };
 
-        var due = BenchmarkRules.NextDue(Plan(), history, D(2026, 1, 12));
+        var due = BenchmarkRules.NextDue(Plan(), [], history, D(2026, 1, 12));
 
         // Plan week 5 starts Mon 2026-02-02; its Saturday is the 7th.
         Assert.Equal(new BenchmarkDue("test", D(2026, 2, 7)), due);
@@ -137,9 +137,29 @@ public class BenchmarkRulesTests
     [Fact]
     public void Next_benchmark_is_this_weeks_when_due_and_not_yet_done()
     {
-        var due = BenchmarkRules.NextDue(Plan(), [], D(2026, 2, 3));
+        var due = BenchmarkRules.NextDue(Plan(), [], [], D(2026, 2, 3));
 
         Assert.Equal(D(2026, 2, 7), due!.Date);
+    }
+
+    [Fact]
+    public void Next_benchmark_honours_a_Week_schedule_move()
+    {
+        // Plan week 5 starts Mon 2026-02-02; the test is moved from Saturday the 7th to Wednesday the 4th.
+        var schedules = new[] { new WeekSchedule(D(2026, 2, 2), [new SessionMove("test", D(2026, 2, 4))]) };
+
+        var due = BenchmarkRules.NextDue(Plan(), schedules, [], D(2026, 2, 3));
+
+        Assert.Equal(new BenchmarkDue("test", D(2026, 2, 4)), due);
+    }
+
+    [Fact]
+    public void A_benchmark_with_a_zero_interval_is_not_a_benchmark_and_never_throws()
+    {
+        var plan = Plan() with { Sessions = [new Session("test", "Test", DayOfWeek.Saturday, SessionType.Test, 0, [])] };
+
+        Assert.Null(BenchmarkRules.NextDue(plan, [], [], D(2026, 2, 3)));
+        Assert.DoesNotContain(BenchmarkRules.List(plan, Library, []), e => e.Latest is not null);
     }
 
     [Fact]
@@ -147,7 +167,7 @@ public class BenchmarkRulesTests
     {
         var plan = Plan() with { Sessions = [new Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [])] };
 
-        Assert.Null(BenchmarkRules.NextDue(plan, [], D(2026, 2, 3)));
+        Assert.Null(BenchmarkRules.NextDue(plan, [], [], D(2026, 2, 3)));
     }
 
     // ---- weekly target

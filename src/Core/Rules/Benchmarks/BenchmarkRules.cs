@@ -36,19 +36,21 @@ public static class BenchmarkRules
     /// <summary>
     /// The earliest benchmark Session still to do: the first week from today's that the Session is scheduled in
     /// (see <see cref="BenchmarkWeeks"/>) with no Workout of it yet. Null when the Plan has no benchmark Session.
-    /// Day moves are ignored; the date is the Session's default day.
+    /// The date is the Session's day in that week's Week schedule, so a move is honoured.
     /// </summary>
-    public static BenchmarkDue? NextDue(Plan plan, IEnumerable<Workout> history, DateOnly today)
+    public static BenchmarkDue? NextDue(
+        Plan plan, IReadOnlyList<WeekSchedule> schedules, IEnumerable<Workout> history, DateOnly today)
     {
         var all = history.ToList();
         return plan.Sessions
             .Where(BenchmarkWeeks.IsBenchmark)
-            .Select(s => DueOf(plan, s, all, today))
+            .Select(s => DueOf(plan, schedules, s, all, today))
             .OrderBy(d => d.Date)
             .FirstOrDefault();
     }
 
-    private static BenchmarkDue DueOf(Plan plan, Session session, List<Workout> history, DateOnly today)
+    private static BenchmarkDue DueOf(
+        Plan plan, IReadOnlyList<WeekSchedule> schedules, Session session, List<Workout> history, DateOnly today)
     {
         var monday = WeekCalendar.MondayOf(today);
         var planStart = WeekCalendar.MondayOf(plan.StartDate);
@@ -57,8 +59,8 @@ public static class BenchmarkRules
         {
             var sunday = WeekCalendar.SundayOf(monday);
             var done = history.Any(w => w.SessionId == session.Id && w.Date >= monday && w.Date <= sunday);
-            if (!done && BenchmarkWeeks.IsScheduledInWeek(plan, session, monday))
-                return new BenchmarkDue(session.Id, monday.AddDays(((int)session.DefaultDay + 6) % 7));
+            if (!done && WeekScheduleRules.Layout(plan, schedules, [], monday).Sessions.FirstOrDefault(s => s.SessionId == session.Id) is { } placed)
+                return new BenchmarkDue(session.Id, placed.Date);
             monday = WeekCalendar.AddWeeks(monday, 1);
         }
     }

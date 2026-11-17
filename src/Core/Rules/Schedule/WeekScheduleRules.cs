@@ -44,7 +44,7 @@ public static class WeekScheduleRules
         return layout.Sessions
             .Where(s => s.Date < today && s.Date >= plan.StartDate && !s.IsBreakDay)
             .Where(s => !workouts.Any(w => w.SessionId == s.SessionId && WeekCalendar.InWeek(layout.Monday, w.Date)))
-            .Select(s => new MissedSession(s.SessionId, s.Date))
+            .Select(s => new MissedSession(s.SessionId, plan.Sessions.FirstOrDefault(p => p.Id == s.SessionId)?.Name ?? s.SessionId, s.Date))
             .ToList();
     }
 
