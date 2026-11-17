@@ -4,7 +4,7 @@
 
 **Blocked by:** 01.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Markdown Export cases from the spec's Testing Decisions pass
 - [ ] No IDs outside the library table; units always labelled

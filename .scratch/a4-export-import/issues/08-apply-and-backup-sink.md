@@ -4,7 +4,7 @@
 
 **Blocked by:** 01, 06, 07.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Every Apply case and the whole-loop test in the spec's Testing Decisions pass
 - [ ] Importing the same file twice gives "nothing to change"

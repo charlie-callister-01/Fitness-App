@@ -176,7 +176,7 @@ Each kind decides what it reads from the file and what it ignores; everything it
 
 ## Further Notes
 
-- **Seam and defaults to confirm.** The proposed single seam is the `Core.Exchange` surface over an in-memory `AppData`. Items marked **(default)** are recommendations, not yet confirmed by the owner. The ones that change behaviour most, for the owner to confirm or change before `/to-tickets`:
+- **Seam and defaults.** The single seam is the `Core.Exchange` surface over an in-memory `AppData`. **The owner confirmed all defaults on 17 Nov 2026 ("go with your recommendation")**, so every item marked **(default)** is now a decision and was built as written. The ones that change behaviour most:
   1. **Near-matches block applying** until answered (alternative: default to "add as new" with the question shown). Recommended: block, as the brief says near-matches "need confirmation".
   2. **The automatic Backup goes through a host-supplied sink** (a download on the phone), and the Import stops if it is not delivered. Alternative: also keep a pre-Import copy inside the app (a new storage item) so "undo last Import" needs no file. Recommended: sink only now; revisit with the screens.
   3. **A Workout that differs from the stored one with the same ID is kept** unless chosen otherwise. Recommended for history safety.

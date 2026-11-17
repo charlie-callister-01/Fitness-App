@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Every Inspect case in the spec's Testing Decisions passes
 - [ ] `unsupported_version` says to update the app; older versions read normally

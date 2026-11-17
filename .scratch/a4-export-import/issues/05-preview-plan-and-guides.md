@@ -4,7 +4,7 @@
 
 **Blocked by:** 04.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Plan and Guides cases from the spec's Testing Decisions pass, including summary wording
 - [ ] Re-previewing the same file after applying would say nothing to change (stable IDs)

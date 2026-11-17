@@ -4,7 +4,7 @@
 
 **Blocked by:** 03.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Every matching case in the spec's Testing Decisions passes
 - [ ] A near-match blocks readiness until decided; both choices produce correct data

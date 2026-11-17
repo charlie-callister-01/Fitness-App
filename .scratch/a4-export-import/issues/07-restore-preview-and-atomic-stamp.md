@@ -4,7 +4,7 @@
 
 **Blocked by:** 03, 05.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Restore cases from the spec's Testing Decisions pass, including from a `CannotRead` start
 - [ ] A3's tests still pass; the atomic stamp is covered by a contract test

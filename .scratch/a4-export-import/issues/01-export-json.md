@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Every Export case in the spec's Testing Decisions (JSON side) passes, through the public surface only
 - [ ] Output reads back through `ExchangeFormat.Read` with no errors

@@ -4,6 +4,6 @@
 
 **Blocked by:** 01, 05.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Every prompt case in the spec's Testing Decisions passes; each worked example reads, validates and previews cleanly
