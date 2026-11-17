@@ -67,8 +67,15 @@ public static class ExercisePerformance
         return readings.Count == 0 ? null : new MeasurementChange(readings[0], readings[^1], readings[^1] - readings[0]);
     }
 
-    /// <summary>Last, Best and (later) Suggested target for the log screen.</summary>
-    public static ExerciseSnapshot Snapshot(Exercise exercise, IEnumerable<Workout> history)
+    /// <summary>Last and Best only; there is no Plan, so no Suggested target.</summary>
+    public static ExerciseSnapshot Snapshot(Exercise exercise, IEnumerable<Workout> history) =>
+        Snapshot(exercise, history, null);
+
+    /// <summary>
+    /// Last, Best and Suggested target for the log screen. The weight increment comes from the Plan, and the first row
+    /// for the Exercise in Plan order gives the rep range. A null Plan gives no target.
+    /// </summary>
+    public static ExerciseSnapshot Snapshot(Exercise exercise, IEnumerable<Workout> history, Plan? plan)
     {
         var all = history.ToList();
         var lastVisit = Visits(exercise, all).LastOrDefault();
@@ -80,7 +87,10 @@ public static class ExercisePerformance
                 lastVisit.Sets,
                 lastVisit.Rpe,
                 PickBest(CandidatesOf(exercise.LogKind, lastVisit))?.Set);
-        return new ExerciseSnapshot(exercise.Id, last, Best(exercise, all), Target: null);
+        var best = Best(exercise, all);
+        var row = plan?.Sessions.SelectMany(s => s.Exercises).FirstOrDefault(r => r.ExerciseId == exercise.Id);
+        var target = plan is null ? null : TargetRules.For(exercise.LogKind, last, best, plan, row);
+        return new ExerciseSnapshot(exercise.Id, last, best, target);
     }
 
     private static bool IsMeasurement(LogKind kind) => kind is LogKind.BodyMeasurementKg or LogKind.BodyMeasurementCm;
