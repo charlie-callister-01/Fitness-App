@@ -22,9 +22,9 @@ Don't skip or merge steps, and don't start the next stage until the current stag
 
 ### Track A
 - **A0: Scaffold and delivery. DONE (PR #7 merged, 16 Nov 2026).** The four-project solution, .NET LTS confirmed, PWA shell that installs and works offline, CI (build and test on PR), GitHub Pages deploy. The live app is at https://charlie-callister-01.github.io/Fitness-App/.
-- **A1: Data model and spec.** Entities and relationships (Plan, Phase, Session, Exercise, Workout, Set, Weigh-in, Pain check, Break, Badge, Guide, settings), permanent IDs, tags, canonical units, format version, JSON serialisation, validation. Written spec first.
-- **A2: Core rules.** Log kinds and input parsing, PRs and Max sets, Suggested target with RPE, weeks/Streak/consistency, Missed/Partial/Skipped/Swapped handling, Badges, benchmark logic, unit conversion, week-rearrangement suggestions, Nudge rules.
-- **A3: Storage.** The storage interface, an in-memory implementation, the IndexedDB implementation, persistent-storage request, load-into-memory model.
+- **A1: Data model and spec. DONE (merged).** Entities and relationships (Plan, Phase, Session, Exercise, Workout, Set, Weigh-in, Pain check, Break, Badge, Guide, settings), permanent IDs, tags, canonical units, format version, JSON serialisation, validation. Written spec first.
+- **A2: Core rules. DONE (PR #12 merged).** Log kinds and input parsing, PRs and Max sets, Suggested target with RPE, weeks/Streak/consistency, Missed/Partial/Skipped/Swapped handling, Badges, benchmark logic, unit conversion, week-rearrangement suggestions, Nudge rules.
+- **A3: Storage. SPEC WRITTEN** ([`specs/a3-storage.md`](specs/a3-storage.md)); tickets next. The storage interface, an in-memory implementation, the IndexedDB implementation, persistent-storage request, load-into-memory model.
 - **A4: Export, Import and prompt pack.** Export picker logic (JSON and Markdown), Import for Backup / Plan / merge / Guides with previews, automatic backup, Exercise matching, error messages, versioned format reading, prompt pack text.
 - **A5: Starter data.** The starting Plan converted from `Config.md`, the 27 Guides, and the weight history, all delivered through Import.
 
@@ -44,7 +44,7 @@ None of these block A0 to A4.
 ## Status and next step
 **A0 is merged and deployed** (spec #1, tickets #2 to #6, PR #7; deploy fix PR #9). GitHub Pages source is set to "GitHub Actions" and the Deploy run succeeds. Still to confirm by hand, because they need a phone or a throwaway PR: install, offline open and update pickup (see `pwa-manual-checks.md`); that a deep link restores in a real browser; that CI fails on a deliberately failing test; and the `lan` run profile from a phone.
 
-**Next:** run `/to-spec` for **A1 (data model and spec)**, then `/to-tickets` with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
+**A1 and A2 are merged** (539 Core and 9 Ui tests green). The A3 spec is written; **next:** the owner answers its open questions, then `/to-tickets` for **A3 (Storage)** with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
 
 ## Open items to settle during specs
 - ~~The exact .NET LTS version and Blazor template details.~~ Settled: .NET 10 LTS, standalone Blazor WebAssembly PWA template ([ADR 0004](adr/0004-dotnet-10-lts-pinned.md)).
