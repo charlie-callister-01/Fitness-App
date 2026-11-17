@@ -19,10 +19,10 @@ public enum IndexedDbFailureKind
 
 public sealed record IndexedDbFailure(IndexedDbFailureKind Kind, string Detail);
 
-public sealed record StoredRecord(string Key, string Json);
+public sealed record RawRecord(string Key, string Json);
 
 public sealed record LoadedData(
-    IReadOnlyDictionary<string, IReadOnlyList<StoredRecord>> Records,
+    IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> Records,
     IReadOnlyDictionary<string, string> Meta);
 
 /// <summary>One put or delete in a batch. <see cref="Json"/> is null for a delete.</summary>
@@ -41,10 +41,8 @@ public sealed record IndexedDbResult<T>(T? Value, IndexedDbFailure? Failure)
 /// <summary>
 /// Typed wrapper over <c>wwwroot/js/indexeddb-store.js</c>. Strings go in and out of JavaScript; this class
 /// only (de)serialises the small JSON envelopes. No storage rules live here.
-/// TODO(A3 ticket 01 merge): <c>IndexedDbDataStore</c> should implement Core's <c>IDataStore</c> over this class
-/// (map kinds to the module's kind names, records to <see cref="StoredRecord"/>, failures to the closed failure kinds).
 /// </summary>
-public sealed class IndexedDbInterop(IJSRuntime js) : IAsyncDisposable
+public sealed class IndexedDbInterop(IJSRuntime js) : IIndexedDbInterop, IAsyncDisposable
 {
     public const string ModulePath = "./js/indexeddb-store.js";
 
@@ -60,11 +58,11 @@ public sealed class IndexedDbInterop(IJSRuntime js) : IAsyncDisposable
 
     public Task<IndexedDbResult<LoadedData>> LoadAllAsync() => CallAsync<LoadedData>("loadAll");
 
-    public Task<IndexedDbResult<object?>> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string>? meta = null) =>
+    public Task<IndexedDbResult<object?>> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null) =>
         CallAsync<object?>("apply", JsonSerializer.Serialize(new { ops, meta }, Wire));
 
     public Task<IndexedDbResult<object?>> ReplaceAllAsync(
-        IReadOnlyDictionary<string, IReadOnlyList<StoredRecord>> records, IReadOnlyDictionary<string, string>? meta = null) =>
+        IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> records, IReadOnlyDictionary<string, string?>? meta = null) =>
         CallAsync<object?>("replaceAll", JsonSerializer.Serialize(new { records, meta }, Wire));
 
     public async Task<IndexedDbResult<string?>> GetMetaAsync(string key)

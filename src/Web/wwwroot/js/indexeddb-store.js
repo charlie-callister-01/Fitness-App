@@ -105,6 +105,12 @@ function checkKind(kind) {
     if (!KINDS.includes(kind)) throw new StoreError('unexpected', `Unknown record kind '${kind}'`);
 }
 
+// A null meta value deletes the key (so "never written" can be restored).
+function putOrDeleteMeta(tx, key, value) {
+    const meta = tx.objectStore(META);
+    if (value === null || value === undefined) meta.delete(key); else meta.put(value, key);
+}
+
 /** Returns { records: { kind: [{key, json}] }, meta: { key: value } }, read in one transaction. */
 export async function loadAll() {
     try {
@@ -147,7 +153,7 @@ export async function apply(batchJson) {
                 else if (op.op === 'delete') store.delete(op.key);
                 else throw new StoreError('unexpected', `Unknown op '${op.op}'`);
             }
-            for (const [k, v] of Object.entries(meta)) tx.objectStore(META).put(v, k);
+            for (const [k, v] of Object.entries(meta)) putOrDeleteMeta(tx, k, v);
         });
         return ok({});
     } catch (e) { return failFrom(e); }
@@ -168,7 +174,7 @@ export async function replaceAll(documentJson) {
                 store.clear();
                 for (const r of records[kind] ?? []) store.put(r.json, r.key);
             }
-            for (const [k, v] of Object.entries(doc.meta ?? {})) tx.objectStore(META).put(v, k);
+            for (const [k, v] of Object.entries(doc.meta ?? {})) putOrDeleteMeta(tx, k, v);
         });
         return ok({});
     } catch (e) { return failFrom(e); }
