@@ -1,6 +1,6 @@
 # Fitness App: documentation index
 
-Start here in a new session. The grilling session (usage, then practical, then technical) is **complete**. Stages A0 (scaffold and delivery), A1 (data model and exchange format) and A2 (core rules) are merged. A3 (Storage) is implemented, reviewed and fixed (spec `specs/a3-storage.md`; draft PR #14). A4 (Export, Import and prompt pack) is specified (`specs/a4-export-import.md`); tickets are next. See `build-plan.md`.
+Start here in a new session. The grilling session (usage, then practical, then technical) is **complete**. Stages A0 (scaffold and delivery), A1 (data model and exchange format) and A2 (core rules) are merged. A3 (Storage) is implemented, reviewed and fixed (spec `specs/a3-storage.md`; draft PR #14). A4 (Export, Import and prompt pack) is implemented and reviewed (`specs/a4-export-import.md`; draft PR open). The next stage is A5 (Starter data). See `build-plan.md`.
 
 | Read this | For |
 |---|---|
