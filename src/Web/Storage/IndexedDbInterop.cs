@@ -34,11 +34,11 @@ public sealed record IndexedDbOperation(string Op, string Kind, string Key, stri
     public static IndexedDbOperation Delete(string kind, string key) => new("delete", kind, key, null);
 }
 
-/// <summary>Success value or a failure; never throws for an expected storage failure.</summary>
-public sealed record IndexedDbResult<T>(T? Value, IndexedDbFailure? Failure)
-{
-    public bool Succeeded => Failure is null;
-}
+/// <summary>The outcome of a call that returns nothing: it succeeded (no failure) or failed. Never thrown for an expected storage failure.</summary>
+public record IndexedDbResult(IndexedDbFailure? Failure);
+
+/// <summary>The outcome of a call that returns a value: <see cref="Value"/> is set exactly when <see cref="IndexedDbResult.Failure"/> is null.</summary>
+public sealed record IndexedDbResult<T>(T? Value, IndexedDbFailure? Failure) : IndexedDbResult(Failure);
 
 /// <summary>
 /// Typed wrapper over <c>wwwroot/js/indexeddb-store.js</c>. Strings go in and out of JavaScript; this class
@@ -56,53 +56,64 @@ public sealed class IndexedDbInterop(IJSRuntime js) : IIndexedDbInterop, IAsyncD
 
     private IJSObjectReference? _module;
 
-    public Task<IndexedDbResult<object?>> OpenAsync(string databaseName) => CallAsync<object?>("open", databaseName);
+    public async Task<IndexedDbResult> OpenAsync(string databaseName) => new((await InvokeAsync("open", databaseName)).Failure);
 
-    public Task<IndexedDbResult<LoadedData>> LoadAllAsync() => CallAsync<LoadedData>("loadAll");
-
-    public Task<IndexedDbResult<object?>> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null) =>
-        CallAsync<object?>("apply", JsonSerializer.Serialize(new { ops, meta }, Wire));
-
-    public Task<IndexedDbResult<object?>> ReplaceAllAsync(
-        IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> records, IReadOnlyDictionary<string, string?>? meta = null) =>
-        CallAsync<object?>("replaceAll", JsonSerializer.Serialize(new { records, meta }, Wire));
-
-    public async Task<IndexedDbResult<string?>> GetMetaAsync(string key)
+    public async Task<IndexedDbResult<LoadedData>> LoadAllAsync()
     {
-        var result = await CallAsync<MetaValue>("getMeta", key);
-        return new(result.Value?.Value, result.Failure);
+        var call = await InvokeAsync("loadAll");
+        if (call.Failure is not null)
+        {
+            return new(default, call.Failure);
+        }
+
+        try
+        {
+            return new(JsonSerializer.Deserialize<LoadedData>(call.Json!, Wire), null);
+        }
+        catch (JsonException e)
+        {
+            return new(default, Unexpected(e));
+        }
     }
 
-    public Task<IndexedDbResult<object?>> SetMetaAsync(string key, string value) => CallAsync<object?>("setMeta", key, value);
+    public async Task<IndexedDbResult> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null) =>
+        new((await InvokeAsync("apply", JsonSerializer.Serialize(new { ops, meta }, Wire))).Failure);
 
-    public Task<IndexedDbResult<object?>> CloseAsync() => CallAsync<object?>("close");
+    public async Task<IndexedDbResult> ReplaceAllAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> records, IReadOnlyDictionary<string, string?>? meta = null) =>
+        new((await InvokeAsync("replaceAll", JsonSerializer.Serialize(new { records, meta }, Wire))).Failure);
 
-    /// <summary>Test cleanup: deletes the whole database.</summary>
-    public Task<IndexedDbResult<object?>> DestroyAsync(string databaseName) => CallAsync<object?>("destroy", databaseName);
+    public async Task<IndexedDbResult> CloseAsync() => new((await InvokeAsync("close")).Failure);
 
     public async ValueTask DisposeAsync()
     {
-        if (_module is not null) await _module.DisposeAsync();
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
     }
 
-    private sealed record MetaValue(string? Value);
+    private readonly record struct Call(string? Json, IndexedDbFailure? Failure);
 
     private sealed record Envelope(bool Ok, IndexedDbFailureKind? Kind, string? Detail);
 
-    private async Task<IndexedDbResult<T>> CallAsync<T>(string function, params object[] args)
+    private static IndexedDbFailure Unexpected(Exception exception) => new(IndexedDbFailureKind.Unexpected, exception.Message);
+
+    /// <summary>Calls a module function and reads its envelope: the raw JSON on success, or the failure it reported (or that calling it caused).</summary>
+    private async Task<Call> InvokeAsync(string function, params string[] args)
     {
         try
         {
             _module ??= await js.InvokeAsync<IJSObjectReference>("import", ModulePath);
             var json = await _module.InvokeAsync<string>(function, args);
             var envelope = JsonSerializer.Deserialize<Envelope>(json, Wire)!;
-            if (!envelope.Ok)
-                return new(default, new IndexedDbFailure(envelope.Kind ?? IndexedDbFailureKind.Unexpected, envelope.Detail ?? ""));
-            return new(typeof(T) == typeof(object) ? default : JsonSerializer.Deserialize<T>(json, Wire), null);
+            return envelope.Ok
+                ? new(json, null)
+                : new(null, new IndexedDbFailure(envelope.Kind ?? IndexedDbFailureKind.Unexpected, envelope.Detail ?? ""));
         }
-        catch (Exception e) when (e is JSException or JsonException or InvalidOperationException)
+        catch (Exception exception) when (exception is JSException or JsonException or InvalidOperationException)
         {
-            return new(default, new IndexedDbFailure(IndexedDbFailureKind.Unexpected, e.Message));
+            return new(null, Unexpected(exception));
         }
     }
 }

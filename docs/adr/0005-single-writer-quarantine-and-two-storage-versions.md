@@ -18,6 +18,6 @@ Three storage rules that are surprising and costly to change once real data exis
 
 ## Consequences
 
-- A window that cannot take the lock (or a browser without Web Locks support, which is treated as a single window) is a known gap: the lock only protects where it exists.
+- A window that cannot take the lock (or a browser without Web Locks support, which is treated as a single window and reported as `WriterLock = Unsupported` in the storage health) is a known gap: the lock only protects where it exists.
 - A quarantined record keeps taking space and keeps being reported until the owner or a later feature fixes or replaces it. If the only active Plan is quarantined the app starts as "cannot read" and blocks commits, so the only way forward is restoring a Backup.
 - A format change needs a migration in `Core` (rewrite on startup); a layout change needs a JavaScript upgrade step and a layout version bump. Neither exists in practice yet: both versions are still 1.

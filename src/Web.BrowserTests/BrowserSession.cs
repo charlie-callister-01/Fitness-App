@@ -13,7 +13,7 @@ public sealed class BrowserSession : IAsyncDisposable
 
     private const string BlankPage = "<!doctype html><html><head><title>storage test</title></head><body></body></html>";
 
-    private readonly List<(IndexedDbInterop Interop, string DatabaseName)> _databases = [];
+    private readonly List<string> _databases = [];
 
     private BrowserSession(IBrowserContext context, IPage page)
     {
@@ -46,20 +46,20 @@ public sealed class BrowserSession : IAsyncDisposable
     /// <summary>Reloads the page: the module's in-memory state is lost, stored data is not.</summary>
     public Task ReloadAsync() => Page.ReloadAsync();
 
-    /// <summary>A fresh interop over a page, tracked so its (uniquely named) database is deleted on dispose.</summary>
+    /// <summary>A fresh interop over a page.</summary>
     public IndexedDbInterop NewInterop(IPage? page = null) => new(new PlaywrightJsRuntime(page ?? Page));
 
     public static string NewDatabaseName() => $"test-{Guid.NewGuid():N}";
 
-    /// <summary>Registers a database for deletion when the session ends.</summary>
-    public void DestroyOnDispose(IndexedDbInterop interop, string databaseName) => _databases.Add((interop, databaseName));
+    /// <summary>Registers a database (opened through the first page) for deletion when the session ends.</summary>
+    public void DestroyOnDispose(string databaseName) => _databases.Add(databaseName);
 
     public async ValueTask DisposeAsync()
     {
-        foreach (var (interop, name) in _databases)
+        // Test-only cleanup, so it calls the module's destroy (which closes the connection first) directly, not through the production wrapper.
+        foreach (var name in _databases)
         {
-            await interop.CloseAsync();
-            await interop.DestroyAsync(name);
+            await CallModuleAsync<string>(Page, IndexedDbInterop.ModulePath, "destroy", name);
         }
         await Context.CloseAsync();
     }
@@ -80,8 +80,12 @@ public sealed class BrowserSession : IAsyncDisposable
         }
         var file = Path.Combine(AppContext.BaseDirectory, "wwwroot", path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(file))
+        {
             await route.FulfillAsync(new RouteFulfillOptions { Status = 200, ContentType = "text/javascript", Body = await File.ReadAllTextAsync(file) });
+        }
         else
+        {
             await route.FulfillAsync(new RouteFulfillOptions { Status = 404, Body = "not found" });
+        }
     }
 }

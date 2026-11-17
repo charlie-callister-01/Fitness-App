@@ -7,11 +7,11 @@ public class StartupWiringTests
 {
     private sealed class FailingOpenInterop(IndexedDbFailure failure) : IIndexedDbInterop
     {
-        public Task<IndexedDbResult<object?>> OpenAsync(string databaseName) => Task.FromResult(new IndexedDbResult<object?>(null, failure));
+        public Task<IndexedDbResult> OpenAsync(string databaseName) => Task.FromResult(new IndexedDbResult(failure));
         public Task<IndexedDbResult<LoadedData>> LoadAllAsync() => throw new InvalidOperationException("never opened");
-        public Task<IndexedDbResult<object?>> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null) =>
+        public Task<IndexedDbResult> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null) =>
             throw new InvalidOperationException("never opened");
-        public Task<IndexedDbResult<object?>> ReplaceAllAsync(
+        public Task<IndexedDbResult> ReplaceAllAsync(
             IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> records, IReadOnlyDictionary<string, string?>? meta = null) =>
             throw new InvalidOperationException("never opened");
     }

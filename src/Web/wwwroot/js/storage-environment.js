@@ -1,6 +1,7 @@
 // Browser storage facts (A3 ticket 07): persistence, usage estimate, the writer lock and the cleared-data marker.
-// Thin by design: no rules. Every function returns a plain string or boolean and never throws; a browser that lacks
-// a feature answers "unsupported", "unknown" (empty string), "not obtained" (false) or "marker absent" (false).
+// Thin by design: no rules, and no policy about what a missing feature means (Core decides that). Every function returns a
+// plain value and never throws; a browser that lacks a feature answers "unsupported", null (estimate), "unsupported" (lock)
+// or false (marker absent).
 
 export const MARKER_KEY = 'fitness-app.cleared-data-marker';
 export const LOCK_NAME = 'fitness-app.writer';
@@ -17,39 +18,39 @@ export async function requestPersistence() {
     }
 }
 
-/** JSON {"usage":n,"quota":n}, or "" when the browser cannot say. */
+/** { usage, quota } in bytes, or null when the browser cannot say. */
 export async function estimate() {
     try {
         const storage = navigator.storage;
-        if (!storage || typeof storage.estimate !== 'function') return '';
+        if (!storage || typeof storage.estimate !== 'function') return null;
         const { usage, quota } = await storage.estimate();
-        if (!Number.isFinite(usage) || !Number.isFinite(quota)) return '';
-        return JSON.stringify({ usage, quota });
+        if (!Number.isFinite(usage) || !Number.isFinite(quota)) return null;
+        return { usage: Math.round(usage), quota: Math.round(quota) };
     } catch {
-        return '';
+        return null;
     }
 }
 
 let lockHeld = false;
 
 /**
- * True if this page now holds the exclusive writer lock (kept until the page is closed). False if another window holds it.
- * A browser without Web Locks cannot tell, so it is treated as the only window: true.
+ * Tries to take the exclusive writer lock, kept until the page is closed. Answers "obtained", "heldElsewhere" (another window has it),
+ * "unsupported" (no Web Locks in this browser) or "unknown" (asking threw). What each means for writing is Core's decision.
  */
 export async function tryTakeWriterLock() {
-    if (lockHeld) return true;
+    if (lockHeld) return 'obtained';
     try {
-        if (!navigator.locks || typeof navigator.locks.request !== 'function') return true;
+        if (!navigator.locks || typeof navigator.locks.request !== 'function') return 'unsupported';
         return await new Promise((resolve, reject) => {
             navigator.locks.request(LOCK_NAME, { ifAvailable: true }, (lock) => {
-                if (!lock) { resolve(false); return undefined; }
+                if (!lock) { resolve('heldElsewhere'); return undefined; }
                 lockHeld = true;
-                resolve(true);
+                resolve('obtained');
                 return new Promise(() => { }); // never settles: the lock is held until the page goes away
             }).catch(reject);
         });
     } catch {
-        return false;
+        return 'unknown';
     }
 }
 
