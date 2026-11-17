@@ -7,16 +7,18 @@ namespace Core.Storage;
 /// that read a Backup and builds an immutable <see cref="DataSnapshot"/>. A record that cannot be read is left out of the snapshot and
 /// reported, never deleted. "Restart" is calling <see cref="OpenAsync"/> again over the same store.
 /// </summary>
-public sealed class AppData
+public sealed partial class AppData
 {
     /// <summary>Commits run one at a time, in the order they asked (the semaphore queues waiters first in, first out).</summary>
     private readonly SemaphoreSlim _writer = new(1, 1);
 
     private DataSnapshot _snapshot;
     private StoreMetadata _metadata;
+    private readonly int _currentVersion;
 
-    private AppData(IDataStore store, StartupResult startup, StoreMetadata metadata)
+    private AppData(IDataStore store, StartupResult startup, StoreMetadata metadata, int currentVersion)
     {
+        _currentVersion = currentVersion;
         Store = store;
         Startup = startup;
         _snapshot = startup.Snapshot;
@@ -26,8 +28,8 @@ public sealed class AppData
     /// <summary>The store this model reads and writes.</summary>
     internal IDataStore Store { get; }
 
-    /// <summary>What startup found. Never changes after open.</summary>
-    public StartupResult Startup { get; }
+    /// <summary>What startup found. Changes only when a replace-all succeeds (see <see cref="ReplaceAllAsync"/>).</summary>
+    public StartupResult Startup { get; private set; }
 
     /// <summary>
     /// The current dataset. Always present, whatever the startup state. A reader that keeps this value keeps a dataset that never changes:
@@ -45,15 +47,25 @@ public sealed class AppData
     /// <summary>When the last Backup was made or restored on this device; null if never. Device bookkeeping, not part of a Backup.</summary>
     public DateTimeOffset? LastBackupAt => _metadata.LastBackupAt;
 
-    public static async Task<AppData> OpenAsync(IDataStore store)
+    public static Task<AppData> OpenAsync(IDataStore store) => OpenAsync(store, ExchangeFormat.CurrentVersion);
+
+    /// <summary>
+    /// Test seam: <paramref name="currentVersion"/> stands in for the app's record format version, so an older stored version can be
+    /// exercised before a real format bump exists. Production code uses <see cref="OpenAsync(IDataStore)"/>.
+    /// </summary>
+    internal static async Task<AppData> OpenAsync(IDataStore store, int currentVersion)
     {
-        return await store.LoadAllAsync() switch
+        switch (await store.LoadAllAsync())
         {
-            StoreResult<StoredData>.Success success => new AppData(store, Read(success.Value), success.Value.Metadata),
-            StoreResult<StoredData>.Failure failure => new AppData(
-                store, new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error), StoreMetadata.Empty),
-            _ => throw new InvalidOperationException("Unreachable: StoreResult has two cases."),
-        };
+            case StoreResult<StoredData>.Success success:
+                var (startup, metadata) = await UpgradeIfOlderAsync(store, success.Value, Read(success.Value, currentVersion), currentVersion);
+                return new AppData(store, startup, metadata, currentVersion);
+            case StoreResult<StoredData>.Failure failure:
+                return new AppData(
+                    store, new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error), StoreMetadata.Empty, currentVersion);
+            default:
+                throw new InvalidOperationException("Unreachable: StoreResult has two cases.");
+        }
     }
 
     /// <summary>A commit of one change; see <see cref="CommitAsync(IReadOnlyList{Change})"/>.</summary>
@@ -62,7 +74,7 @@ public sealed class AppData
     /// <summary>
     /// Saves the changes as one atomic batch, then publishes the new snapshot and raises <see cref="Changed"/>. If the store fails, the
     /// old snapshot stays, nothing is raised and the failure kind comes back. The first successful commit also marks the store initialised,
-    /// in the same unit as the save.
+    /// in the same unit as the save, and records the record format version (always the current one).
     /// </summary>
     public async Task<CommitResult> CommitAsync(IReadOnlyList<Change> changes)
     {
@@ -80,7 +92,9 @@ public sealed class AppData
                 return new CommitResult.Rejected(issues);
             }
 
-            var metadata = _metadata.Initialised ? null : _metadata with { Initialised = true };
+            var metadata = _metadata is { Initialised: true } && _metadata.RecordFormatVersion == _currentVersion
+                ? null
+                : _metadata with { Initialised = true, RecordFormatVersion = _currentVersion };
             if (await Store.ApplyAsync([.. changes.Select(change => change.ToStoreChange())], metadata) is StoreResult<Unit>.Failure failure)
             {
                 return new CommitResult.StoreFailed(failure.Error);
@@ -127,11 +141,11 @@ public sealed class AppData
     /// leave another dangling (a Workout naming a removed Exercise), so this repeats. Errors that name no record cannot be set aside:
     /// the data as a whole cannot be read.
     /// </summary>
-    private static StartupResult Read(StoredData data)
+    private static StartupResult Read(StoredData data, int currentVersion)
     {
         var remaining = data.Records.ToList();
         var issues = new List<LoadIssue>();
-        var version = data.Metadata.RecordFormatVersion ?? ExchangeFormat.CurrentVersion;
+        var version = data.Metadata.RecordFormatVersion ?? currentVersion;
 
         while (true)
         {
