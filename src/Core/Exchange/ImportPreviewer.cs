@@ -15,34 +15,44 @@ public static class ImportPreviewer
         [ImportKind.Plan] = new PlanImport(),
         [ImportKind.Guides] = new GuidesImport(),
         [ImportKind.Merge] = new NotYetSupportedImport(ImportKind.Merge),
-        [ImportKind.Restore] = new NotYetSupportedImport(ImportKind.Restore),
+        [ImportKind.Restore] = new RestoreImport(),
     };
 
-    public static ImportPreview Preview(DataSnapshot snapshot, Inspected inspected, ImportKind kind, ImportDecisions decisions)
+    /// <param name="now">Used only by Restore: the Backup date when the file has no <c>exportedAt</c>.</param>
+    /// <param name="setAsideCount">Used only by Restore: how many records startup set aside (the count of <c>AppData.Startup.Issues</c> that name a record), which a restore removes.</param>
+    public static ImportPreview Preview(
+        DataSnapshot snapshot,
+        Inspected inspected,
+        ImportKind kind,
+        ImportDecisions decisions,
+        DateTimeOffset? now = null,
+        int setAsideCount = 0)
     {
         var rules = Kinds[kind];
-        var matching = ExerciseMatcher.Match(snapshot, inspected, decisions);
-        var built = rules.Build(new ImportContext(snapshot, inspected, matching, decisions));
+        var matching = rules.UsesExerciseMatching
+            ? ExerciseMatcher.Match(snapshot, inspected, decisions)
+            : new ExerciseMatching([], new Dictionary<string, string>(), [], [], [], inspected.Document);
+        var built = rules.Build(new ImportContext(snapshot, inspected, matching, decisions, now, setAsideCount));
         var items = built.Items
             .Concat(matching.Findings.Where(f => rules.Reads.Contains(PathHead(f.Path))).Select(ToItem))
             .Concat(IgnoredItems(matching.Document, rules))
             .ToList();
         if (!items.Any(i => i.Action == ImportItemAction.Blocker) && !matching.OpenDecisions.Any())
         {
-            items.AddRange(ValidationBlockers(snapshot, built.Changes));
+            items.AddRange(ValidationBlockers(snapshot, built));
         }
 
-        return new ImportPreview(kind, built.Summary, items, matching.Matches, built.Changes, snapshot);
+        return new ImportPreview(kind, built.Summary, items, matching.Matches, built.Changes, snapshot, built.Replacement, built.BackupStamp);
     }
 
     /// <summary>
-    /// Applies the changes to a copy of the snapshot and runs the same validator the commit will run, so the preview cannot promise
+    /// Applies the changes to a copy of the snapshot (for Restore, takes the file's document) and runs the same validator the commit will run, so the preview cannot promise
     /// what the commit would reject. Skipped while something else already blocks, because the result would only repeat it.
     /// </summary>
-    private static IEnumerable<ImportItem> ValidationBlockers(DataSnapshot snapshot, IReadOnlyList<Change> changes)
+    private static IEnumerable<ImportItem> ValidationBlockers(DataSnapshot snapshot, KindResult built)
     {
-        var result = changes.Aggregate(snapshot, (s, change) => change.ApplyTo(s));
-        return ExchangeFormat.Validate(result.ToDocument())
+        var result = built.Replacement ?? built.Changes.Aggregate(snapshot, (s, change) => change.ApplyTo(s)).ToDocument();
+        return ExchangeFormat.Validate(result)
             .Select(issue => new ImportItem(ImportItemAction.Blocker, KindAt(issue.Path), issue.Path, $"{issue.Path}: {issue.Message}"));
     }
 

@@ -117,4 +117,45 @@ public class AppDataReplaceAllTests
         Assert.Equal(StartupState.Ready, app.Startup.State);
         Assert.IsType<CommitResult.Committed>(await app.CommitAsync(Change.Put(Rdl() with { Name = "RDL 2" })));
     }
+
+    [Fact]
+    public async Task Replace_all_stamps_the_backup_time_in_the_same_store_write()
+    {
+        var inner = await StoreHolding(TestData.Minimal());
+        var app = await AppData.OpenAsync(inner);
+        var at = new DateTimeOffset(2026, 11, 10, 8, 0, 0, TimeSpan.Zero);
+
+        await app.ReplaceAllAsync(TestData.Minimal() with { Exercises = [Rdl()] }, at);
+
+        Assert.Equal(at, app.LastBackupAt);
+        Assert.Equal(at, (await Stored(inner)).Metadata.LastBackupAt);
+        Assert.Equal(at, (await AppData.OpenAsync(inner)).LastBackupAt);
+    }
+
+    [Fact]
+    public async Task A_failed_replace_all_does_not_stamp_the_backup_time()
+    {
+        var old = new DateTimeOffset(2026, 11, 1, 8, 0, 0, TimeSpan.Zero);
+        var inner = await StoreHolding(TestData.Minimal());
+        var store = new FaultInjectingDataStore(inner);
+        var app = await AppData.OpenAsync(store);
+        await app.RecordBackupAsync(old);
+        store.FailAllWrites(StoreFailureKind.StorageFull);
+
+        await app.ReplaceAllAsync(TestData.Minimal() with { Exercises = [Rdl()] }, old.AddDays(9));
+
+        Assert.Equal(old, app.LastBackupAt);
+        Assert.Equal(old, (await Stored(inner)).Metadata.LastBackupAt);
+    }
+
+    [Fact]
+    public async Task A_rejected_replace_all_does_not_stamp_the_backup_time()
+    {
+        var app = await AppData.OpenAsync(await StoreHolding(TestData.Minimal()));
+        var invalid = TestData.Minimal() with { Exercises = [TestData.GobletSquat(), TestData.GobletSquat()] };
+
+        await app.ReplaceAllAsync(invalid, new DateTimeOffset(2026, 11, 10, 8, 0, 0, TimeSpan.Zero));
+
+        Assert.Null(app.LastBackupAt);
+    }
 }

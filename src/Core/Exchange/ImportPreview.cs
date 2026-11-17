@@ -1,3 +1,4 @@
+using Core.Model;
 using Core.Storage;
 
 namespace Core.Exchange;
@@ -34,8 +35,9 @@ public sealed record ImportItem(ImportItemAction Action, RecordKind? Kind, strin
 
 /// <summary>
 /// Everything the owner needs to confirm an Import, and everything the apply step needs to commit it. <see cref="Changes"/> is the exact
-/// batch that will be committed (empty for a kind that replaces everything); <see cref="Source"/> is the snapshot the preview was built from,
-/// so a later apply can refuse a preview that is out of date.
+/// batch that will be committed (empty for a kind that replaces everything, Restore); <see cref="Source"/> is the snapshot the preview was built from,
+/// so a later apply can refuse a preview that is out of date. <see cref="Replacement"/> is set only for Restore: the whole document to pass to
+/// <c>AppData.ReplaceAllAsync</c>, with <see cref="BackupStamp"/> (the file's <c>exportedAt</c>, else the time the caller gave) as its Backup date.
 /// </summary>
 public sealed record ImportPreview(
     ImportKind Kind,
@@ -43,7 +45,9 @@ public sealed record ImportPreview(
     IReadOnlyList<ImportItem> Items,
     IReadOnlyList<ExerciseMatch> Matches,
     IReadOnlyList<Change> Changes,
-    DataSnapshot Source)
+    DataSnapshot Source,
+    ExchangeDocument? Replacement = null,
+    DateTimeOffset? BackupStamp = null)
 {
     /// <summary>The near-matches still waiting for the owner.</summary>
     public IEnumerable<ExerciseMatch> OpenChoices => Matches.Where(m => m.Outcome == ExerciseOutcome.NeedsDecision);

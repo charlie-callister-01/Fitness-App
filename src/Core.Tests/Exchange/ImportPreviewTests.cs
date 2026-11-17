@@ -183,7 +183,6 @@ public class ImportPreviewTests
 
     [Theory]
     [InlineData(ImportKind.Merge)]
-    [InlineData(ImportKind.Restore)]
     public void A_kind_that_is_not_built_yet_says_so_and_is_never_ready(ImportKind kind)
     {
         var preview = Preview(Library(exercises: Squat), Doc(plans: [MakePlan("hyrox", "Hyrox block", true, "s9", "ph9")]), kind);

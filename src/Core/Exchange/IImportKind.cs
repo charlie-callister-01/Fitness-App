@@ -1,12 +1,24 @@
+using Core.Model;
 using Core.Storage;
 
 namespace Core.Exchange;
 
 /// <summary>What a kind's rules get to work with: the library, the file, the Exercise matching and the owner's answers.</summary>
-internal sealed record ImportContext(DataSnapshot Snapshot, Inspected Inspected, ExerciseMatching Matching, ImportDecisions Decisions);
+internal sealed record ImportContext(
+    DataSnapshot Snapshot,
+    Inspected Inspected,
+    ExerciseMatching Matching,
+    ImportDecisions Decisions,
+    DateTimeOffset? Now = null,
+    int SetAsideCount = 0);
 
 /// <summary>What a kind decided: the changes to commit, the preview lines for them and the summary sentences.</summary>
-internal sealed record KindResult(IReadOnlyList<Change> Changes, IReadOnlyList<ImportItem> Items, IReadOnlyList<string> Summary)
+internal sealed record KindResult(
+    IReadOnlyList<Change> Changes,
+    IReadOnlyList<ImportItem> Items,
+    IReadOnlyList<string> Summary,
+    ExchangeDocument? Replacement = null,
+    DateTimeOffset? BackupStamp = null)
 {
     /// <summary>This result followed by <paramref name="next"/>: changes, items and sentences in that order.</summary>
     public KindResult Then(KindResult next) =>
@@ -31,6 +43,9 @@ internal interface IImportKind
 
     /// <summary>The top-level collections of the file (their wire names) this kind reads. Every other collection present is ignored.</summary>
     IReadOnlySet<string> Reads { get; }
+
+    /// <summary>False for a kind that takes the file as it is (Restore): no Exercise matching, remapping or reference findings.</summary>
+    bool UsesExerciseMatching => true;
 
     KindResult Build(ImportContext context);
 }
