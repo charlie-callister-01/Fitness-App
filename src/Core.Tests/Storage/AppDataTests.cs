@@ -196,12 +196,12 @@ public class AppDataTests
     public async Task A_store_that_cannot_be_loaded_reports_the_failure_and_starts_empty()
     {
         var store = new FaultInjectingDataStore(new InMemoryDataStore());
-        store.FailEverything(StoreFailureKind.StorageUnavailable);
+        store.FailEverything(StoreFailureKind.Unexpected);
 
         var app = await AppData.OpenAsync(store);
 
         Assert.Equal(StartupState.StorageFailed, app.Startup.State);
-        Assert.Equal(StoreFailureKind.StorageUnavailable, app.Startup.Failure?.Kind);
+        Assert.Equal(StoreFailureKind.Unexpected, app.Startup.Failure?.Kind);
         Assert.Empty(app.Snapshot.Plans);
         Assert.Equal(Settings.Default, app.Snapshot.Settings);
     }

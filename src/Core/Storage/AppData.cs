@@ -7,7 +7,7 @@ namespace Core.Storage;
 /// that read a Backup and builds an immutable <see cref="DataSnapshot"/>. A record that cannot be read is left out of the snapshot and
 /// reported, never deleted. "Restart" is calling <see cref="OpenAsync"/> again over the same store.
 /// </summary>
-public sealed class AppData
+public sealed partial class AppData
 {
     /// <summary>Commits run one at a time, in the order they asked (the semaphore queues waiters first in, first out).</summary>
     private readonly SemaphoreSlim _writer = new(1, 1);
@@ -45,16 +45,8 @@ public sealed class AppData
     /// <summary>When the last Backup was made or restored on this device; null if never. Device bookkeeping, not part of a Backup.</summary>
     public DateTimeOffset? LastBackupAt => _metadata.LastBackupAt;
 
-    public static async Task<AppData> OpenAsync(IDataStore store)
-    {
-        return await store.LoadAllAsync() switch
-        {
-            StoreResult<StoredData>.Success success => new AppData(store, Read(success.Value), success.Value.Metadata),
-            StoreResult<StoredData>.Failure failure => new AppData(
-                store, new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error), StoreMetadata.Empty),
-            _ => throw new InvalidOperationException("Unreachable: StoreResult has two cases."),
-        };
-    }
+    /// <summary>Opens over <paramref name="store"/> with a default environment (writable, persistence granted, no marker). Tests and tools; the app passes the real one.</summary>
+    public static Task<AppData> OpenAsync(IDataStore store) => OpenAsync(store, new InMemoryStorageEnvironment());
 
     /// <summary>A commit of one change; see <see cref="CommitAsync(IReadOnlyList{Change})"/>.</summary>
     public Task<CommitResult> CommitAsync(Change change) => CommitAsync([change]);
@@ -71,6 +63,11 @@ public sealed class AppData
             return new CommitResult.Blocked(Startup.State);
         }
 
+        if (WriterLockFailure() is { } lockFailure)
+        {
+            return new CommitResult.StoreFailed(lockFailure);
+        }
+
         await _writer.WaitAsync();
         try
         {
@@ -80,6 +77,7 @@ public sealed class AppData
                 return new CommitResult.Rejected(issues);
             }
 
+            var firstSave = !_metadata.Initialised;
             var metadata = _metadata.Initialised ? null : _metadata with { Initialised = true };
             if (await Store.ApplyAsync([.. changes.Select(change => change.ToStoreChange())], metadata) is StoreResult<Unit>.Failure failure)
             {
@@ -88,6 +86,11 @@ public sealed class AppData
 
             _snapshot = candidate;
             _metadata = metadata ?? _metadata;
+            if (firstSave)
+            {
+                await WriteMarkerAsync();
+            }
+
             Changed?.Invoke();
             return new CommitResult.Committed();
         }
@@ -103,6 +106,11 @@ public sealed class AppData
     /// </summary>
     public async Task<StoreResult<Unit>> RecordBackupAsync(DateTimeOffset at)
     {
+        if (WriterLockFailure() is { } lockFailure)
+        {
+            return new StoreResult<Unit>.Failure(lockFailure);
+        }
+
         await _writer.WaitAsync();
         try
         {
