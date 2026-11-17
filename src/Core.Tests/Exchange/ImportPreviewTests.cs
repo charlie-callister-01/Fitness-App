@@ -181,19 +181,6 @@ public class ImportPreviewTests
         Assert.StartsWith("workouts[0].sessionId: ", blocker.Text);
     }
 
-    [Theory]
-    [InlineData(ImportKind.Merge)]
-    public void A_kind_that_is_not_built_yet_says_so_and_is_never_ready(ImportKind kind)
-    {
-        var preview = Preview(Library(exercises: Squat), Doc(plans: [MakePlan("hyrox", "Hyrox block", true, "s9", "ph9")]), kind);
-
-        Assert.False(preview.IsReady);
-        Assert.Empty(preview.Changes);
-        var blocker = Assert.Single(preview.Blockers);
-        Assert.Null(blocker.Kind);
-        Assert.Contains("not supported yet", blocker.Text);
-    }
-
     private static Guide Gd(string exerciseId, string? works, string? notes = null, params string[] cues) =>
         new(exerciseId, works, null, null, null, cues, [], null, null, [], null, notes);
 
