@@ -4,11 +4,11 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Convert canonical to display and display to canonical for weight (kg/lb) and distance (km/mi), driven by the Settings display units
-- [ ] Display rounding gives sensible values (weights to a sensible increment, km/mi to two decimals) and never alters stored values
-- [ ] A "show both units" result is available for a weight and a distance
-- [ ] Round-trip (canonical to display and back) stays within display rounding with no cumulative drift over repeated edits
-- [ ] The weight increment used for targets stays in kg whatever the display unit
-- [ ] Tests run under a comma-decimal culture (for example de-DE) and prove identical results
+- [x] Convert canonical to display and display to canonical for weight (kg/lb) and distance (km/mi), driven by the Settings display units
+- [x] Display rounding gives sensible values (weights to a sensible increment, km/mi to two decimals) and never alters stored values
+- [x] A "show both units" result is available for a weight and a distance
+- [x] Round-trip (canonical to display and back) stays within display rounding with no cumulative drift over repeated edits
+- [x] The weight increment used for targets stays in kg whatever the display unit
+- [x] Tests run under a comma-decimal culture (for example de-DE) and prove identical results
