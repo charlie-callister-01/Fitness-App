@@ -1,3 +1,4 @@
+using System.Globalization;
 using Core.Model;
 
 namespace Core.Serialisation;
@@ -24,6 +25,7 @@ internal static class DocumentValidator
         checker.CheckBodyAndGuides();
         checker.CheckPlans();
         checker.CheckWorkouts();
+        checker.CheckWeekSchedules();
         return checker.Issues;
     }
 
@@ -41,10 +43,12 @@ internal static class DocumentValidator
         Workout,
         Set,
         PainCheck,
+        WeekSchedule,
     }
 
     private static string Label(RecordKind kind) => kind switch
     {
+        RecordKind.WeekSchedule => "Week schedule",
         RecordKind.WeighIn => "Weigh-in",
         RecordKind.PainCheck => "Pain check",
         _ => kind.ToString(),
@@ -388,6 +392,47 @@ internal static class DocumentValidator
             var path = $"{workoutPath}.painCheck";
             CheckUnique(RecordKind.PainCheck, $"{path}.id", "id", pain.Id);
             CheckExercise($"{path}.exerciseId", pain.ExerciseId);
+        }
+
+        public void CheckWeekSchedules()
+        {
+            foreach (var (week, i) in Indexed(_document.WeekSchedules))
+            {
+                var path = $"weekSchedules[{i}]";
+                CheckUnique(RecordKind.WeekSchedule, $"{path}.weekStart", "weekStart", week.WeekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                var isMonday = week.WeekStart.DayOfWeek == DayOfWeek.Monday;
+                if (!isMonday)
+                {
+                    Error($"{path}.weekStart", "invalid_value", $"{path}.weekStart ({week.WeekStart:yyyy-MM-dd}) must be a Monday, because weeks run Monday to Sunday.");
+                }
+
+                CheckMoves(week, path, isMonday);
+            }
+        }
+
+        /// <summary>A move's date is judged against its week only when the week is a real one (it starts on a Monday); otherwise the week is already reported.</summary>
+        private void CheckMoves(WeekSchedule week, string weekPath, bool isMonday)
+        {
+            var moved = new HashSet<string>();
+            foreach (var (move, i) in Indexed(week.Moves))
+            {
+                var path = $"{weekPath}.moves[{i}]";
+                if (IsSet(move.SessionId) && _sessions.IsUnknown(move.SessionId))
+                {
+                    Error($"{path}.sessionId", "unknown_session", $"{path}.sessionId \"{move.SessionId}\" is not a Session in any Plan in this document.");
+                }
+
+                if (IsSet(move.SessionId) && !moved.Add(move.SessionId))
+                {
+                    Error($"{path}.sessionId", "duplicate_id", $"{path}.sessionId \"{move.SessionId}\" is moved more than once in the week of {week.WeekStart:yyyy-MM-dd}. A Session can have one move per week.");
+                }
+
+                if (isMonday && (move.Date < week.WeekStart || move.Date > week.WeekStart.AddDays(6)))
+                {
+                    Error($"{path}.date", "out_of_range",
+                        $"{path}.date ({move.Date:yyyy-MM-dd}) is outside the week of {week.WeekStart:yyyy-MM-dd}. A move must land between that Monday and the Sunday after it.");
+                }
+            }
         }
 
         private static IEnumerable<(T Item, int Index)> Indexed<T>(IEnumerable<T>? items) =>
