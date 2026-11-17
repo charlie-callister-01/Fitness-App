@@ -41,6 +41,7 @@ public enum BodyArea
 /// <summary>
 /// One continuous effort, in canonical units. Which fields are filled depends on the Exercise's log kind (checked by A2, not here).
 /// Cardio distance is <see cref="DistanceKm"/>, carry distance is <see cref="DistanceM"/>; a Set never has both.
+/// A body measurement in kg is <see cref="WeightKg"/>; one in cm is <see cref="MeasurementCm"/>, never combined with weight or distance.
 /// </summary>
 public sealed record WorkoutSet(
     string Id,
@@ -49,7 +50,8 @@ public sealed record WorkoutSet(
     double? DistanceKm,
     int? DurationSeconds,
     double? DistanceM,
-    bool IsMax);
+    bool IsMax,
+    double? MeasurementCm = null);
 
 /// <summary>
 /// An Exercise in a Workout. For a skipped entry <see cref="ExerciseId"/> is the planned Exercise left undone;

@@ -124,8 +124,8 @@ public class BadgeRulesTests
     public void A_negative_target_on_a_measurement_Exercise_is_a_drop_from_its_start()
     {
         var lifts = new History()
-            .Done("w1", "2026-10-01", "waist", History.Set(kg: 100))
-            .Done("w2", "2026-11-01", "waist", History.Set(kg: 95));
+            .Done("w1", "2026-10-01", "waist", History.Set(cm: 100))
+            .Done("w2", "2026-11-01", "waist", History.Set(cm: 95));
         var p = P("waist", -10, Hist(lifts: lifts));
         Assert.Equal(5, p.Value);
         Assert.Equal(50, p.Percent);
@@ -135,8 +135,8 @@ public class BadgeRulesTests
     public void A_growing_measurement_gives_no_drop()
     {
         var lifts = new History()
-            .Done("w1", "2026-10-01", "waist", History.Set(kg: 90))
-            .Done("w2", "2026-11-01", "waist", History.Set(kg: 95));
+            .Done("w1", "2026-10-01", "waist", History.Set(cm: 90))
+            .Done("w2", "2026-11-01", "waist", History.Set(cm: 95));
         var p = P("waist", -5, Hist(lifts: lifts));
         Assert.Equal(-5, p.Value);
         Assert.Equal(0, p.Percent);

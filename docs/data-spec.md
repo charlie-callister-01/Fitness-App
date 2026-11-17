@@ -258,7 +258,7 @@ A user-editable achievement. Only its definition is stored; progress is always w
 | `id` | string | yes | Unique among Badges. |
 | `name` | string | yes | Non-blank. |
 | `metric` | string | yes | Non-blank name of what is measured. The set of metrics and how progress is computed belong to stage A2, so A1 does not restrict the value. |
-| `target` | number > 0 | yes | Value the metric must reach. |
+| `target` | number, not 0 | yes | Value the metric must reach. A negative target on a measurement metric (`bodyweight` or a body-measurement Exercise) means "drop by this much" from the first reading. Zero is `out_of_range`. |
 
 Supported `metric` values (case-insensitive; A2 works progress out from history): `sessions` (counted Workouts ever), `streak` (best-ever Streak run in weeks), `bestweek` (most counted Workouts in one week), `prs` (PRs across all Exercises), `bodyweight` (the latest Weigh-in), or an Exercise `id` (its best value in the Exercise's own measure; for a body measurement, its latest reading). Any other value is accepted and stored, and shows as "not measurable".
 
@@ -311,6 +311,7 @@ One real occurrence of training on a date. Its Sets and its Pain check live insi
 | `distanceM` | number > 0 | no | Carry distance. Not allowed together with `distanceKm` (`invalid_value`). |
 | `durationSeconds` | integer >= 1 | no | |
 | `isMax` | boolean | no | Default `false`. A Max set (a 1 or 3 rep max attempt). |
+| `measurementCm` | number > 0 | no | A body measurement in cm (for a `bodyMeasurementCm` Exercise). Not allowed together with `weightKg`, `distanceKm` or `distanceM` (`invalid_value`). A body measurement in kg is a plain `weightKg`. |
 
 Which fields a Set should have for an Exercise's log kind is behaviour (stage A2), not checked on read.
 
@@ -336,7 +337,8 @@ This block is parsed and validated by the real reader in the test suite. It has 
     { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load" },
     { "id": "farmers-carry", "name": "Farmers carry", "logKind": "carry" },
     { "id": "5k-run", "name": "5 km run", "logKind": "time" },
-    { "id": "rdl", "name": "Romanian deadlift", "logKind": "load" }
+    { "id": "rdl", "name": "Romanian deadlift", "logKind": "load" },
+    { "id": "waist", "name": "Waist", "logKind": "bodyMeasurementCm" }
   ],
   "workouts": [
     {
@@ -388,6 +390,11 @@ This block is parsed and validated by the real reader in the test suite. It has 
           "exerciseId": "farmers-carry",
           "status": "done",
           "sets": [{ "id": "s-4", "weightKg": 32, "distanceM": 40, "durationSeconds": 60 }]
+        },
+        {
+          "exerciseId": "waist",
+          "status": "done",
+          "sets": [{ "id": "s-5", "measurementCm": 86.5 }]
         }
       ],
       "painCheck": { "id": "p-2", "status": "none" }

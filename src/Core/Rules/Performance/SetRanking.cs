@@ -26,7 +26,7 @@ internal static class SetRanking
 
     /// <summary>
     /// The y value drawn on the Exercise's progress chart for a Set, in the Exercise's natural measure.
-    /// Body measurements are read from <see cref="WorkoutSet.WeightKg"/> (kg or cm).
+    /// A body measurement in kg is read from <see cref="WorkoutSet.WeightKg"/>, one in cm from <see cref="WorkoutSet.MeasurementCm"/>.
     /// </summary>
     public static double? ChartValue(LogKind kind, WorkoutSet set) => kind switch
     {
@@ -37,7 +37,8 @@ internal static class SetRanking
         LogKind.Seconds or LogKind.Minutes or LogKind.Time => set.DurationSeconds,
         LogKind.DistanceKm => set.DistanceKm,
         LogKind.DistanceM => set.DistanceM,
-        LogKind.BodyMeasurementKg or LogKind.BodyMeasurementCm => set.WeightKg,
+        LogKind.BodyMeasurementKg => set.WeightKg,
+        LogKind.BodyMeasurementCm => set.MeasurementCm,
         _ => null,
     };
 

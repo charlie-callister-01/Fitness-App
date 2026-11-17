@@ -205,6 +205,29 @@ internal sealed partial class FieldReader
         return TryTakeRequired(name, out var value) ? PositiveDouble(ChildPath(name), value) : 0;
     }
 
+    /// <summary>A required number that may be negative but not zero.</summary>
+    public double RequiredNonZeroDouble(string name)
+    {
+        if (!TryTakeRequired(name, out var value))
+        {
+            return 0;
+        }
+
+        var path = ChildPath(name);
+        if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out var number))
+        {
+            Sink.Error(path, "wrong_type", $"{path} must be a number.");
+            return 0;
+        }
+
+        if (number == 0)
+        {
+            Sink.Error(path, "out_of_range", $"{path} can't be 0.");
+        }
+
+        return number;
+    }
+
     /// <summary>An optional number that, when present, must be greater than zero.</summary>
     public double? OptionalPositiveDouble(string name)
     {

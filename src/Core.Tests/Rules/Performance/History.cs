@@ -9,8 +9,8 @@ internal sealed class History
 
     public IReadOnlyList<Workout> Workouts => _workouts;
 
-    public static WorkoutSet Set(double? kg = null, int? reps = null, double? km = null, int? seconds = null, double? m = null, bool max = false) =>
-        new($"s{Guid.NewGuid():N}", kg, reps, km, seconds, m, max);
+    public static WorkoutSet Set(double? kg = null, int? reps = null, double? km = null, int? seconds = null, double? m = null, bool max = false, double? cm = null) =>
+        new($"s{Guid.NewGuid():N}", kg, reps, km, seconds, m, max, cm);
 
     public History Done(string id, string date, string exerciseId, params WorkoutSet[] sets) =>
         Add(id, date, new WorkoutEntry(exerciseId, EntryStatus.Done, null, null, null, sets));

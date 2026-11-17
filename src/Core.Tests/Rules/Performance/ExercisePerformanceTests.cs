@@ -361,6 +361,28 @@ public class ExercisePerformanceTests
     }
 
     [Fact]
+    public void Centimetre_measurements_are_read_from_measurement_cm_not_weight()
+    {
+        var waist = Ex(LogKind.BodyMeasurementCm);
+        var h = new History()
+            .Done("w1", "2026-01-01", "ex", Set(cm: 92))
+            .Done("w2", "2026-01-08", "ex", Set(cm: 90.5));
+
+        var change = ExercisePerformance.BodyChange(waist, h.Workouts)!;
+
+        Assert.Equal((92, 90.5, -1.5), (change.Start, change.Latest, change.Change));
+        Assert.Equal(2, ExercisePerformance.ProgressPoints(waist, h.Workouts).Count);
+    }
+
+    [Fact]
+    public void A_weight_on_a_centimetre_exercise_is_not_a_reading()
+    {
+        var h = new History().Done("w1", "2026-01-01", "ex", Set(kg: 92));
+
+        Assert.Null(ExercisePerformance.BodyChange(Ex(LogKind.BodyMeasurementCm), h.Workouts));
+    }
+
+    [Fact]
     public void Body_change_is_null_for_other_kinds_and_for_no_readings()
     {
         Assert.Null(ExercisePerformance.BodyChange(Ex(LogKind.Load), []));

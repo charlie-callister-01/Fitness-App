@@ -17,7 +17,7 @@ internal static class BodyAndGuideReader
             r => new WeighIn(r.RequiredId("id"), r.RequiredDate("date"), r.RequiredPositiveDouble("weightKg"))),
         root.ReadRecords("breaks", ReadBreak),
         root.ReadRecords("badges",
-            r => new Badge(r.RequiredId("id"), r.RequiredString("name"), r.RequiredString("metric"), r.RequiredPositiveDouble("target"))),
+            r => new Badge(r.RequiredId("id"), r.RequiredString("name"), r.RequiredString("metric"), r.RequiredNonZeroDouble("target"))),
         root.ReadRecords("guides", ReadGuide));
 
     private static Break ReadBreak(FieldReader r)

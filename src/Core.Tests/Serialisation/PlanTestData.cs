@@ -13,7 +13,7 @@ internal static class PlanTestData
         FormatVersion: ExchangeFormat.CurrentVersion,
         ExportedAt: null,
         ExportedFrom: null,
-        Exercises: [Exercise("goblet-squat"), Exercise("farmers-carry", LogKind.Carry), Exercise("5k-run", LogKind.Time), Exercise("rdl")],
+        Exercises: [Exercise("goblet-squat"), Exercise("farmers-carry", LogKind.Carry), Exercise("5k-run", LogKind.Time), Exercise("rdl"), Exercise("waist", LogKind.BodyMeasurementCm)],
         Settings: null,
         Plans:
         [

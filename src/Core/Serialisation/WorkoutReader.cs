@@ -79,6 +79,7 @@ internal static class WorkoutReader
         var duration = reader.OptionalInt("durationSeconds", min: 1);
         var distanceM = reader.OptionalPositiveDouble("distanceM");
         var isMax = reader.OptionalBool("isMax", defaultValue: false);
+        var measurementCm = reader.OptionalPositiveDouble("measurementCm");
 
         if (distanceKm is not null && distanceM is not null)
         {
@@ -86,7 +87,13 @@ internal static class WorkoutReader
                 $"{reader.ChildPath("distanceM")} can't be used together with {reader.ChildPath("distanceKm")}. Use km for cardio or metres for a carry, not both.");
         }
 
-        return new WorkoutSet(id, weightKg, reps, distanceKm, duration, distanceM, isMax);
+        if (measurementCm is not null && (weightKg is not null || distanceKm is not null || distanceM is not null))
+        {
+            reader.Report("measurementCm", "invalid_value",
+                $"{reader.ChildPath("measurementCm")} can't be used together with weight or distance. A body measurement in cm is a Set of its own (a body weight in kg is a plain weightKg).");
+        }
+
+        return new WorkoutSet(id, weightKg, reps, distanceKm, duration, distanceM, isMax, measurementCm);
     }
 
     private static PainCheck? ReadPainCheck(FieldReader workout) =>
