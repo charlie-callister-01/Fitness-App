@@ -11,9 +11,9 @@ internal sealed class MergeImport : IImportKind
 {
     public string Name => "A merge";
 
-    public IReadOnlySet<string> Reads { get; } = new HashSet<string>
+    public IReadOnlySet<RecordKind> Reads { get; } = new HashSet<RecordKind>
     {
-        "exercises", "plans", "weighIns", "workouts", "breaks", "badges", "weekSchedules",
+        RecordKind.Exercise, RecordKind.Plan, RecordKind.WeighIn, RecordKind.Workout, RecordKind.Break, RecordKind.Badge, RecordKind.WeekSchedule,
     };
 
     public KindResult Build(ImportContext context)
@@ -21,14 +21,15 @@ internal sealed class MergeImport : IImportKind
         var document = context.Matching.Document;
         var snapshot = context.Snapshot;
         var result = ExerciseChanges.Build(context.Matching, includeTagChanges: true);
-        return Closed(result
+        return result
             .Then(Merge(RecordKind.Plan, document.Plans, snapshot.Plans, p => p.Name, settle: (file, current) => file with { IsActive = current?.IsActive ?? false }))
             .Then(Merge(RecordKind.WeighIn, document.WeighIns, snapshot.WeighIns, w => $"{w.Date:yyyy-MM-dd}"))
             .Then(Merge(RecordKind.Workout, document.Workouts, snapshot.Workouts, w => $"{w.Date:yyyy-MM-dd}", context.Decisions.WorkoutChoice))
             .Then(new KindResult([], SameSessionWarnings(document.Workouts ?? [], snapshot.Workouts), []))
             .Then(Merge(RecordKind.Break, document.Breaks, snapshot.Breaks, b => $"{b.StartDate:yyyy-MM-dd} to {b.EndDate:yyyy-MM-dd}"))
             .Then(Merge(RecordKind.Badge, document.Badges, snapshot.Badges, b => b.Name))
-            .Then(Merge(RecordKind.WeekSchedule, document.WeekSchedules, snapshot.WeekSchedules, w => $"week of {w.WeekStart:yyyy-MM-dd}")));
+            .Then(Merge(RecordKind.WeekSchedule, document.WeekSchedules, snapshot.WeekSchedules, w => $"week of {w.WeekStart:yyyy-MM-dd}"))
+            .Closed();
     }
 
     /// <summary>A warning for each Workout the merge adds that is on the same date and Session as a Workout the library has under another ID.</summary>
@@ -47,17 +48,6 @@ internal sealed class MergeImport : IImportKind
         ];
     }
 
-    /// <summary>
-    /// The closing sentence. A merge can touch Workouts, so unlike the other kinds it says "Touches no Workouts." only when none of its
-    /// changes is a Workout; with no changes at all it opens with "Nothing to change." instead.
-    /// </summary>
-    private static KindResult Closed(KindResult result) => result switch
-    {
-        { Changes.Count: 0 } => result with { Summary = ["Nothing to change.", .. result.Summary] },
-        _ when result.Changes.All(c => c.Kind != RecordKind.Workout) => result with { Summary = [.. result.Summary, "Touches no Workouts."] },
-        _ => result,
-    };
-
     /// <param name="choice">What to do, by key, with a record that differs from the library's. Only Workouts are ever kept.</param>
     /// <param name="settle">The file's record as it would be stored given the library's (null when it is new). Plans use it to keep <c>isActive</c>.</param>
     private static KindResult Merge<T>(
@@ -75,10 +65,10 @@ internal sealed class MergeImport : IImportKind
         var changes = new List<Change>();
         var items = new List<ImportItem>();
         var (added, replaced, kept) = (0, 0, 0);
+        var name = Wording.Names[kind].Singular;
         foreach (var fileRecord in (incoming ?? []).DistinctBy(RecordKeys.For))
         {
             var key = RecordKeys.For(fileRecord);
-            var name = Wording.Names[kind].Singular;
             var record = settle(fileRecord, existing.GetValueOrDefault(key));
             if (!existing.TryGetValue(key, out var current))
             {

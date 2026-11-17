@@ -26,7 +26,7 @@ internal static class ExportSlicer
             Exercises: exercises,
             Settings: null,
             WeighIns: request.WeighIns ? [.. snapshot.WeighIns.Where(w => InRange(request, w.Date))] : null,
-            Breaks: request.Plan ? [.. snapshot.Breaks.Where(b => request.Range is null || request.Range.Overlaps(b.StartDate, b.EndDate))] : null,
+            Breaks: request.Plan ? [.. snapshot.Breaks.Where(b => Overlaps(request, b.StartDate, b.EndDate))] : null,
             Badges: null,
             Guides: request.Guides ? SliceGuides(snapshot, exercises) : null,
             Plans: plans,
@@ -35,6 +35,8 @@ internal static class ExportSlicer
     }
 
     private static bool InRange(ExportRequest request, DateOnly date) => request.Range?.Contains(date) ?? true;
+
+    private static bool Overlaps(ExportRequest request, DateOnly first, DateOnly last) => request.Range?.Overlaps(first, last) ?? true;
 
     private static IReadOnlyList<Plan> ActivePlan(DataSnapshot snapshot) => [.. snapshot.Plans.Where(p => p.IsActive).Take(1)];
 
@@ -61,7 +63,7 @@ internal static class ExportSlicer
         return
         [
             .. snapshot.WeekSchedules
-                .Where(w => request.Range is null || request.Range.Overlaps(w.WeekStart, w.WeekStart.AddDays(6)))
+                .Where(w => Overlaps(request, w.WeekStart, w.WeekStart.AddDays(6)))
                 .Select(w => w with { Moves = [.. w.Moves.Where(m => sessionIds.Contains(m.SessionId))] }),
         ];
     }

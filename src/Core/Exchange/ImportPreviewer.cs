@@ -39,10 +39,10 @@ public static class ImportPreviewer
         var rules = Kinds[kind];
         var matching = rules.UsesExerciseMatching
             ? ExerciseMatcher.Match(snapshot, inspected, decisions)
-            : new ExerciseMatching([], new Dictionary<string, string>(), [], [], [], inspected.Document);
+            : ExerciseMatching.Untouched(inspected.Document);
         var built = rules.Build(new ImportContext(snapshot, inspected, matching, decisions, now, setAsideCount));
         var items = built.Items
-            .Concat(matching.Findings.Where(f => rules.Reads.Contains(PathHead(f.Path))).Select(ToItem))
+            .Concat(matching.Findings.Where(f => KindAt(f.Path) is { } kindOfFinding && rules.Reads.Contains(kindOfFinding)).Select(ToItem))
             .Concat(IgnoredItems(matching.Document, rules))
             .ToList();
         if (!items.Any(i => i.Action == ImportItemAction.Blocker) && !matching.OpenDecisions.Any())
@@ -85,7 +85,7 @@ public static class ImportPreviewer
     {
         foreach (var (kind, count) in DocumentCollections.Present(document))
         {
-            if (!rules.Reads.Contains(kind.WireName()))
+            if (!rules.Reads.Contains(kind))
             {
                 yield return new ImportItem(ImportItemAction.Ignore, kind, kind.WireName(), IgnoredText(kind, count, rules));
             }

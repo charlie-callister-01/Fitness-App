@@ -23,7 +23,7 @@ internal sealed class RestoreImport : IImportKind
 
     public string Name => "A restore";
 
-    public IReadOnlySet<string> Reads { get; } = Enum.GetValues<RecordKind>().Select(k => k.WireName()).ToHashSet();
+    public IReadOnlySet<RecordKind> Reads { get; } = Enum.GetValues<RecordKind>().ToHashSet();
 
     public bool UsesExerciseMatching => false;
 
@@ -83,5 +83,4 @@ internal sealed class RestoreImport : IImportKind
 
     private static string JoinWithAnd(List<string> parts) =>
         parts.Count == 1 ? parts[0] : $"{string.Join(", ", parts.SkipLast(1))} and {parts[^1]}";
-
 }

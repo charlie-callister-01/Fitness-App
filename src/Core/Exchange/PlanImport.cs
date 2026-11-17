@@ -13,7 +13,7 @@ internal sealed class PlanImport : IImportKind
 {
     public string Name => "A Plan import";
 
-    public IReadOnlySet<string> Reads { get; } = new HashSet<string> { "plans", "exercises" };
+    public IReadOnlySet<RecordKind> Reads { get; } = new HashSet<RecordKind> { RecordKind.Plan, RecordKind.Exercise };
 
     public KindResult Build(ImportContext context)
     {
@@ -43,7 +43,7 @@ internal sealed class PlanImport : IImportKind
             }
         }
 
-        return exercises.Then(new KindResult(changes, items, summary)).ClosedForKindsThatLeaveWorkoutsAlone();
+        return exercises.Then(new KindResult(changes, items, summary)).Closed();
     }
 
     private static IEnumerable<string> IdsOf(Plan plan) =>

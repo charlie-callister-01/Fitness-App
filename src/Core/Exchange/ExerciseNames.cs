@@ -44,6 +44,7 @@ internal static class ExerciseNames
             return 0;
         }
 
+        var total = left.Count + right.Count;
         var shared = 0;
         foreach (var gram in right)
         {
@@ -53,7 +54,7 @@ internal static class ExerciseNames
             }
         }
 
-        return 2.0 * shared / (Bigrams(a).Count + right.Count);
+        return 2.0 * shared / total;
     }
 
     private static List<string> Bigrams(string s) =>

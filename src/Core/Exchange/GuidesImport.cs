@@ -12,7 +12,7 @@ internal sealed class GuidesImport : IImportKind
 {
     public string Name => "A Guides import";
 
-    public IReadOnlySet<string> Reads { get; } = new HashSet<string> { "guides", "exercises" };
+    public IReadOnlySet<RecordKind> Reads { get; } = new HashSet<RecordKind> { RecordKind.Guide, RecordKind.Exercise };
 
     public KindResult Build(ImportContext context)
     {
@@ -53,7 +53,7 @@ internal sealed class GuidesImport : IImportKind
         }
 
         var summary = Wording.AddedReplacedKept(RecordKind.Guide, "Replaces", added, replaced, kept);
-        return exercises.Then(new KindResult(changes, items, summary)).ClosedForKindsThatLeaveWorkoutsAlone();
+        return exercises.Then(new KindResult(changes, items, summary)).Closed();
     }
 
     private static bool HasText(string? text) => !string.IsNullOrWhiteSpace(text);

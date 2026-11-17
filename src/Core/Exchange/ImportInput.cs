@@ -57,7 +57,7 @@ public static partial class ImportInput
 
     public static InspectResult Inspect(string text)
     {
-        var (json, trimmed) = Clean(text ?? string.Empty);
+        var (json, trimmed) = Clean(text);
 
         var read = ExchangeFormat.Read(json);
         if (!read.IsSuccess)

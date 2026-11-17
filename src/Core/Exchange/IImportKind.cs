@@ -25,11 +25,15 @@ internal sealed record KindResult(
         new([.. Changes, .. next.Changes], [.. Items, .. next.Items], [.. Summary, .. next.Summary]);
 
     /// <summary>
-    /// The closing sentence for a kind that never touches Workouts: with no changes, "Nothing to change." first and then the sentences
-    /// so far (what was kept); otherwise the sentences so far and "Touches no Workouts."
+    /// The closing sentence every kind but Restore shares: with no changes, "Nothing to change." first and then the sentences so far
+    /// (what was kept); otherwise, when none of the changes is a Workout, the sentences so far and "Touches no Workouts."
     /// </summary>
-    public KindResult ClosedForKindsThatLeaveWorkoutsAlone() =>
-        this with { Summary = Changes.Count == 0 ? ["Nothing to change.", .. Summary] : [.. Summary, "Touches no Workouts."] };
+    public KindResult Closed() => Changes switch
+    {
+        { Count: 0 } => this with { Summary = ["Nothing to change.", .. Summary] },
+        _ when Changes.All(c => c.Kind != RecordKind.Workout) => this with { Summary = [.. Summary, "Touches no Workouts."] },
+        _ => this,
+    };
 }
 
 /// <summary>
@@ -41,8 +45,8 @@ internal interface IImportKind
     /// <summary>How the preview names this kind in a sentence, such as "A Plan import".</summary>
     string Name { get; }
 
-    /// <summary>The top-level collections of the file (their wire names) this kind reads. Every other collection present is ignored.</summary>
-    IReadOnlySet<string> Reads { get; }
+    /// <summary>The kinds of record in the file this kind reads. Every other collection present is ignored.</summary>
+    IReadOnlySet<RecordKind> Reads { get; }
 
     /// <summary>False for a kind that takes the file as it is (Restore): no Exercise matching, remapping or reference findings.</summary>
     bool UsesExerciseMatching => true;

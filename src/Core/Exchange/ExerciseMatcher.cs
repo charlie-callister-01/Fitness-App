@@ -60,15 +60,11 @@ public static class ExerciseMatcher
 
         var distinct = resolved.DistinctBy(e => e.Id).ToList();
 
-        var known = file.Select(e => e.Id).Concat(libraryById.Keys).ToHashSet();
         var rewritten = ExerciseReferences.Rewrite(
             document,
             (_, id) => idMap.GetValueOrDefault(id, id),
             metric => idMap.GetValueOrDefault(metric, metric));
-        findings.AddRange(ExerciseReferences.Paths(document)
-            .Where(reference => !idMap.ContainsKey(reference.Id) && !known.Contains(reference.Id))
-            .Select(reference => new MatchFinding(MatchFindingKind.Blocker, reference.Path, "unknown_exercise",
-                $"{reference.Path} \"{reference.Id}\" is not in the Exercise library. Add it to exercises or use an existing ID.")));
+        findings.AddRange(UnknownExercises(document, idMap, file.Select(e => e.Id).Concat(libraryById.Keys).ToHashSet()));
         findings.AddRange(UnknownSessions(snapshot, document));
 
         return new ExerciseMatching(
@@ -79,6 +75,13 @@ public static class ExerciseMatcher
             findings,
             document.Exercises is null ? rewritten : rewritten with { Exercises = distinct });
     }
+
+    /// <summary>Exercise references that name an Exercise in neither the file's list nor the library.</summary>
+    private static IEnumerable<MatchFinding> UnknownExercises(Model.ExchangeDocument document, Dictionary<string, string> idMap, HashSet<string> known) =>
+        ExerciseReferences.Paths(document)
+            .Where(reference => !idMap.ContainsKey(reference.Id) && !known.Contains(reference.Id))
+            .Select(reference => new MatchFinding(MatchFindingKind.Blocker, reference.Path, "unknown_exercise",
+                $"{reference.Path} \"{reference.Id}\" is not in the Exercise library. Add it to exercises or use an existing ID."));
 
     private static (ExerciseOutcome Outcome, Exercise? Target, IReadOnlyList<ExerciseCandidate> Candidates) Resolve(
         Exercise incoming,

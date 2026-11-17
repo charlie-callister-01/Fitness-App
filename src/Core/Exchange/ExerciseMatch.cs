@@ -58,6 +58,10 @@ public sealed record ExerciseMatching(
     IReadOnlyList<MatchFinding> Findings,
     ExchangeDocument Document)
 {
+    /// <summary>The file as it is: nothing matched, remapped or found. For a kind that takes the file whole (Restore).</summary>
+    public static ExerciseMatching Untouched(ExchangeDocument document) =>
+        new([], new Dictionary<string, string>(), [], [], [], document);
+
     /// <summary>The near-matches still waiting for the owner. An Import cannot be applied while any remain.</summary>
     public IEnumerable<ExerciseMatch> OpenDecisions => Matches.Where(m => m.Outcome == ExerciseOutcome.NeedsDecision);
 }
