@@ -24,7 +24,7 @@ Don't skip or merge steps, and don't start the next stage until the current stag
 - **A0: Scaffold and delivery. DONE (PR #7 merged, 16 Nov 2026).** The four-project solution, .NET LTS confirmed, PWA shell that installs and works offline, CI (build and test on PR), GitHub Pages deploy. The live app is at https://charlie-callister-01.github.io/Fitness-App/.
 - **A1: Data model and spec. DONE (merged).** Entities and relationships (Plan, Phase, Session, Exercise, Workout, Set, Weigh-in, Pain check, Break, Badge, Guide, settings), permanent IDs, tags, canonical units, format version, JSON serialisation, validation. Written spec first.
 - **A2: Core rules. DONE (PR #12 merged).** Log kinds and input parsing, PRs and Max sets, Suggested target with RPE, weeks/Streak/consistency, Missed/Partial/Skipped/Swapped handling, Badges, benchmark logic, unit conversion, week-rearrangement suggestions, Nudge rules.
-- **A3: Storage. SPEC WRITTEN** ([`specs/a3-storage.md`](specs/a3-storage.md)); tickets next. The storage interface, an in-memory implementation, the IndexedDB implementation, persistent-storage request, load-into-memory model.
+- **A3: Storage. IMPLEMENTED** (tickets 01 to 09 done; review steps and PR still to do). Spec: [`specs/a3-storage.md`](specs/a3-storage.md). Delivered: `IDataStore` and the in-memory store, `AppData` (load into an immutable snapshot, save-then-publish commits, quarantine, format migration, replace-all), `IStorageEnvironment` and storage health, the IndexedDB module and store in `Web`, startup wiring, and the Playwright contract run (`src/Web.BrowserTests`, own CI job). Design: technical brief "Storage" and [ADR 0005](adr/0005-single-writer-quarantine-and-two-storage-versions.md); manual checks: [`pwa-manual-checks.md`](pwa-manual-checks.md).
 - **A4: Export, Import and prompt pack.** Export picker logic (JSON and Markdown), Import for Backup / Plan / merge / Guides with previews, automatic backup, Exercise matching, error messages, versioned format reading, prompt pack text.
 - **A5: Starter data.** The starting Plan converted from `Config.md`, the 27 Guides, and the weight history, all delivered through Import.
 
@@ -44,7 +44,15 @@ None of these block A0 to A4.
 ## Status and next step
 **A0 is merged and deployed** (spec #1, tickets #2 to #6, PR #7; deploy fix PR #9). GitHub Pages source is set to "GitHub Actions" and the Deploy run succeeds. Still to confirm by hand, because they need a phone or a throwaway PR: install, offline open and update pickup (see `pwa-manual-checks.md`); that a deep link restores in a real browser; that CI fails on a deliberately failing test; and the `lan` run profile from a phone.
 
-**A1 and A2 are merged** (539 Core and 9 Ui tests green). The A3 spec is written and its defaults are confirmed by the owner; **next:** `/to-tickets` for **A3 (Storage)** with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
+**A1 and A2 are merged** (539 Core and 9 Ui tests green). **A3 (Storage) is implemented** (all nine tickets). Remaining for A3: the two reviews, their fixes, and the PR. **Next stage: A4 (Export, Import and prompt pack)**, once A3's PR is written. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first. The storage manual checks (quota-full, persistence grant, cleared data, blocked upgrade, iOS Safari) still need doing by hand on a phone; see `pwa-manual-checks.md`.
+
+## Known sharp edges from A3 (for the owner)
+- **Only active Plan quarantined.** If the only active Plan cannot be read it is set aside, the snapshot then has a dangling reference, and the app starts as "cannot read" (`no_active_plan`), which blocks every commit. The owner can then only restore a Backup. Consider a gentler recovery path when the Plan screens are designed.
+- **Backup restore is two writes.** After a restore, `RecordBackupAsync` (the last-Backup time) is a separate, non-atomic write from the replace-all. A failure between them leaves the data restored but the Backup Nudge date stale. A4 should handle or surface it.
+- **Web Locks missing means "single window".** A browser without Web Locks gets the writer lock automatically, so two windows could write there. Accepted: all current target browsers have it, but it is untested outside Chromium.
+- **Browser tests do not run WASM.** They run the C# store on the test host and the JavaScript in headless Chromium. The Blazor interop layer in a real WebAssembly runtime is checked only by hand.
+- **Layout version is still 1.** No real layout or record-format upgrade has been exercised, only a synthetic older version in tests and the manual rehearsal in `pwa-manual-checks.md`.
+- **The browser-tests CI job has not yet run on GitHub.** Expect to fix workflow details on its first run.
 
 ## Open items to settle during specs
 - ~~The exact .NET LTS version and Blazor template details.~~ Settled: .NET 10 LTS, standalone Blazor WebAssembly PWA template ([ADR 0004](adr/0004-dotnet-10-lts-pinned.md)).
