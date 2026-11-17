@@ -38,7 +38,7 @@ public abstract class DataStoreContract
     public static TheoryData<StoredRecord> OneRecordOfEveryKind() =>
     [
         Rec(RecordKind.Exercise, "ex_squat", """{"id":"ex_squat","name":"Back squat – paused","unit":"kg"}"""),
-        Rec(RecordKind.Settings, RecordKeys.SettingsKey, """{"displayWeightUnit":"kg","restTimerSeconds":90}"""),
+        Rec(RecordKind.Settings, "settings", """{"displayWeightUnit":"kg","restTimerSeconds":90}"""),
         Rec(RecordKind.Plan, "plan_1", """{"id":"plan_1","phases":[{"id":"ph_1","sessions":[{"id":"se_1","rows":[]}]}]}"""),
         Rec(RecordKind.WeighIn, "wi_1", """{"id":"wi_1","date":"2026-11-17","weightKg":82.4}"""),
         Rec(RecordKind.Break, "br_1", """{"id":"br_1","startDate":"2026-12-24","endDate":"2026-12-27","reason":"Holiday ☃"}"""),
@@ -87,7 +87,7 @@ public abstract class DataStoreContract
     {
         var schedule = new Core.Model.WeekSchedule(new DateOnly(2026, 11, 16), []);
 
-        Assert.Equal("2026-11-16", RecordKeys.ForWeekSchedule(schedule));
+        Assert.Equal("2026-11-16", RecordKeys.For(schedule));
     }
 
     [Fact]
@@ -182,8 +182,8 @@ public abstract class DataStoreContract
     public async Task Replace_all_removes_everything_not_in_the_new_set()
     {
         var store = CreateEmptyStore();
-        await Apply(store, Put(Rec(RecordKind.Plan, "old")), Put(Rec(RecordKind.Workout, "wo_old")), Put(Rec(RecordKind.Settings, RecordKeys.SettingsKey, "old")));
-        var replacement = new[] { Rec(RecordKind.Plan, "new"), Rec(RecordKind.Settings, RecordKeys.SettingsKey, "new") };
+        await Apply(store, Put(Rec(RecordKind.Plan, "old")), Put(Rec(RecordKind.Workout, "wo_old")), Put(Rec(RecordKind.Settings, "settings", "old")));
+        var replacement = new[] { Rec(RecordKind.Plan, "new"), Rec(RecordKind.Settings, "settings", "new") };
 
         await Ok(store.ReplaceAllAsync(replacement));
 

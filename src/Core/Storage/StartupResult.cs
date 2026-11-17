@@ -28,9 +28,11 @@ public enum StartupState
 /// </summary>
 public sealed record LoadIssue(RecordKind? Kind, string? Key, string Message);
 
-/// <summary>What startup found: the state, the snapshot to run on (never null), and what could not be loaded.</summary>
+/// <summary>
+/// What startup found: the state and what could not be loaded. It carries no snapshot, so it cannot go stale:
+/// <see cref="AppData.Snapshot"/> is the one current dataset.
+/// </summary>
 public sealed record StartupResult(
     StartupState State,
-    DataSnapshot Snapshot,
     IReadOnlyList<LoadIssue> Issues,
     StoreFailure? Failure = null);

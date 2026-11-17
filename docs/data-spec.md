@@ -96,6 +96,8 @@ One object holding app-wide settings, so a Backup restores everything.
 | `streakMinWorkoutsPerWeek` | integer >= 1 | yes | Streak rule: Workouts needed in a week. |
 | `streakCountsCustomWorkouts` | boolean | yes | Streak rule: whether Custom workouts count. |
 
+**First-run defaults.** When no Settings are stored (a first run, or Settings never changed), the app uses `Settings.Default`: kg, km, a 2.5 kg weight increment, a 90 second rest timer, no goal weight, a Streak minimum of 3 Workouts a week, and Custom workouts not counted toward the Streak. These are the app's starting product choices, not rules of the format, and the owner can adjust them (change the values in `Settings.Default`; existing stored Settings are unaffected).
+
 ## Plan, Phase and Session
 
 `plans` is an array of Plans. Several can exist; **exactly one has `isActive: true`** whenever the array is non-empty (an empty array means "no Plans"). A Plan is self-contained: it carries its own weekly target, Streak rules and weight increment (the Settings values of the same names are app-wide defaults).

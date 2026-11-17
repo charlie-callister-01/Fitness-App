@@ -144,6 +144,46 @@ public class AppDataEnvironmentTests
     }
 
     [Fact]
+    public async Task A_commit_queued_behind_a_replace_all_is_judged_against_the_data_the_replace_all_left()
+    {
+        var inner = await StoreHolding();
+        await inner.ApplyAsync([new StoreChange.Put(new StoredRecord(RecordKind.Exercise, "rdl", "{not json"))]);
+        var gated = new GatedReplaceAllDataStore(inner);
+        var app = await AppData.OpenAsync(gated, new InMemoryStorageEnvironment());
+        Assert.Single(app.Startup.Issues);
+
+        var replace = app.ReplaceAllAsync(TestData.Minimal());
+        await gated.ReplaceAllReached;
+        var commit = app.CommitAsync(Change.Put(Rdl()));
+        gated.Release();
+
+        Assert.IsType<CommitResult.Committed>(await replace);
+        Assert.IsType<CommitResult.Committed>(await commit);
+    }
+
+    [Fact]
+    public async Task A_Changed_handler_that_throws_does_not_make_a_saved_commit_fail_or_stop_other_handlers()
+    {
+        var app = await AppData.OpenAsync(await StoreHolding());
+        var laterHandlerRan = false;
+        app.Changed += () => throw new InvalidOperationException("handler bug");
+        app.Changed += () => laterHandlerRan = true;
+
+        var result = await app.CommitAsync(Change.Put(Rdl()));
+
+        Assert.IsType<CommitResult.Committed>(result);
+        Assert.True(laterHandlerRan);
+        Assert.Contains(app.Snapshot.Exercises, e => e.Id == "rdl");
+    }
+
+    [Fact]
+    public void Only_stored_record_types_can_be_put_and_Settings_cannot_be_deleted()
+    {
+        Assert.Throws<ArgumentException>(() => Change.Put("not a record"));
+        Assert.Throws<ArgumentException>(() => Change.Delete(RecordKind.Settings, "settings"));
+    }
+
+    [Fact]
     public async Task Recording_a_backup_is_refused_when_the_stored_metadata_is_unknown()
     {
         var inner = new InMemoryDataStore();

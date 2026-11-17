@@ -11,24 +11,24 @@ public sealed partial class AppData
     /// rewrite, so it makes the upgrade fail rather than run. A failed upgrade leaves the stored data as it was and starts with
     /// <see cref="StartupState.CannotRead"/> (which blocks commits, so versions are never mixed).
     /// </summary>
-    private static async Task<(StartupResult Startup, StoreMetadata Metadata)> UpgradeIfOlderAsync(
-        IDataStore store, StoredData data, StartupResult startup, int currentVersion)
+    private static async Task<(LoadOutcome Outcome, StoreMetadata Metadata)> UpgradeIfOlderAsync(
+        IDataStore store, StoredData data, LoadOutcome read, int currentVersion)
     {
         if (data.Metadata.RecordFormatVersion is not { } stored || stored >= currentVersion
-            || startup.State is not (StartupState.Ready or StartupState.FirstRun))
+            || read.Startup.State is not (StartupState.Ready or StartupState.FirstRun))
         {
-            return (startup, data.Metadata);
+            return (read, data.Metadata);
         }
 
         var upgraded = data.Metadata with { RecordFormatVersion = currentVersion };
-        if (startup.Issues.Count == 0
-            && await store.ReplaceAllAsync(StoredRecords.FromDocument(startup.Snapshot.ToDocument()), upgraded) is StoreResult<Unit>.Success)
+        if (read.Startup.Issues.Count == 0
+            && await store.ReplaceAllAsync(StoredRecords.FromDocument(read.Snapshot.ToDocument()), upgraded) is StoreResult<Unit>.Success)
         {
-            return (startup, upgraded);
+            return (read, upgraded);
         }
 
         var issue = new LoadIssue(null, null,
             "Your data was saved by an older version of the app and could not be upgraded. Nothing has been changed.");
-        return (new StartupResult(StartupState.CannotRead, DataSnapshot.Empty, [issue]), data.Metadata);
+        return (new LoadOutcome(new StartupResult(StartupState.CannotRead, [issue]), DataSnapshot.Empty), data.Metadata);
     }
 }

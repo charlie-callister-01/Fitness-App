@@ -1,5 +1,4 @@
 using System.Globalization;
-using Core.Model;
 
 namespace Core.Storage;
 
@@ -17,29 +16,20 @@ public enum RecordKind
     WeekSchedule,
 }
 
-/// <summary>The key rule for each record kind. Every kind is keyed by its permanent ID except Settings, Guide and Week schedule.</summary>
+public static class RecordKindExtensions
+{
+    /// <summary>
+    /// The kind's wire name: its top-level property in the exchange format, and the name the IndexedDB module files its records under.
+    /// </summary>
+    public static string WireName(this RecordKind kind) => RecordDescriptors.For(kind).Property;
+}
+
+/// <summary>The key rule for each record kind, read from <see cref="RecordDescriptors"/>.</summary>
 public static class RecordKeys
 {
-    /// <summary>Settings is a singleton: it is always stored under this one key.</summary>
-    public const string SettingsKey = "settings";
-
-    public static string ForExercise(Exercise exercise) => exercise.Id;
-
-    public static string ForPlan(Plan plan) => plan.Id;
-
-    public static string ForWeighIn(WeighIn weighIn) => weighIn.Id;
-
-    public static string ForBreak(Break @break) => @break.Id;
-
-    public static string ForBadge(Badge badge) => badge.Id;
-
-    /// <summary>A Guide is keyed by the Exercise it describes.</summary>
-    public static string ForGuide(Guide guide) => guide.ExerciseId;
-
-    public static string ForWorkout(Workout workout) => workout.Id;
+    /// <summary>The key of a record: its permanent ID, except a Guide (its Exercise's ID), a Week schedule (its Monday date) and Settings (a fixed key).</summary>
+    public static string For<T>(T record) => RecordDescriptors.For<T>().KeyOf(record);
 
     /// <summary>A Week schedule is keyed by its Monday date, as yyyy-MM-dd.</summary>
-    public static string ForWeekSchedule(WeekSchedule schedule) => ForWeekStart(schedule.WeekStart);
-
     public static string ForWeekStart(DateOnly monday) => monday.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

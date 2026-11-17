@@ -19,30 +19,18 @@ public sealed partial class AppData
             return new CommitResult.Rejected(issues);
         }
 
-        if (WriterLockFailure() is { } lockFailure)
+        return await WithWriterAsync<CommitResult>(failure => new CommitResult.StoreFailed(failure), async () =>
         {
-            return new CommitResult.StoreFailed(lockFailure);
-        }
-
-        await _writer.WaitAsync();
-        try
-        {
-            var metadata = _metadata with { Initialised = true, RecordFormatVersion = _currentVersion };
+            var metadata = _state.Metadata with { Initialised = true, RecordFormatVersion = _currentVersion };
             if (await Store.ReplaceAllAsync(StoredRecords.FromDocument(document), metadata) is StoreResult<Unit>.Failure failure)
             {
                 return new CommitResult.StoreFailed(failure.Error);
             }
 
-            _snapshot = DataSnapshot.From(document);
-            _metadata = metadata;
-            Startup = new StartupResult(StartupState.Ready, _snapshot, []);
+            _state = new State(DataSnapshot.From(document), metadata, new StartupResult(StartupState.Ready, []));
             await WriteMarkerAsync();
-            Changed?.Invoke();
+            RaiseChanged();
             return new CommitResult.Committed();
-        }
-        finally
-        {
-            _writer.Release();
-        }
+        });
     }
 }
