@@ -1,6 +1,6 @@
 # Technical brief
 
-See also: [ADR 0001](adr/0001-schema-first-with-permanent-ids-and-versioned-exchange-format.md), [ADR 0002](adr/0002-csharp-blazor-pwa-with-shared-ui-library.md), [ADR 0003](adr/0003-local-first-indexeddb-storage-behind-an-interface.md).
+See also: [ADR 0001](adr/0001-schema-first-with-permanent-ids-and-versioned-exchange-format.md), [ADR 0002](adr/0002-csharp-blazor-pwa-with-shared-ui-library.md), [ADR 0003](adr/0003-local-first-indexeddb-storage-behind-an-interface.md), [ADR 0005](adr/0005-single-writer-quarantine-and-two-storage-versions.md).
 
 ## Stack
 
@@ -27,7 +27,18 @@ Rule: screens call `Core`; they never contain rules. The strict maintainability 
 
 Local-first, single device. **IndexedDB as a document store behind a storage interface.** The whole dataset is loaded into memory at startup, all queries run in `Core` (so they are unit-testable), and each change saves the one record that changed. The data volume is small (a few thousand Workouts over years). An in-memory implementation of the interface is used by tests.
 
-Safety: request **persistent storage** on first run; make the PWA installable; Nudge when there's no Backup in 14 days; automatic Backup before every Import.
+Safety: request **persistent storage** at every startup until it is granted; make the PWA installable; Nudge when there's no Backup in 14 days; automatic Backup before every Import.
+
+Delivered in stage A3 (spec: [`specs/a3-storage.md`](specs/a3-storage.md); decisions: [ADR 0005](adr/0005-single-writer-quarantine-and-two-storage-versions.md)):
+
+- **Layout.** `IDataStore` (in `Core/Storage`) is one generic store addressed by record kind and key, not a repository per kind. In IndexedDB (`src/Web/wwwroot/js/indexeddb-store.js`, behind `Web/Storage/IndexedDbDataStore`) that is one object store per record kind plus a `meta` store, no indexes. Each value is the top-level exchange record as JSON text (a Workout whole, a Plan whole). Writes are one atomic transaction (a batch of puts and deletes, or replace-all).
+- **Two version numbers.** The *layout version* is the IndexedDB database version (which stores exist; an upgrade step in the JS module; currently 1). The *record format version* is the exchange `formatVersion` the records were written in, kept in `meta`. At startup an older record format is read through the versioned reader and rewritten once by replace-all; a newer one stops the app from loading ("cannot read") and writes nothing.
+- **Load and quarantine.** `AppData` loads everything through the A1 reader and validator into an immutable `DataSnapshot`. A record that fails to read or validate is left out of the snapshot but stays in storage untouched, and is reported as a `LoadIssue` (kind, key, message). A problem with the document as a whole gives `CannotRead`.
+- **Commits.** Save first, then publish: `AppData` builds the next snapshot, validates it strictly with the A1 validator (two active Plans, dangling Exercise references and so on are rejected with field-level issues), asks the store to apply the batch, and only on success publishes it and raises the change event. A rejected or failed commit changes nothing. Failures are values: storage full, storage unavailable, writer lock held, unexpected. Commits are blocked when startup could not read the data.
+- **Single writer.** The first window takes an exclusive Web Lock; any other window is read-only (`Health.AnotherWindowOpen`, commits return writer-lock-held). A browser without Web Locks is treated as one window.
+- **Environment.** `IStorageEnvironment` (the persistent-storage request, usage estimate, the writer lock, and the cleared-data marker in local storage) has a browser implementation and a fake. `AppData.Health` exposes persistence, estimate, database availability, can-write and another-window-open. An empty database with the marker or the "initialised" record present starts as `BrowserCleared`, not `FirstRun`.
+- **Fallback.** If IndexedDB cannot be opened at all (for example private browsing) the app runs on the in-memory store with `DatabaseAvailable = false`, so the owner can log but nothing is kept.
+- **Tests.** One contract suite (`DataStoreContract`, in `Core.Tests`) runs against the in-memory store in the normal run and against the real IndexedDB module in headless Chromium in `src/Web.BrowserTests` (Playwright for .NET; skipped by default, its own CI job `browser-tests.yml`). The C# store runs on the test host and the JavaScript in Chromium, not in WebAssembly. Quota-full, the real persistence grant, the browser clearing data, the blocked upgrade and iOS Safari are manual: see [`pwa-manual-checks.md`](pwa-manual-checks.md).
 
 Not chosen: browser-SQLite libraries such as SqliteWasmBlazor and Bit.Bsqlite (young, some pre-release, maintenance unverified), or a backend. A later MAUI build implements the same interface with SQLite or files.
 

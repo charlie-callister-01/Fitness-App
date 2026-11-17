@@ -20,4 +20,15 @@ public sealed record Settings(
     int RestTimerSeconds,
     double? GoalWeightKg,
     int StreakMinWorkoutsPerWeek,
-    bool StreakCountsCustomWorkouts);
+    bool StreakCountsCustomWorkouts)
+{
+    /// <summary>What the app uses when no Settings are stored (a first run, or the owner has never changed them).</summary>
+    public static Settings Default { get; } = new(
+        DisplayWeightUnit: WeightUnit.Kg,
+        DisplayDistanceUnit: DistanceUnit.Km,
+        WeightIncrementKg: 2.5,
+        RestTimerSeconds: 90,
+        GoalWeightKg: null,
+        StreakMinWorkoutsPerWeek: 3,
+        StreakCountsCustomWorkouts: false);
+}

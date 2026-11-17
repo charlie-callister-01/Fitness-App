@@ -15,3 +15,6 @@ concurrency:
 jobs:
   build-and-test:
     uses: ./.github/workflows/build-and-test.yml
+
+  browser-tests:
+    uses: ./.github/workflows/browser-tests.yml
