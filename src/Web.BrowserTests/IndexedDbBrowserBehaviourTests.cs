@@ -17,7 +17,7 @@ public sealed class IndexedDbBrowserBehaviourTests(BrowserFixture browser) : IAs
     {
         name ??= BrowserSession.NewDatabaseName();
         var interop = _session.NewInterop();
-        _session.DestroyOnDispose(interop, name);
+        _session.DestroyOnDispose(name);
         return (interop, new IndexedDbDataStore(interop, name), name);
     }
 
@@ -164,8 +164,27 @@ public sealed class IndexedDbBrowserBehaviourTests(BrowserFixture browser) : IAs
         var first = _session.Page;
         var second = await _session.NewPageAsync();
 
-        Assert.True(await BrowserSession.CallModuleAsync<bool>(first, module, "tryTakeWriterLock"));
-        Assert.False(await BrowserSession.CallModuleAsync<bool>(second, module, "tryTakeWriterLock"));
-        Assert.True(await BrowserSession.CallModuleAsync<bool>(first, module, "tryTakeWriterLock"));
+        Assert.Equal("obtained", await BrowserSession.CallModuleAsync<string>(first, module, "tryTakeWriterLock"));
+        Assert.Equal("heldElsewhere", await BrowserSession.CallModuleAsync<string>(second, module, "tryTakeWriterLock"));
+        Assert.Equal("obtained", await BrowserSession.CallModuleAsync<string>(first, module, "tryTakeWriterLock"));
+    }
+
+    [Fact]
+    public async Task A_browser_without_web_locks_answers_unsupported()
+    {
+        const string module = "./js/storage-environment.js";
+        var page = await _session.NewPageAsync();
+        await page.EvaluateAsync("Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true })");
+
+        Assert.Equal("unsupported", await BrowserSession.CallModuleAsync<string>(page, module, "tryTakeWriterLock"));
+    }
+
+    [Fact]
+    public async Task The_estimate_is_a_structured_value()
+    {
+        var estimate = await BrowserSession.CallModuleAsync<System.Text.Json.JsonElement>(_session.Page, "./js/storage-environment.js", "estimate");
+
+        Assert.True(estimate.GetProperty("usage").GetInt64() >= 0);
+        Assert.True(estimate.GetProperty("quota").GetInt64() > 0);
     }
 }

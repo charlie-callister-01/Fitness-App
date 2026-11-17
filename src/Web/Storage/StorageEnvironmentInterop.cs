@@ -11,9 +11,9 @@ public sealed class StorageEnvironmentInterop(IJSRuntime js) : IStorageEnvironme
 
     public Task<string> RequestPersistenceAsync() => CallAsync<string>("requestPersistence");
 
-    public Task<string> EstimateAsync() => CallAsync<string>("estimate");
+    public Task<StorageUsage?> EstimateAsync() => CallAsync<StorageUsage?>("estimate");
 
-    public Task<bool> TryTakeWriterLockAsync() => CallAsync<bool>("tryTakeWriterLock");
+    public Task<string> TryTakeWriterLockAsync() => CallAsync<string>("tryTakeWriterLock");
 
     public Task<bool> ReadClearedDataMarkerAsync() => CallAsync<bool>("readClearedDataMarker");
 
@@ -21,7 +21,10 @@ public sealed class StorageEnvironmentInterop(IJSRuntime js) : IStorageEnvironme
 
     public async ValueTask DisposeAsync()
     {
-        if (_module is not null) await _module.DisposeAsync();
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
     }
 
     private async Task<T> CallAsync<T>(string function)

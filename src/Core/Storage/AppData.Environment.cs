@@ -8,7 +8,11 @@ internal sealed record EnvironmentFacts(
     PersistenceStatus Persistence,
     StorageEstimate? Estimate,
     bool DatabaseAvailable,
-    bool HasWriterLock);
+    WriterLockResult WriterLock)
+{
+    /// <summary>The writer-lock policy: only a lock that was obtained, or cannot exist in this browser, lets this window write.</summary>
+    public bool HasWriterLock => WriterLock is WriterLockResult.Obtained or WriterLockResult.Unsupported;
+}
 
 /// <summary>The browser-facing half of <see cref="AppData"/>: persistence, health, the writer lock, the cleared-data marker and the in-memory fallback.</summary>
 public sealed partial class AppData
@@ -21,7 +25,7 @@ public sealed partial class AppData
         _environment.Estimate,
         _environment.DatabaseAvailable,
         _environment.HasWriterLock && _state.Startup.State is not (StartupState.CannotRead or StartupState.StorageFailed),
-        AnotherWindowOpen: !_environment.HasWriterLock);
+        _environment.WriterLock);
 
     /// <summary>
     /// Opens over <paramref name="store"/>: asks for persistent storage (a denial blocks nothing), tries to take the writer lock (without
@@ -44,7 +48,7 @@ public sealed partial class AppData
     {
         var persistence = await environment.RequestPersistenceAsync();
         var estimate = await environment.EstimateAsync();
-        var hasLock = await environment.TryTakeWriterLockAsync();
+        var writerLock = await environment.TryTakeWriterLockAsync();
         var marker = await environment.ReadClearedDataMarkerAsync();
 
         var databaseAvailable = true;
@@ -63,7 +67,7 @@ public sealed partial class AppData
             failure => Task.FromResult(new State(
                 DataSnapshot.Empty, StoreMetadata.Empty, new StartupResult(StartupState.StorageFailed, [], failure))));
 
-        return new AppData(store, state, new EnvironmentFacts(environment, persistence, estimate, databaseAvailable, hasLock), currentVersion);
+        return new AppData(store, state, new EnvironmentFacts(environment, persistence, estimate, databaseAvailable, writerLock), currentVersion);
     }
 
     private static async Task<State> StartAsync(IDataStore store, StoredData data, bool markerPresent, int currentVersion)

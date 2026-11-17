@@ -24,35 +24,47 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
     public async Task<StoreResult<StoredData>> LoadAllAsync()
     {
         var (result, openFailure) = await CallAsync(interop.LoadAllAsync);
-        if (openFailure is not null) return new StoreResult<StoredData>.Failure(openFailure);
-        if (result!.Failure is { } failure) return new StoreResult<StoredData>.Failure(MapFailure(failure));
+        if (openFailure is not null)
+        {
+            return new StoreResult<StoredData>.Failure(openFailure);
+        }
+
+        if (result!.Failure is { } failure)
+        {
+            return new StoreResult<StoredData>.Failure(MapFailure(failure));
+        }
 
         var loaded = result.Value!;
-        var records = new List<Core.Storage.StoredRecord>();
+        var records = new List<StoredRecord>();
         foreach (var (kind, moduleKind) in ModuleKinds)
         {
-            if (!loaded.Records.TryGetValue(moduleKind, out var raw)) continue;
-            records.AddRange(raw.Select(r => new Core.Storage.StoredRecord(kind, r.Key, r.Json)));
+            if (loaded.Records.TryGetValue(moduleKind, out var raw))
+            {
+                records.AddRange(raw.Select(rawRecord => new StoredRecord(kind, rawRecord.Key, rawRecord.Json)));
+            }
         }
         return new StoreResult<StoredData>.Success(new StoredData(records, ReadMetadata(loaded.Meta)));
     }
 
     public async Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes, StoreMetadata? metadata = null)
     {
-        var ops = changes.Select(c => c switch
+        var ops = changes.Select(change => change switch
         {
-            StoreChange.Put p => IndexedDbOperation.Put(ModuleKinds[p.Record.Kind], p.Record.Key, p.Record.Json),
-            StoreChange.Delete d => IndexedDbOperation.Delete(ModuleKinds[d.Kind], d.Key),
-            _ => throw new ArgumentOutOfRangeException(nameof(changes), c, "Unknown change type"),
+            StoreChange.Put put => IndexedDbOperation.Put(ModuleKinds[put.Record.Kind], put.Record.Key, put.Record.Json),
+            StoreChange.Delete delete => IndexedDbOperation.Delete(ModuleKinds[delete.Kind], delete.Key),
+            _ => throw new ArgumentOutOfRangeException(nameof(changes), change, "Unknown change type"),
         }).ToList();
         return await RunAsync(() => interop.ApplyAsync(ops, metadata is null ? null : WriteMetadata(metadata)));
     }
 
-    public Task<StoreResult<Unit>> ReplaceAllAsync(IReadOnlyList<Core.Storage.StoredRecord> records, StoreMetadata? metadata = null)
+    public Task<StoreResult<Unit>> ReplaceAllAsync(IReadOnlyList<StoredRecord> records, StoreMetadata? metadata = null)
     {
-        var grouped = ModuleKinds.ToDictionary(
-            k => k.Value,
-            k => (IReadOnlyList<RawRecord>)records.Where(r => r.Kind == k.Key).Select(r => new RawRecord(r.Key, r.Json)).ToList());
+        var grouped = new Dictionary<string, IReadOnlyList<RawRecord>>();
+        foreach (var (kind, moduleKind) in ModuleKinds)
+        {
+            grouped[moduleKind] = records.Where(record => record.Kind == kind).Select(record => new RawRecord(record.Key, record.Json)).ToList();
+        }
+
         return RunAsync(() => interop.ReplaceAllAsync(grouped, metadata is null ? null : WriteMetadata(metadata)));
     }
 
@@ -63,11 +75,11 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
     /// A null value tells the module to delete the key, so "never written" round-trips. The layout version is not written from here:
     /// the module owns it and stamps it when it creates or upgrades the database.
     /// </summary>
-    internal static IReadOnlyDictionary<string, string?> WriteMetadata(StoreMetadata m) => new Dictionary<string, string?>
+    internal static IReadOnlyDictionary<string, string?> WriteMetadata(StoreMetadata metadata) => new Dictionary<string, string?>
     {
-        [LastBackupAtKey] = m.LastBackupAt?.ToString("o", CultureInfo.InvariantCulture),
-        [RecordFormatVersionKey] = m.RecordFormatVersion?.ToString(CultureInfo.InvariantCulture),
-        [InitialisedKey] = m.Initialised ? "true" : null,
+        [LastBackupAtKey] = metadata.LastBackupAt?.ToString("o", CultureInfo.InvariantCulture),
+        [RecordFormatVersionKey] = metadata.RecordFormatVersion?.ToString(CultureInfo.InvariantCulture),
+        [InitialisedKey] = metadata.Initialised ? "true" : null,
     };
 
     internal static StoreMetadata ReadMetadata(IReadOnlyDictionary<string, string> meta) => new(
@@ -89,9 +101,17 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
 
     private async Task<StoreFailure?> EnsureOpenAsync()
     {
-        if (_opened) return null;
+        if (_opened)
+        {
+            return null;
+        }
+
         var result = await interop.OpenAsync(databaseName);
-        if (result.Failure is { } failure) return MapFailure(failure);
+        if (result.Failure is { } failure)
+        {
+            return MapFailure(failure);
+        }
+
         _opened = true;
         return null;
     }
@@ -100,21 +120,37 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
     /// Opens if needed and runs the call. If the module says its connection was closed (another tab upgraded the database, or the browser
     /// closed it), opens again and retries once; if that cannot open, the open failure comes back instead.
     /// </summary>
-    private async Task<(IndexedDbResult<T>? Result, StoreFailure? OpenFailure)> CallAsync<T>(Func<Task<IndexedDbResult<T>>> call)
+    private async Task<(TResult? Result, StoreFailure? OpenFailure)> CallAsync<TResult>(Func<Task<TResult>> call)
+        where TResult : IndexedDbResult
     {
-        if (await EnsureOpenAsync() is { } openFailure) return (null, openFailure);
+        if (await EnsureOpenAsync() is { } openFailure)
+        {
+            return (null, openFailure);
+        }
+
         var result = await call();
-        if (result.Failure is not { Kind: IndexedDbFailureKind.NotOpen }) return (result, null);
+        if (result.Failure is not { Kind: IndexedDbFailureKind.NotOpen })
+        {
+            return (result, null);
+        }
 
         _opened = false;
-        if (await EnsureOpenAsync() is { } reopenFailure) return (null, reopenFailure);
+        if (await EnsureOpenAsync() is { } reopenFailure)
+        {
+            return (null, reopenFailure);
+        }
+
         return (await call(), null);
     }
 
-    private async Task<StoreResult<Unit>> RunAsync(Func<Task<IndexedDbResult<object?>>> call)
+    private async Task<StoreResult<Unit>> RunAsync(Func<Task<IndexedDbResult>> call)
     {
         var (result, openFailure) = await CallAsync(call);
-        if (openFailure is not null) return new StoreResult<Unit>.Failure(openFailure);
+        if (openFailure is not null)
+        {
+            return new StoreResult<Unit>.Failure(openFailure);
+        }
+
         return result!.Failure is { } failure
             ? new StoreResult<Unit>.Failure(MapFailure(failure))
             : new StoreResult<Unit>.Success(default);
