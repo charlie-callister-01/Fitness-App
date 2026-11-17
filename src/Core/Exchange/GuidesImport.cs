@@ -74,7 +74,7 @@ internal sealed class GuidesImport : IImportKind
     private static bool HasText(string? text) => !string.IsNullOrWhiteSpace(text);
 
     /// <summary>True when the Guide has anything but personal notes.</summary>
-    private static bool HasContent(Guide guide) =>
+    internal static bool HasContent(Guide guide) =>
         new[] { guide.Works, guide.WhyInPlan, guide.Setup, guide.HowTo, guide.Easier, guide.Harder, guide.VideoUrl }.Any(HasText)
         || guide.Cues.Count > 0 || guide.CommonMistakes.Count > 0 || guide.WatchOuts.Count > 0;
 }
