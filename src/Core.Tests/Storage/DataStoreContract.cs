@@ -146,6 +146,31 @@ public abstract class DataStoreContract
     }
 
     [Fact]
+    public async Task A_batch_can_write_the_metadata_in_the_same_unit()
+    {
+        var store = CreateEmptyStore();
+        var metadata = new StoreMetadata(null, null, null, true);
+
+        await Ok(store.ApplyAsync([Put(Rec(RecordKind.Plan, "plan_1"))], metadata));
+
+        var data = await Ok(store.LoadAllAsync());
+        Assert.Equal(metadata, data.Metadata);
+        Assert.Single(data.Records);
+    }
+
+    [Fact]
+    public async Task A_failed_batch_does_not_write_the_metadata()
+    {
+        var inner = CreateEmptyStore();
+        var store = new FaultInjectingDataStore(inner);
+        store.FailLastOperationOfNextBatch(StoreFailureKind.StorageFull);
+
+        await store.ApplyAsync([Put(Rec(RecordKind.Plan, "plan_1"))], new StoreMetadata(null, null, null, true));
+
+        Assert.Equal(StoreMetadata.Empty, (await Ok(inner.LoadAllAsync())).Metadata);
+    }
+
+    [Fact]
     public async Task Replace_all_removes_everything_not_in_the_new_set()
     {
         var store = CreateEmptyStore();

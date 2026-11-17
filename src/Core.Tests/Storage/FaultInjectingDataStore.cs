@@ -31,7 +31,7 @@ public sealed class FaultInjectingDataStore(IDataStore inner) : IDataStore
     public Task<StoreResult<StoredData>> LoadAllAsync() =>
         _allFailure is { } kind ? Task.FromResult<StoreResult<StoredData>>(Fail<StoredData>(kind)) : inner.LoadAllAsync();
 
-    public Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes)
+    public Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes, StoreMetadata? metadata = null)
     {
         if (CurrentWriteFailure() is { } kind)
         {
@@ -44,7 +44,7 @@ public sealed class FaultInjectingDataStore(IDataStore inner) : IDataStore
             return Task.FromResult<StoreResult<Unit>>(Fail<Unit>(batchKind));
         }
 
-        return inner.ApplyAsync(changes);
+        return inner.ApplyAsync(changes, metadata);
     }
 
     public Task<StoreResult<Unit>> ReplaceAllAsync(IReadOnlyList<StoredRecord> records, StoreMetadata? metadata = null) =>

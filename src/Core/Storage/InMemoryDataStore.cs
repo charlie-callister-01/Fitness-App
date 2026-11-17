@@ -15,7 +15,7 @@ public sealed class InMemoryDataStore : IDataStore
         return Task.FromResult<StoreResult<StoredData>>(new StoreResult<StoredData>.Success(new StoredData(records, _metadata)));
     }
 
-    public Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes)
+    public Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes, StoreMetadata? metadata = null)
     {
         // Work on a copy and swap it in at the end, so a batch is all-or-nothing and later edits to the caller's list change nothing.
         var next = new Dictionary<(RecordKind, string), string>(_records);
@@ -33,6 +33,7 @@ public sealed class InMemoryDataStore : IDataStore
         }
 
         _records = next;
+        _metadata = metadata ?? _metadata;
         return Done();
     }
 
