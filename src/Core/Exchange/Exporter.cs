@@ -13,12 +13,16 @@ public static class Exporter
     public static ExportResult Export(DataSnapshot snapshot, ExportRequest request, string exportedFrom, DateTimeOffset now)
     {
         var document = ExportSlicer.Slice(snapshot, request) with { ExportedAt = now, ExportedFrom = exportedFrom };
+        var summary = ExportSummary.Lines(document, request);
         var text = request.Format switch
         {
             ExportFormat.Json => ExchangeFormat.Write(document, indented: true),
-            _ => throw new NotSupportedException("Markdown rendering is not built yet (A4 ticket 02)."),
+            _ => MarkdownRenderer.Render(document, request, summary, SessionNames(snapshot)),
         };
 
-        return new ExportResult(text, ExportSummary.FileName(request, now), ExportSummary.Lines(document, request), request.IsBackup);
+        return new ExportResult(text, ExportSummary.FileName(request, now), summary, request.IsBackup);
     }
+
+    private static Dictionary<string, string> SessionNames(DataSnapshot snapshot) =>
+        snapshot.Plans.SelectMany(p => p.Sessions).GroupBy(s => s.Id).ToDictionary(g => g.Key, g => g.First().Name);
 }
