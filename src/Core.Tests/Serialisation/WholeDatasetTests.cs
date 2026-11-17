@@ -22,7 +22,7 @@ public class WholeDatasetTests
         return new PainCheck($"p-status-{index}", PainStatus.Reported, [BodyArea.Other], severity, null, null);
     }
 
-    private static ExchangeDocument Everything()
+    internal static ExchangeDocument Everything()
     {
         var logKinds = Enum.GetValues<LogKind>().Select(k => new Exercise($"ex-{k}".ToLowerInvariant(), $"Übung {k} — 深蹲 🏋️", k, null, false)).ToList();
         var rich = WorkoutTestData.Rich();
