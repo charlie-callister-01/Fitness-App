@@ -7,15 +7,15 @@ public sealed partial class AppData
     private PersistenceStatus _persistence;
     private StorageEstimate? _estimate;
     private bool _databaseAvailable = true;
-    private bool _hasWriterLock = true;
+    private WriterLockResult _writerLock = WriterLockResult.Obtained;
 
     /// <summary>The current storage facts. Refreshed by <see cref="RefreshEstimateAsync"/>; the rest is fixed at open.</summary>
     public StorageHealth Health => new(
         _persistence,
         _estimate,
         _databaseAvailable,
-        _hasWriterLock && Startup.State is not (StartupState.CannotRead or StartupState.StorageFailed),
-        AnotherWindowOpen: !_hasWriterLock);
+        HasWriterLock && Startup.State is not (StartupState.CannotRead or StartupState.StorageFailed),
+        _writerLock);
 
     /// <summary>
     /// Opens over <paramref name="store"/>: asks for persistent storage (a denial blocks nothing), tries to take the writer lock (without
@@ -26,7 +26,7 @@ public sealed partial class AppData
     {
         var persistence = await environment.RequestPersistenceAsync();
         var estimate = await environment.EstimateAsync();
-        var hasLock = await environment.TryTakeWriterLockAsync();
+        var writerLock = await environment.TryTakeWriterLockAsync();
         var marker = await environment.ReadClearedDataMarkerAsync();
 
         var databaseAvailable = true;
@@ -58,7 +58,7 @@ public sealed partial class AppData
         app._persistence = persistence;
         app._estimate = estimate;
         app._databaseAvailable = databaseAvailable;
-        app._hasWriterLock = hasLock;
+        app._writerLock = writerLock;
         return app;
     }
 
@@ -75,7 +75,10 @@ public sealed partial class AppData
             ? read with { State = StartupState.BrowserCleared }
             : read;
 
-    private StoreFailure? WriterLockFailure() => _hasWriterLock ? null : new StoreFailure(StoreFailureKind.WriterLockHeld);
+    /// <summary>The writer-lock policy: only a lock that was obtained, or cannot exist in this browser, lets this window write.</summary>
+    private bool HasWriterLock => _writerLock is WriterLockResult.Obtained or WriterLockResult.Unsupported;
+
+    private StoreFailure? WriterLockFailure() => HasWriterLock ? null : new StoreFailure(StoreFailureKind.WriterLockHeld);
 
     /// <summary>With no database nothing is kept, so a marker would claim data that is not there.</summary>
     private async Task WriteMarkerAsync()

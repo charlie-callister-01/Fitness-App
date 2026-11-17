@@ -12,6 +12,8 @@ export const LAYOUT_VERSION = 1;
 export const KINDS = ['exercises', 'settings', 'plans', 'weighIns', 'breaks', 'badges', 'guides', 'workouts', 'weekSchedules'];
 const META = 'meta';
 
+// The one open connection. Module-level on purpose: an ES module is a singleton per page, which is exactly the lifetime of the
+// connection. It is set by open(), cleared when the browser closes or versions it away, and null means "not open".
 let db = null;
 
 const ok = (extra) => JSON.stringify({ ok: true, ...extra });
@@ -111,10 +113,26 @@ function checkKind(kind) {
     if (!KINDS.includes(kind)) throw new StoreError('unexpected', `Unknown record kind '${kind}'`);
 }
 
-// A null meta value deletes the key (so "never written" can be restored).
-function putOrDeleteMeta(tx, key, value) {
-    const meta = tx.objectStore(META);
-    if (value === null || value === undefined) meta.delete(key); else meta.put(value, key);
+/**
+ * A read-write transaction over `stores` that also writes `meta` ({ key: value }) in the same transaction, so a batch and its
+ * metadata commit or abort together. A null meta value deletes the key (so "never written" can be restored).
+ */
+function transactWrite(stores, meta, fn) {
+    const entries = Object.entries(meta);
+    const all = entries.length && !stores.includes(META) ? [...stores, META] : stores;
+    return transact(all, 'readwrite', (tx) => {
+        fn(tx);
+        const metaStore = entries.length ? tx.objectStore(META) : null;
+        for (const [key, value] of entries) {
+            if (value === null || value === undefined) metaStore.delete(key); else metaStore.put(value, key);
+        }
+    });
+}
+
+/** Requests every key and value of a store; resolves to [{ key, value }] in key order. */
+async function readAll(store) {
+    const [keys, values] = await Promise.all([requestResult(store.getAllKeys()), requestResult(store.getAll())]);
+    return keys.map((key, i) => ({ key: String(key), value: values[i] }));
 }
 
 /** Returns { records: { kind: [{key, json}] }, meta: { key: value } }, read in one transaction. */
@@ -124,14 +142,12 @@ export async function loadAll() {
         const pending = [];
         await transact([...KINDS, META], 'readonly', (tx) => {
             for (const kind of KINDS) {
-                const store = tx.objectStore(kind);
-                pending.push(Promise.all([requestResult(store.getAllKeys()), requestResult(store.getAll())]).then(([keys, values]) => {
-                    out.records[kind] = keys.map((k, i) => ({ key: String(k), json: values[i] }));
+                pending.push(readAll(tx.objectStore(kind)).then((rows) => {
+                    out.records[kind] = rows.map(({ key, value }) => ({ key, json: value }));
                 }));
             }
-            const meta = tx.objectStore(META);
-            pending.push(Promise.all([requestResult(meta.getAllKeys()), requestResult(meta.getAll())]).then(([keys, values]) => {
-                keys.forEach((k, i) => { out.meta[String(k)] = values[i]; });
+            pending.push(readAll(tx.objectStore(META)).then((rows) => {
+                for (const { key, value } of rows) out.meta[key] = value;
             }));
         });
         await Promise.all(pending);
@@ -150,16 +166,14 @@ export async function apply(batchJson) {
         const meta = batch.meta ?? {};
         for (const op of ops) checkKind(op.kind);
         const stores = [...new Set(ops.map((o) => o.kind))];
-        if (Object.keys(meta).length) stores.push(META);
-        if (!stores.length) return ok({});
-        await transact(stores, 'readwrite', (tx) => {
+        if (!stores.length && !Object.keys(meta).length) return ok({});
+        await transactWrite(stores, meta, (tx) => {
             for (const op of ops) {
                 const store = tx.objectStore(op.kind);
                 if (op.op === 'put') store.put(op.json, op.key);
                 else if (op.op === 'delete') store.delete(op.key);
                 else throw new StoreError('unexpected', `Unknown op '${op.op}'`);
             }
-            for (const [k, v] of Object.entries(meta)) putOrDeleteMeta(tx, k, v);
         });
         return ok({});
     } catch (e) { return failFrom(e); }
@@ -174,30 +188,13 @@ export async function replaceAll(documentJson) {
         const doc = JSON.parse(documentJson);
         const records = doc.records ?? {};
         for (const kind of Object.keys(records)) checkKind(kind);
-        await transact([...KINDS, META], 'readwrite', (tx) => {
+        await transactWrite(KINDS, doc.meta ?? {}, (tx) => {
             for (const kind of KINDS) {
                 const store = tx.objectStore(kind);
                 store.clear();
                 for (const r of records[kind] ?? []) store.put(r.json, r.key);
             }
-            for (const [k, v] of Object.entries(doc.meta ?? {})) putOrDeleteMeta(tx, k, v);
         });
-        return ok({});
-    } catch (e) { return failFrom(e); }
-}
-
-/** Reads one meta value: { ok, value } (value is null when absent). */
-export async function getMeta(key) {
-    try {
-        let req;
-        await transact([META], 'readonly', (tx) => { req = tx.objectStore(META).get(key); });
-        return ok({ value: req.result ?? null });
-    } catch (e) { return failFrom(e); }
-}
-
-export async function setMeta(key, value) {
-    try {
-        await transact([META], 'readwrite', (tx) => { tx.objectStore(META).put(value, key); });
         return ok({});
     } catch (e) { return failFrom(e); }
 }

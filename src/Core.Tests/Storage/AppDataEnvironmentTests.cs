@@ -222,7 +222,7 @@ public class AppDataEnvironmentTests
     public async Task A_second_window_is_read_only_and_a_commit_changes_nothing()
     {
         var store = await StoreHolding();
-        var environment = new InMemoryStorageEnvironment { WriterLockAvailable = false };
+        var environment = new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere };
         var app = await AppData.OpenAsync(store, environment);
         var before = app.Snapshot;
 
@@ -238,9 +238,35 @@ public class AppDataEnvironmentTests
     }
 
     [Fact]
+    public async Task A_browser_without_web_locks_is_treated_as_a_single_window_and_says_so()
+    {
+        var app = await AppData.OpenAsync(await StoreHolding(), new InMemoryStorageEnvironment { WriterLock = WriterLockResult.Unsupported });
+
+        var result = await app.CommitAsync(Change.Put(Rdl()));
+
+        Assert.IsType<CommitResult.Committed>(result);
+        Assert.True(app.Health.CanWrite);
+        Assert.False(app.Health.AnotherWindowOpen);
+        Assert.Equal(WriterLockResult.Unsupported, app.Health.WriterLock);
+    }
+
+    [Fact]
+    public async Task When_the_lock_state_cannot_be_told_the_window_stays_read_only()
+    {
+        var app = await AppData.OpenAsync(await StoreHolding(), new InMemoryStorageEnvironment { WriterLock = WriterLockResult.Unknown });
+
+        var result = await app.CommitAsync(Change.Put(Rdl()));
+
+        Assert.Equal(StoreFailureKind.WriterLockHeld, Assert.IsType<CommitResult.StoreFailed>(result).Failure.Kind);
+        Assert.False(app.Health.CanWrite);
+        Assert.False(app.Health.AnotherWindowOpen);
+        Assert.Equal(WriterLockResult.Unknown, app.Health.WriterLock);
+    }
+
+    [Fact]
     public async Task A_second_window_cannot_record_a_backup_either()
     {
-        var app = await AppData.OpenAsync(await StoreHolding(), new InMemoryStorageEnvironment { WriterLockAvailable = false });
+        var app = await AppData.OpenAsync(await StoreHolding(), new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
 
         var result = await app.RecordBackupAsync(BackupTime);
 
@@ -267,7 +293,7 @@ public class AppDataEnvironmentTests
     public async Task A_second_window_cannot_replace_all()
     {
         var store = await StoreHolding();
-        var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLockAvailable = false });
+        var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
 
         var result = await app.ReplaceAllAsync(TestData.Minimal() with { Exercises = [Rdl()] });
 

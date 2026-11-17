@@ -28,7 +28,7 @@ public sealed class IndexedDbDataStoreContractTests(BrowserFixture browser) : Da
     {
         var interop = _session!.NewInterop();
         var name = BrowserSession.NewDatabaseName();
-        _session.DestroyOnDispose(interop, name);
+        _session.DestroyOnDispose(name);
         return new IndexedDbDataStore(interop, name);
     }
 }

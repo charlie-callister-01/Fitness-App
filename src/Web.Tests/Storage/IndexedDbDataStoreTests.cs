@@ -20,26 +20,26 @@ public class IndexedDbDataStoreTests
         public IReadOnlyDictionary<string, IReadOnlyList<RawRecord>>? Replaced { get; private set; }
         public IReadOnlyDictionary<string, string?>? ReplacedMeta { get; private set; }
 
-        public Task<IndexedDbResult<object?>> OpenAsync(string databaseName)
+        public Task<IndexedDbResult> OpenAsync(string databaseName)
         {
             OpenCalls++;
-            return Task.FromResult(new IndexedDbResult<object?>(null, OpenFailure));
+            return Task.FromResult(new IndexedDbResult(OpenFailure));
         }
 
         public Task<IndexedDbResult<LoadedData>> LoadAllAsync() => Task.FromResult(new IndexedDbResult<LoadedData>(Loaded, NextFailure()));
 
-        public Task<IndexedDbResult<object?>> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null)
+        public Task<IndexedDbResult> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null)
         {
             AppliedOps = ops;
             AppliedMeta = meta;
-            return Task.FromResult(new IndexedDbResult<object?>(null, NextFailure()));
+            return Task.FromResult(new IndexedDbResult(NextFailure()));
         }
 
-        public Task<IndexedDbResult<object?>> ReplaceAllAsync(IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> records, IReadOnlyDictionary<string, string?>? meta = null)
+        public Task<IndexedDbResult> ReplaceAllAsync(IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> records, IReadOnlyDictionary<string, string?>? meta = null)
         {
             Replaced = records;
             ReplacedMeta = meta;
-            return Task.FromResult(new IndexedDbResult<object?>(null, NextFailure()));
+            return Task.FromResult(new IndexedDbResult(NextFailure()));
         }
     }
 
@@ -55,16 +55,16 @@ public class IndexedDbDataStoreTests
     {
         var fake = new FakeInterop();
         var store = new IndexedDbDataStore(fake);
-        var changes = KindNames.SelectMany(k => new StoreChange[]
+        var changes = KindNames.SelectMany(kind => new StoreChange[]
         {
-            new StoreChange.Put(new Core.Storage.StoredRecord(k.Kind, "k", "{}")),
-            new StoreChange.Delete(k.Kind, "gone"),
+            new StoreChange.Put(new StoredRecord(kind.Kind, "k", "{}")),
+            new StoreChange.Delete(kind.Kind, "gone"),
         }).ToList();
 
         var result = await store.ApplyAsync(changes);
 
         Assert.IsType<StoreResult<Unit>.Success>(result);
-        Assert.Equal(KindNames.SelectMany(k => new[] { ("put", k.Module, "k"), ("delete", k.Module, "gone") }),
+        Assert.Equal(KindNames.SelectMany(kind => new[] { ("put", kind.Module, "k"), ("delete", kind.Module, "gone") }),
             fake.AppliedOps!.Select(o => (o.Op, o.Kind, o.Key)));
     }
 
@@ -89,8 +89,8 @@ public class IndexedDbDataStoreTests
         var result = await new IndexedDbDataStore(fake).LoadAllAsync();
 
         var data = Assert.IsType<StoreResult<StoredData>.Success>(result).Value;
-        Assert.Contains(new Core.Storage.StoredRecord(RecordKind.WeekSchedule, "2026-11-16", "{a}"), data.Records);
-        Assert.Contains(new Core.Storage.StoredRecord(RecordKind.Workout, "w1", "{b}"), data.Records);
+        Assert.Contains(new StoredRecord(RecordKind.WeekSchedule, "2026-11-16", "{a}"), data.Records);
+        Assert.Contains(new StoredRecord(RecordKind.Workout, "w1", "{b}"), data.Records);
         Assert.Equal(new StoreMetadata(at, 1, 1, true), data.Metadata);
     }
 
@@ -109,7 +109,7 @@ public class IndexedDbDataStoreTests
         var at = new DateTimeOffset(2026, 11, 1, 8, 30, 0, TimeSpan.Zero);
 
         await new IndexedDbDataStore(fake).ReplaceAllAsync(
-            [new Core.Storage.StoredRecord(RecordKind.Plan, "p1", "{}")], new StoreMetadata(at, 1, 1, true));
+            [new StoredRecord(RecordKind.Plan, "p1", "{}")], new StoreMetadata(at, 1, 1, true));
 
         Assert.Single(fake.Replaced!["plans"]);
         Assert.Empty(fake.Replaced["workouts"]);
@@ -165,7 +165,7 @@ public class IndexedDbDataStoreTests
         await store.ApplyAsync([]);
         fake.NotOpenResponses = 1;
 
-        var apply = await store.ApplyAsync([new StoreChange.Put(new Core.Storage.StoredRecord(RecordKind.Plan, "p", "{}"))]);
+        var apply = await store.ApplyAsync([new StoreChange.Put(new StoredRecord(RecordKind.Plan, "p", "{}"))]);
         fake.NotOpenResponses = 1;
         var load = await store.LoadAllAsync();
 

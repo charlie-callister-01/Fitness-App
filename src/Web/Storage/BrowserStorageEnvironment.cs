@@ -1,12 +1,12 @@
-using System.Text.Json;
 using Core.Storage;
 
 namespace Web.Storage;
 
 /// <summary>
 /// <see cref="IStorageEnvironment"/> over the browser. Maps the module's plain answers to Core's types and turns any failure to
-/// ask (the module missing, a JS error) into the safe answer: persistence unsupported, estimate unknown, writer lock not obtained,
-/// marker absent. It never throws. A browser without Web Locks is treated as having only one window: the module grants the lock.
+/// ask (the module missing, a JS error) into the safe answer: persistence unsupported, estimate unknown, writer lock unknown
+/// (which <c>AppData</c> keeps read-only), marker absent. It never throws. What a missing feature means for writing is Core's
+/// policy, not decided here.
 /// </summary>
 public sealed class BrowserStorageEnvironment(IStorageEnvironmentInterop interop) : IStorageEnvironment
 {
@@ -18,28 +18,21 @@ public sealed class BrowserStorageEnvironment(IStorageEnvironmentInterop interop
             _ => PersistenceStatus.Unsupported,
         };
 
-    public async Task<StorageEstimate?> EstimateAsync()
-    {
-        var json = await TryAsync(interop.EstimateAsync, "");
-        if (json.Length == 0) return null;
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-            return new StorageEstimate(root.GetProperty("usage").GetInt64(), root.GetProperty("quota").GetInt64());
-        }
-        catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
-        {
-            return null;
-        }
-    }
+    public async Task<StorageEstimate?> EstimateAsync() =>
+        await TryAsync(interop.EstimateAsync, null) is { } usage ? new StorageEstimate(usage.Usage, usage.Quota) : null;
 
-    public Task<bool> TryTakeWriterLockAsync() => TryAsync(interop.TryTakeWriterLockAsync, false);
+    public async Task<WriterLockResult> TryTakeWriterLockAsync() =>
+        await TryAsync(interop.TryTakeWriterLockAsync, "") switch
+        {
+            "obtained" => WriterLockResult.Obtained,
+            "heldElsewhere" => WriterLockResult.HeldElsewhere,
+            "unsupported" => WriterLockResult.Unsupported,
+            _ => WriterLockResult.Unknown,
+        };
 
     public Task<bool> ReadClearedDataMarkerAsync() => TryAsync(interop.ReadClearedDataMarkerAsync, false);
 
-    public async Task WriteClearedDataMarkerAsync() =>
-        await TryAsync(async () => { await interop.WriteClearedDataMarkerAsync(); return true; }, false);
+    public Task WriteClearedDataMarkerAsync() => TryAsync(interop.WriteClearedDataMarkerAsync);
 
     private static async Task<T> TryAsync<T>(Func<Task<T>> call, T fallback)
     {
@@ -47,9 +40,21 @@ public sealed class BrowserStorageEnvironment(IStorageEnvironmentInterop interop
         {
             return await call();
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             return fallback;
+        }
+    }
+
+    private static async Task TryAsync(Func<Task> call)
+    {
+        try
+        {
+            await call();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Nothing to do: a marker that could not be written is caught later by the initialised metadata.
         }
     }
 }

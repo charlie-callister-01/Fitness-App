@@ -14,7 +14,7 @@ Chromium, via Playwright for .NET.
 - `IndexedDbBrowserBehaviourTests` adds what only a browser shows: real transaction rollback (bad last op in a batch,
   unknown kind, failing replace-all), reload persistence, a database created at layout version 1, and the writer lock
   across two pages of one browser context.
-- Each test uses a new browser context and a uniquely named database, deleted with `destroy` afterwards.
+- Each test uses a new browser context and a uniquely named database, deleted afterwards by calling the module's `destroy` directly (that capability is not in the production wrapper).
 
 ## Running
 
