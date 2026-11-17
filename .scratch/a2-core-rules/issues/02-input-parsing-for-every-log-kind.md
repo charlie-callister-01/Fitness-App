@@ -4,12 +4,12 @@
 
 **Blocked by:** 01 (Unit conversion and display rounding)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Load: `20x10`, `20 x 10`, `20×10`, `20*10` and comma decimals (`22,5x8`) parse to weight and reps; `bwx8` is bodyweight reps
-- [ ] Bodyweight-with-load takes added weight and reps; carry (`32x40`) is weight per hand and metres
-- [ ] Time accepts `m:ss`, `h:mm:ss` and plain seconds; seconds, minutes, km and m kinds take a bare number in that kind's unit and accept an unambiguous suffix (`45s`, `3min`, `5km`, `400m`)
-- [ ] Reps, body measurements (kg, cm), tick-only (no value) and text (non-empty) kinds parse
-- [ ] Spaces are ignored anywhere; input in display units is converted to canonical before returning
-- [ ] Unparseable input returns a failure with a message naming what was expected (for example "Expected weight x reps, like 20x10"); parsing never throws
-- [ ] Table-driven tests cover every kind including the awkward and rejected inputs, and a de-DE culture run proves culture independence
+- [x] Load: `20x10`, `20 x 10`, `20×10`, `20*10` and comma decimals (`22,5x8`) parse to weight and reps; `bwx8` is bodyweight reps
+- [x] Bodyweight-with-load takes added weight and reps; carry (`32x40`) is weight per hand and metres
+- [x] Time accepts `m:ss`, `h:mm:ss` and plain seconds; seconds, minutes, km and m kinds take a bare number in that kind's unit and accept an unambiguous suffix (`45s`, `3min`, `5km`, `400m`)
+- [x] Reps, body measurements (kg, cm), tick-only (no value) and text (non-empty) kinds parse
+- [x] Spaces are ignored anywhere; input in display units is converted to canonical before returning
+- [x] Unparseable input returns a failure with a message naming what was expected (for example "Expected weight x reps, like 20x10"); parsing never throws
+- [x] Table-driven tests cover every kind including the awkward and rejected inputs, and a de-DE culture run proves culture independence

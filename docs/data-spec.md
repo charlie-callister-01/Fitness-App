@@ -260,6 +260,8 @@ A user-editable achievement. Only its definition is stored; progress is always w
 | `metric` | string | yes | Non-blank name of what is measured. The set of metrics and how progress is computed belong to stage A2, so A1 does not restrict the value. |
 | `target` | number > 0 | yes | Value the metric must reach. |
 
+Supported `metric` values (case-insensitive; A2 works progress out from history): `sessions` (counted Workouts ever), `streak` (best-ever Streak run in weeks), `bestweek` (most counted Workouts in one week), `prs` (PRs across all Exercises), `bodyweight` (the latest Weigh-in), or an Exercise `id` (its best value in the Exercise's own measure; for a body measurement, its latest reading). Any other value is accepted and stored, and shows as "not measurable".
+
 ## Guide
 
 The reference page for one Exercise. A Guide has no ID of its own: it is keyed by `exerciseId`, so there is at most one per Exercise (`duplicate_id` at the second).
