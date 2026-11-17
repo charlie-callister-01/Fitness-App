@@ -29,6 +29,7 @@ The written definition of the app's data and its one JSON exchange format (the B
 | `badges` | array of Badge | no | |
 | `guides` | array of Guide | no | |
 | `workouts` | array of Workout | no | Each holds its Sets and Pain check. See Workout. |
+| `weekSchedules` | array of Week schedule | no | One-week-only Session moves. Added without a version bump. See Week schedule. |
 
 An absent collection means "not part of this document". That is how partial documents (Plan-only, Guides-only) work with no second format. A present-but-empty collection means "none".
 
@@ -389,6 +390,33 @@ This block is parsed and validated by the real reader in the test suite. It has 
       ],
       "painCheck": { "id": "p-2", "status": "none" }
     }
+  ]
+}
+```
+
+## Week schedule
+
+The one-week-only moves of Sessions to other days. A Session not listed is on its default day, so the collection holds only exceptions. "Make this the new default" is a Plan edit (the Session's `defaultDay`), not a Week schedule.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `weekStart` | date | yes | The week's Monday (weeks run Monday to Sunday). Not a Monday is `invalid_value`. One Week schedule per week: a repeat is `duplicate_id`. |
+| `moves` | array of move | no | Absent or empty means no moves that week. |
+
+A move has `sessionId` (required; a Session ID from a Plan, `unknown_session` otherwise, and left to Import when the document has no `plans`) and `date` (required; between `weekStart` and the Sunday after it, else `out_of_range`). A Session can be moved once per week: a second move of it is `duplicate_id` at the second move's `sessionId`.
+
+```json
+{
+  "formatVersion": 1,
+  "weekSchedules": [
+    {
+      "weekStart": "2026-11-16",
+      "moves": [
+        { "sessionId": "a-lower", "date": "2026-11-18" },
+        { "sessionId": "c-engine", "date": "2026-11-22" }
+      ]
+    },
+    { "weekStart": "2026-11-23", "moves": [] }
   ]
 }
 ```
