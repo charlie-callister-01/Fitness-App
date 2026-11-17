@@ -172,6 +172,32 @@ public class AppDataEnvironmentTests
     }
 
     [Fact]
+    public async Task Restoring_a_Backup_after_browser_cleared_data_writes_the_marker_and_starts_ready()
+    {
+        var environment = new InMemoryStorageEnvironment { MarkerPresent = true };
+        var app = await AppData.OpenAsync(new InMemoryDataStore(), environment);
+        environment.MarkerPresent = false;
+
+        var result = await app.ReplaceAllAsync(TestData.Minimal());
+
+        Assert.IsType<CommitResult.Committed>(result);
+        Assert.Equal(StartupState.Ready, app.Startup.State);
+        Assert.True(environment.MarkerPresent);
+    }
+
+    [Fact]
+    public async Task A_second_window_cannot_replace_all()
+    {
+        var store = await StoreHolding();
+        var app = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLockAvailable = false });
+
+        var result = await app.ReplaceAllAsync(TestData.Minimal() with { Exercises = [Rdl()] });
+
+        Assert.Equal(StoreFailureKind.WriterLockHeld, Assert.IsType<CommitResult.StoreFailed>(result).Failure.Kind);
+        Assert.Equal(["goblet-squat"], (await AppData.OpenAsync(store)).Snapshot.Exercises.Select(e => e.Id));
+    }
+
+    [Fact]
     public async Task An_unavailable_database_falls_back_to_memory_and_the_owner_can_still_log()
     {
         var store = new FaultInjectingDataStore(new InMemoryDataStore());

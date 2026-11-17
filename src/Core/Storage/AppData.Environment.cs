@@ -22,7 +22,7 @@ public sealed partial class AppData
     /// it this window is read-only), loads, and tells first run from browser-cleared data using the marker. If the store reports
     /// <see cref="StoreFailureKind.StorageUnavailable"/>, runs on an in-memory store so the owner can still log.
     /// </summary>
-    public static async Task<AppData> OpenAsync(IDataStore store, IStorageEnvironment environment)
+    internal static async Task<AppData> OpenAsync(IDataStore store, IStorageEnvironment environment, int currentVersion)
     {
         var persistence = await environment.RequestPersistenceAsync();
         var estimate = await environment.EstimateAsync();
@@ -38,13 +38,21 @@ public sealed partial class AppData
             loaded = await store.LoadAllAsync();
         }
 
-        var app = loaded switch
+        AppData app;
+        switch (loaded)
         {
-            StoreResult<StoredData>.Success success => new AppData(store, Classify(Read(success.Value), success.Value, marker), success.Value.Metadata),
-            StoreResult<StoredData>.Failure failure => new AppData(
-                store, new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error), StoreMetadata.Empty),
-            _ => throw new InvalidOperationException("Unreachable: StoreResult has two cases."),
-        };
+            case StoreResult<StoredData>.Success success:
+                var (startup, metadata) = await UpgradeIfOlderAsync(store, success.Value, Read(success.Value, currentVersion), currentVersion);
+                app = new AppData(store, Classify(startup, success.Value, marker), metadata, currentVersion);
+                break;
+            case StoreResult<StoredData>.Failure failure:
+                app = new AppData(
+                    store, new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error), StoreMetadata.Empty, currentVersion);
+                break;
+            default:
+                throw new InvalidOperationException("Unreachable: StoreResult has two cases.");
+        }
+
         app._environment = environment;
         app._persistence = persistence;
         app._estimate = estimate;
