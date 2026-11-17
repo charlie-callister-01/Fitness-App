@@ -77,7 +77,7 @@ public class WeekScheduleRulesTests
     {
         Assert.DoesNotContain("test", Ids(WeekScheduleRules.Layout(Plan(), [], [], Mon)));
         var bench = WeekScheduleRules.Layout(Plan(), [], [], BenchMon);
-        Assert.Contains(bench.Sessions, s => s is { SessionId: "test", IsBenchmark: true });
+        Assert.Contains(bench.Sessions, s => s is { SessionId: "test" } && BenchmarkWeeks.IsBenchmark(s.Session));
         Assert.Contains("test", Ids(WeekScheduleRules.Layout(Plan(), [], [], WeekCalendar.AddWeeks(BenchMon, 4))));
         Assert.DoesNotContain("test", Ids(WeekScheduleRules.Layout(Plan(), [], [], WeekCalendar.AddWeeks(BenchMon, 2))));
     }

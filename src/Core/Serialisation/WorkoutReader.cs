@@ -87,13 +87,21 @@ internal static class WorkoutReader
                 $"{reader.ChildPath("distanceM")} can't be used together with {reader.ChildPath("distanceKm")}. Use km for cardio or metres for a carry, not both.");
         }
 
-        if (measurementCm is not null && (weightKg is not null || distanceKm is not null || distanceM is not null))
-        {
-            reader.Report("measurementCm", "invalid_value",
-                $"{reader.ChildPath("measurementCm")} can't be used together with weight or distance. A body measurement in cm is a Set of its own (a body weight in kg is a plain weightKg).");
-        }
+        CheckMeasurementIsExclusive(reader, measurementCm, hasWeightOrDistance: weightKg is not null || distanceKm is not null || distanceM is not null);
 
         return new WorkoutSet(id, weightKg, reps, distanceKm, duration, distanceM, isMax, measurementCm);
+    }
+
+    /// <summary>A body measurement in cm is a Set of its own: it can't share a Set with weight or distance.</summary>
+    private static void CheckMeasurementIsExclusive(FieldReader reader, double? measurementCm, bool hasWeightOrDistance)
+    {
+        if (measurementCm is null || !hasWeightOrDistance)
+        {
+            return;
+        }
+
+        reader.Report("measurementCm", "invalid_value",
+            $"{reader.ChildPath("measurementCm")} can't be used together with weight or distance. A body measurement in cm is a Set of its own (a body weight in kg is a plain weightKg).");
     }
 
     private static PainCheck? ReadPainCheck(FieldReader workout) =>

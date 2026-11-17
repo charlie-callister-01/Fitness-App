@@ -14,21 +14,26 @@ public static class CustomWorkoutOffer
     /// </summary>
     public static IReadOnlyList<Exercise> Order(
         Plan plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
-        IReadOnlyList<Workout> workouts, IEnumerable<Exercise> library, DateOnly today)
+        IReadOnlyList<Workout> workouts, IReadOnlyList<Exercise> library, DateOnly today)
     {
-        var all = library.ToList();
         var missedIds = WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
             .Select(m => m.SessionId).ToHashSet();
-        var byId = all.GroupBy(e => e.Id).ToDictionary(g => g.Key, g => g.First());
+        var phase = PhaseRules.CurrentPhase(plan, today);
 
-        var first = plan.Sessions
+        var byId = new Dictionary<string, Exercise>();
+        foreach (var exercise in library) byId.TryAdd(exercise.Id, exercise);
+
+        var offeredIds = new HashSet<string>();
+        var first = new List<Exercise>();
+        var plannedRows = plan.Sessions
             .Where(s => missedIds.Contains(s.Id))
-            .SelectMany(s => PhaseRules.ExerciseRows(plan, s.Id, today))
-            .Select(r => byId.GetValueOrDefault(r.ExerciseId))
-            .OfType<Exercise>()
-            .Distinct()
-            .ToList();
+            .SelectMany(s => PhaseRules.ExerciseRows(plan, phase, s.Id));
+        foreach (var row in plannedRows)
+        {
+            if (byId.TryGetValue(row.ExerciseId, out var exercise) && offeredIds.Add(exercise.Id))
+                first.Add(exercise);
+        }
 
-        return [.. first, .. all.Except(first)];
+        return [.. first, .. library.Where(e => !offeredIds.Contains(e.Id))];
     }
 }

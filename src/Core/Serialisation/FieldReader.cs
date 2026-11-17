@@ -214,9 +214,8 @@ internal sealed partial class FieldReader
         }
 
         var path = ChildPath(name);
-        if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out var number))
+        if (ReadNumber(path, value) is not { } number)
         {
-            Sink.Error(path, "wrong_type", $"{path} must be a number.");
             return 0;
         }
 
@@ -373,9 +372,8 @@ internal sealed partial class FieldReader
 
     private double PositiveDouble(string path, JsonElement value)
     {
-        if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out var number))
+        if (ReadNumber(path, value) is not { } number)
         {
-            Sink.Error(path, "wrong_type", $"{path} must be a number.");
             return 0;
         }
 
@@ -386,6 +384,18 @@ internal sealed partial class FieldReader
         }
 
         return number;
+    }
+
+    /// <summary>The one number-type check: the value as a double, or null after reporting <c>wrong_type</c> when it isn't a number.</summary>
+    private double? ReadNumber(string path, JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var number))
+        {
+            return number;
+        }
+
+        Sink.Error(path, "wrong_type", $"{path} must be a number.");
+        return null;
     }
 
     private static string AllowedValues<T>() where T : struct, Enum =>

@@ -39,32 +39,45 @@ public static class BadgeRules
             return new BadgeProgress(badge.Id, badge.Metric, false, 0, badge.Target, 0, false);
 
         var wantsDrop = badge.Target < 0;
-        var reading = wantsDrop ? m.Drop : m.Value;
-        var value = reading ?? 0;
-        var target = Math.Abs(badge.Target);
-        var lowerIsBetter = m.LowerIsBetter && !wantsDrop;
+        var value = wantsDrop ? m.Drop : m.Value;
+        if (value is not { } current)
+            return new BadgeProgress(badge.Id, badge.Metric, true, 0, badge.Target, 0, false);
 
-        var reached = reading is not null && (lowerIsBetter ? value <= target : value >= target);
-        return new BadgeProgress(badge.Id, badge.Metric, true, value, badge.Target, PercentOf(reading is not null, lowerIsBetter, value, target), reached);
+        // A drop is a rising number (how far it has fallen), so it is never "lower is better".
+        var reading = new Reading(current, Math.Abs(badge.Target), m.LowerIsBetter && !wantsDrop);
+        return new BadgeProgress(badge.Id, badge.Metric, true, current, badge.Target, reading.Percent, reading.Reached);
     }
 
-    private static int PercentOf(bool hasData, bool lowerIsBetter, double value, double target)
+    /// <summary>A reading that exists, against a target. Higher is better unless <paramref name="LowerIsBetter"/> (a time).</summary>
+    private readonly record struct Reading(double Value, double Target, bool LowerIsBetter)
     {
-        if (!hasData || target <= 0 || value <= 0) return 0;
-        var ratio = lowerIsBetter ? target / value : value / target;
-        return (int)Math.Floor(Math.Clamp(ratio, 0, 1) * 100);
+        public bool Reached => LowerIsBetter ? Value <= Target : Value >= Target;
+
+        public int Percent
+        {
+            get
+            {
+                if (Target <= 0 || Value <= 0) return 0;
+                var ratio = LowerIsBetter ? Target / Value : Value / Target;
+                return (int)Math.Floor(Math.Clamp(ratio, 0, 1) * 100);
+            }
+        }
     }
 
-    /// <summary>A metric's current value, and for measurements the drop from the start. Null values mean no data yet.</summary>
+    /// <summary>
+    /// A metric's current value, and for measurements the drop from the start (positive when the reading has fallen).
+    /// Null values mean no data yet.
+    /// </summary>
     private sealed record Measured(double? Value, double? Drop = null, bool LowerIsBetter = false);
 
     private static Measured? Measure(string metric, BadgeHistory h, DateOnly today)
     {
         switch (metric.ToLowerInvariant())
         {
-            case "sessions": return new Measured(CountedWorkoutsEver(h));
-            case "streak": return new Measured(WeekRules.Streak(h.Plan, h.Workouts, h.Breaks, today).BestRun);
-            case "bestweek" or "best week": return new Measured(WeekRules.Streak(h.Plan, h.Workouts, h.Breaks, today).BestWeekCount);
+            case "sessions": return new Measured(WeekRules.CountedWorkoutsByWeek(h.Plan, h.Workouts).Values.Sum());
+            case "streak" or "bestweek" or "best week":
+                var streak = WeekRules.Streak(h.Plan, h.Workouts, h.Breaks, today);
+                return new Measured(metric.ToLowerInvariant() == "streak" ? streak.BestRun : streak.BestWeekCount);
             case "prs": return new Measured(h.Exercises.Sum(e => ExercisePerformance.Prs(e, h.Workouts).Count));
             case "bodyweight": return Weights(h);
         }
@@ -72,12 +85,6 @@ public static class BadgeRules
         var exercise = h.Exercises.FirstOrDefault(e => e.Id == metric);
         return exercise is null ? null : ExerciseMeasure(exercise, h);
     }
-
-    private static int CountedWorkoutsEver(BadgeHistory h) =>
-        h.Workouts
-            .Select(w => WeekCalendar.MondayOf(w.Date))
-            .Distinct()
-            .Sum(monday => WeekRules.CountedWorkouts(h.Plan, h.Workouts, monday));
 
     private static Measured Weights(BadgeHistory h)
     {
@@ -90,7 +97,7 @@ public static class BadgeRules
     private static Measured ExerciseMeasure(Exercise exercise, BadgeHistory h)
     {
         if (ExercisePerformance.BodyChange(exercise, h.Workouts) is { } change)
-            return new Measured(change.Latest, -change.Change);
+            return new Measured(change.Latest, change.Start - change.Latest);
 
         var best = ExercisePerformance.Best(exercise, h.Workouts);
         double? value = best is null ? null : SetRanking.ChartValue(exercise.LogKind, best.Set);

@@ -34,7 +34,7 @@ public static class PhaseRules
         if (WeekRules.PlanWeekNumber(plan, today) is not { } week)
             return new(PhaseState.BeforeStart, null, null, null, null);
 
-        var phase = plan.Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek);
+        var phase = PhaseOfWeek(plan, week);
         if (phase is not null)
             return new(PhaseState.InPhase, week, phase, week - phase.StartWeek + 1, phase.EndWeek - phase.StartWeek + 1);
 
@@ -63,14 +63,29 @@ public static class PhaseRules
     }
 
     /// <summary>The Exercise rows of a Session today: the current Phase's Override when it has one, else the Plan default. Empty for an unknown Session.</summary>
-    public static IReadOnlyList<SessionExercise> ExerciseRows(Plan plan, string sessionId, DateOnly today)
+    public static IReadOnlyList<SessionExercise> ExerciseRows(Plan plan, string sessionId, DateOnly today) =>
+        ExerciseRows(plan, CurrentPhase(plan, today), sessionId);
+
+    /// <summary>As <see cref="ExerciseRows(Plan, string, DateOnly)"/>, for a caller that has already resolved the current Phase (null when none).</summary>
+    public static IReadOnlyList<SessionExercise> ExerciseRows(Plan plan, Phase? currentPhase, string sessionId)
     {
         var session = plan.Sessions.FirstOrDefault(s => s.Id == sessionId);
         if (session is null) return [];
-        var over = Position(plan, today).Phase?.SessionOverrides.FirstOrDefault(o => o.SessionId == sessionId);
+        var over = currentPhase?.SessionOverrides.FirstOrDefault(o => o.SessionId == sessionId);
         return over?.Exercises ?? session.Exercises;
     }
 
+    /// <summary>The Phase whose week range contains today, or null before the Plan starts, in a gap, or after the last Phase.</summary>
+    public static Phase? CurrentPhase(Plan plan, DateOnly today) =>
+        WeekRules.PlanWeekNumber(plan, today) is { } week ? PhaseOfWeek(plan, week) : null;
+
+    private static Phase? PhaseOfWeek(Plan plan, int week) =>
+        plan.Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek);
+
+    /// <summary>
+    /// A goal's Set meets it when it has a weight and reps, each at least the goal's. A Set missing either (a time, a distance)
+    /// never meets a weight-and-reps goal.
+    /// </summary>
     private static bool Meets(WorkoutSet set, PhaseGoal goal) =>
-        set.WeightKg >= goal.WeightKg && set.Reps >= goal.Reps;
+        set.WeightKg is { } weight && set.Reps is { } reps && weight >= goal.WeightKg && reps >= goal.Reps;
 }

@@ -60,13 +60,20 @@ public static class NudgeRules
     private static IEnumerable<Nudge> RepeatedPain(IReadOnlyList<Workout> workouts, DateOnly monday)
     {
         return workouts
-            .Where(w => WeekCalendar.InWeek(monday, w.Date) && w.PainCheck is { Status: PainStatus.Reported })
-            .SelectMany(w => w.PainCheck!.Areas.Distinct().Select(a => (w.Id, Area: a)))
+            .Where(w => WeekCalendar.InWeek(monday, w.Date))
+            .SelectMany(ReportedAreas)
             .GroupBy(x => x.Area)
             .Where(g => g.Select(x => x.Id).Distinct().Count() >= 2)
             .OrderBy(g => g.Key)
             .Select(g => new Nudge(NudgeKind.RepeatedPain,
                 $"{g.Key} pain reported twice this week. Consider easing off.", Area: g.Key));
+    }
+
+    /// <summary>The distinct body areas a Workout's Pain check reported, each tagged with the Workout. None when no pain was reported.</summary>
+    private static IEnumerable<(string Id, BodyArea Area)> ReportedAreas(Workout workout)
+    {
+        if (workout.PainCheck is not { Status: PainStatus.Reported } pain) yield break;
+        foreach (var area in pain.Areas.Distinct()) yield return (workout.Id, area);
     }
 
     private static IEnumerable<Nudge> Missed(

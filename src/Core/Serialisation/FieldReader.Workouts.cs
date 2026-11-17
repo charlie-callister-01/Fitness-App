@@ -14,9 +14,8 @@ internal sealed partial class FieldReader
         }
 
         var path = ChildPath(name);
-        if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out var number))
+        if (ReadNumber(path, value) is not { } number)
         {
-            Sink.Error(path, "wrong_type", $"{path} must be a number.");
             return null;
         }
 

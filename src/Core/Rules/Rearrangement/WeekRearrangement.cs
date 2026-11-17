@@ -39,23 +39,25 @@ public static class WeekRearrangement
         var missed = WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
             .Select(m => m.SessionId).ToHashSet();
 
+        var doneThisWeek = workouts
+            .Where(w => WeekCalendar.InWeek(layout.Monday, w.Date))
+            .Select(w => w.SessionId).OfType<string>().ToHashSet();
+        var placedById = ByIdFirstWins(layout.Sessions, l => l.SessionId);
         var outstanding = plan.Sessions
-            .Select(s => layout.Sessions.FirstOrDefault(l => l.SessionId == s.Id))
+            .Select(s => placedById.GetValueOrDefault(s.Id))
             .OfType<ScheduledSession>()
-            .Where(l => missed.Contains(l.SessionId) || (l.Date >= today && !DoneThisWeek(workouts, l.SessionId, layout.Monday)))
+            .Where(l => missed.Contains(l.SessionId) || (l.Date >= today && !doneThisWeek.Contains(l.SessionId)))
             .ToList();
         if (outstanding.Count == 0) return new RearrangementResult.NothingToRearrange();
 
-        var groups = outstanding.ToDictionary(l => l.SessionId, l => MuscleGroups(plan, exercises, l.SessionId));
+        var exercisesById = ByIdFirstWins(exercises, e => e.Id);
+        var groups = outstanding.ToDictionary(l => l.SessionId, l => MuscleGroups(l.Session, exercisesById));
         if (IsWorkable(outstanding, groups, today)) return new RearrangementResult.NothingToRearrange();
 
         var days = WeekCalendar.DaysOf(layout.Monday)
             .Where(d => d >= today && d <= sunday && !layout.BreakDays.Contains(d)).ToList();
         return Place(layout.Monday, outstanding.Select(o => o.SessionId).ToList(), groups, days);
     }
-
-    private static bool DoneThisWeek(IReadOnlyList<Workout> workouts, string sessionId, DateOnly monday) =>
-        workouts.Any(w => w.SessionId == sessionId && WeekCalendar.InWeek(monday, w.Date));
 
     private static bool IsWorkable(
         IReadOnlyList<ScheduledSession> outstanding, Dictionary<string, HashSet<string>> groups, DateOnly today)
@@ -85,10 +87,16 @@ public static class WeekRearrangement
         return new(monday, placed.OrderBy(p => p.Date).ToList(), unplaced);
     }
 
-    private static HashSet<string> MuscleGroups(Plan plan, IReadOnlyList<Exercise> exercises, string sessionId)
+    /// <summary>Indexes by key; on a repeated key the first wins (the validator rejects repeats, but a rule must not throw on them).</summary>
+    private static Dictionary<string, T> ByIdFirstWins<T>(IEnumerable<T> items, Func<T, string> key)
     {
-        var session = plan.Sessions.First(s => s.Id == sessionId);
-        var byId = exercises.ToDictionary(e => e.Id);
+        var byId = new Dictionary<string, T>();
+        foreach (var item in items) byId.TryAdd(key(item), item);
+        return byId;
+    }
+
+    private static HashSet<string> MuscleGroups(Session session, Dictionary<string, Exercise> byId)
+    {
         return session.Exercises
             .Select(r => byId.GetValueOrDefault(r.ExerciseId)?.Tags?.MuscleGroups)
             .OfType<IReadOnlyList<string>>()

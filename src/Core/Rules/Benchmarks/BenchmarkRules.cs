@@ -45,25 +45,35 @@ public static class BenchmarkRules
         return plan.Sessions
             .Where(BenchmarkWeeks.IsBenchmark)
             .Select(s => DueOf(plan, schedules, s, all, today))
+            .OfType<BenchmarkDue>()
             .OrderBy(d => d.Date)
             .FirstOrDefault();
     }
 
-    private static BenchmarkDue DueOf(
+    /// <summary>
+    /// The first benchmark week (Plan weeks 1, 1+N, 1+2N) from today's with no Workout of the Session. Only as many
+    /// benchmark weeks as there are Workouts can be done, so looking one past that always finds a free week.
+    /// </summary>
+    private static BenchmarkDue? DueOf(
         Plan plan, IReadOnlyList<WeekSchedule> schedules, Session session, List<Workout> history, DateOnly today)
     {
-        var monday = WeekCalendar.MondayOf(today);
-        var planStart = WeekCalendar.MondayOf(plan.StartDate);
-        if (monday < planStart) monday = planStart;
-        while (true)
-        {
-            var sunday = WeekCalendar.SundayOf(monday);
-            var done = history.Any(w => w.SessionId == session.Id && w.Date >= monday && w.Date <= sunday);
-            if (!done && WeekScheduleRules.Layout(plan, schedules, [], monday).Sessions.FirstOrDefault(s => s.SessionId == session.Id) is { } placed)
-                return new BenchmarkDue(session.Id, placed.Date);
-            monday = WeekCalendar.AddWeeks(monday, 1);
-        }
+        if (session.BenchmarkIntervalWeeks is not int interval || interval <= 0) return null;
+
+        var planMonday = WeekCalendar.MondayOf(plan.StartDate);
+        var fromMonday = Max(WeekCalendar.MondayOf(today), planMonday);
+        var weeksIn = (fromMonday.DayNumber - planMonday.DayNumber) / 7;
+        var firstBenchmarkIndex = (weeksIn + interval - 1) / interval;
+
+        return Enumerable.Range(firstBenchmarkIndex, history.Count + 1)
+            .Select(index => WeekCalendar.AddWeeks(planMonday, index * interval))
+            .Where(monday => !history.Any(w => w.SessionId == session.Id && WeekCalendar.InWeek(monday, w.Date)))
+            .Select(monday => WeekScheduleRules.PlaceSession(plan, schedules, [], session, monday))
+            .OfType<ScheduledSession>()
+            .Select(placed => new BenchmarkDue(session.Id, placed.Date))
+            .FirstOrDefault();
     }
+
+    private static DateOnly Max(DateOnly a, DateOnly b) => a > b ? a : b;
 
     private static BenchmarkEntry Entry(Exercise exercise, List<Workout> all, List<Workout> tests)
     {

@@ -400,18 +400,22 @@ internal static class DocumentValidator
             {
                 var path = $"weekSchedules[{i}]";
                 CheckUnique(RecordKind.WeekSchedule, $"{path}.weekStart", "weekStart", week.WeekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-                var isMonday = week.WeekStart.DayOfWeek == DayOfWeek.Monday;
-                if (!isMonday)
+                (DateOnly First, DateOnly Last)? validRange = null;
+                if (week.WeekStart.DayOfWeek == DayOfWeek.Monday)
+                {
+                    validRange = (week.WeekStart, week.WeekStart.AddDays(6));
+                }
+                else
                 {
                     Error($"{path}.weekStart", "invalid_value", $"{path}.weekStart ({week.WeekStart:yyyy-MM-dd}) must be a Monday, because weeks run Monday to Sunday.");
                 }
 
-                CheckMoves(week, path, isMonday);
+                CheckMoves(week, path, validRange);
             }
         }
 
-        /// <summary>A move's date is judged against its week only when the week is a real one (it starts on a Monday); otherwise the week is already reported.</summary>
-        private void CheckMoves(WeekSchedule week, string weekPath, bool isMonday)
+        /// <summary>A move's date is judged against <paramref name="validRange"/>, the keyed week's Monday to Sunday. It is null when the week doesn't start on a Monday (already reported), so no date is judged.</summary>
+        private void CheckMoves(WeekSchedule week, string weekPath, (DateOnly First, DateOnly Last)? validRange)
         {
             var moved = new HashSet<string>();
             foreach (var (move, i) in Indexed(week.Moves))
@@ -427,7 +431,7 @@ internal static class DocumentValidator
                     Error($"{path}.sessionId", "duplicate_id", $"{path}.sessionId \"{move.SessionId}\" is moved more than once in the week of {week.WeekStart:yyyy-MM-dd}. A Session can have one move per week.");
                 }
 
-                if (isMonday && (move.Date < week.WeekStart || move.Date > week.WeekStart.AddDays(6)))
+                if (validRange is { } range && (move.Date < range.First || move.Date > range.Last))
                 {
                     Error($"{path}.date", "out_of_range",
                         $"{path}.date ({move.Date:yyyy-MM-dd}) is outside the week of {week.WeekStart:yyyy-MM-dd}. A move must land between that Monday and the Sunday after it.");
