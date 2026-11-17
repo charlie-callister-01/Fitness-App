@@ -1,0 +1,43 @@
+name: Browser tests
+
+# Reusable workflow: called by ci.yml (pull requests). Runs the storage contract against the real IndexedDB
+# module in headless Chromium. Separate from build-and-test.yml, which never needs a browser: the browser
+# project is built there but skipped by `dotnet test` (see src/Web.BrowserTests/README.md).
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installs the SDK pinned in global.json.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build src/Web.BrowserTests -c Release
+
+      # playwright.ps1 is generated into the test output by the Microsoft.Playwright package.
+      - name: Install Chromium
+        run: pwsh src/Web.BrowserTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      # RunBrowserTests=true opts this project in (a plain `dotnet test` skips it).
+      # A failing contract case fails this step and therefore the job.
+      - name: Test
+        run: >
+          dotnet test src/Web.BrowserTests -c Release --no-build -p:RunBrowserTests=true
+          --logger "trx;LogFileName=browser-tests.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: TestResults

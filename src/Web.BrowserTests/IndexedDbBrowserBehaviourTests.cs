@@ -1,0 +1,145 @@
+using Core.Storage;
+using Web.Storage;
+
+namespace Web.BrowserTests;
+
+/// <summary>Behaviour only a real browser can show: real transaction rollback, reload, upgrade, the writer lock.</summary>
+[Collection(BrowserCollection.Name)]
+public sealed class IndexedDbBrowserBehaviourTests(BrowserFixture browser) : IAsyncLifetime
+{
+    private BrowserSession _session = null!;
+
+    public async Task InitializeAsync() => _session = await browser.NewSessionAsync();
+
+    public async Task DisposeAsync() => await _session.DisposeAsync();
+
+    private (IndexedDbInterop Interop, IndexedDbDataStore Store, string Name) NewStore(string? name = null)
+    {
+        name ??= BrowserSession.NewDatabaseName();
+        var interop = _session.NewInterop();
+        _session.DestroyOnDispose(interop, name);
+        return (interop, new IndexedDbDataStore(interop, name), name);
+    }
+
+    private static async Task<StoredData> Load(IDataStore store) =>
+        Assert.IsType<StoreResult<StoredData>.Success>(await store.LoadAllAsync()).Value;
+
+    private static StoredRecord Plan(string key, string json) => new(RecordKind.Plan, key, json);
+
+    private static async Task Seed(IDataStore store, StoreMetadata metadata)
+    {
+        Assert.IsType<StoreResult<Unit>.Success>(await store.ApplyAsync([new StoreChange.Put(Plan("plan_1", "before"))], metadata));
+    }
+
+    private static readonly StoreMetadata Before = new(null, 1, 1, true);
+
+    [Fact]
+    public async Task A_batch_with_a_bad_last_operation_aborts_the_whole_transaction()
+    {
+        var (interop, store, _) = NewStore();
+        await Seed(store, Before);
+
+        var result = await interop.ApplyAsync(
+            [IndexedDbOperation.Put("plans", "plan_1", "after"), IndexedDbOperation.Put("plans", "plan_2", "new"), new IndexedDbOperation("explode", "plans", "x", null)],
+            new Dictionary<string, string?> { ["layoutVersion"] = "9" });
+
+        Assert.NotNull(result.Failure);
+        var data = await Load(store);
+        Assert.Equal([Plan("plan_1", "before")], data.Records);
+        Assert.Equal(Before, data.Metadata);
+    }
+
+    [Fact]
+    public async Task A_batch_with_an_unknown_kind_is_rejected_before_anything_is_written()
+    {
+        var (interop, store, _) = NewStore();
+        await Seed(store, Before);
+
+        var result = await interop.ApplyAsync([IndexedDbOperation.Put("plans", "plan_1", "after"), IndexedDbOperation.Put("nonsense", "k", "{}")]);
+
+        Assert.NotNull(result.Failure);
+        Assert.Equal([Plan("plan_1", "before")], (await Load(store)).Records);
+    }
+
+    [Fact]
+    public async Task A_replace_all_that_fails_midway_keeps_the_previous_records_and_metadata()
+    {
+        var (interop, store, _) = NewStore();
+        await Seed(store, Before);
+        // The bad record (no key) is in the last store, after the earlier stores were cleared and rewritten.
+        var records = new Dictionary<string, IReadOnlyList<RawRecord>>
+        {
+            ["plans"] = [new RawRecord("plan_new", "new")],
+            ["weekSchedules"] = [new RawRecord(null!, "no key")],
+        };
+
+        var result = await interop.ReplaceAllAsync(records, new Dictionary<string, string?> { ["layoutVersion"] = "9" });
+
+        Assert.NotNull(result.Failure);
+        var data = await Load(store);
+        Assert.Equal([Plan("plan_1", "before")], data.Records);
+        Assert.Equal(Before, data.Metadata);
+    }
+
+    [Fact]
+    public async Task Data_survives_a_page_reload()
+    {
+        var (_, store, name) = NewStore();
+        var metadata = new StoreMetadata(new DateTimeOffset(2026, 11, 17, 8, 30, 0, TimeSpan.Zero), 1, 1, true);
+        await Seed(store, metadata);
+
+        await _session.ReloadAsync();
+
+        var reopened = new IndexedDbDataStore(_session.NewInterop(), name);
+        var data = await Load(reopened);
+        Assert.Equal([Plan("plan_1", "before")], data.Records);
+        Assert.Equal(metadata, data.Metadata);
+    }
+
+    [Fact]
+    public async Task A_database_created_at_layout_version_1_opens_and_keeps_its_data()
+    {
+        // Layout version 1 is written out longhand on purpose: this is a frozen copy of what shipped, not the module's own code.
+        // The module is still at version 1, so this proves reading a pre-existing v1 database; when version 2 exists this
+        // same test becomes the real upgrade test (keep it, and add a v2 expectation).
+        var name = BrowserSession.NewDatabaseName();
+        await _session.Page.EvaluateAsync(
+            """
+            ([name]) => new Promise((resolve, reject) => {
+                const open = indexedDB.open(name, 1);
+                open.onupgradeneeded = () => {
+                    for (const kind of ['exercises', 'settings', 'plans', 'weighIns', 'breaks', 'badges', 'guides', 'workouts', 'weekSchedules', 'meta'])
+                        open.result.createObjectStore(kind);
+                };
+                open.onerror = () => reject(open.error);
+                open.onsuccess = () => {
+                    const db = open.result;
+                    const tx = db.transaction(['plans', 'meta'], 'readwrite');
+                    tx.objectStore('plans').put('{"id":"plan_1"}', 'plan_1');
+                    tx.objectStore('meta').put('true', 'initialised');
+                    tx.oncomplete = () => { db.close(); resolve(); };
+                    tx.onerror = () => reject(tx.error);
+                };
+            })
+            """,
+            new object[] { name });
+
+        var (_, store, _) = NewStore(name);
+        var data = await Load(store);
+
+        Assert.Equal([Plan("plan_1", """{"id":"plan_1"}""")], data.Records);
+        Assert.True(data.Metadata.Initialised);
+    }
+
+    [Fact]
+    public async Task A_second_page_in_the_same_browser_cannot_take_the_writer_lock_while_the_first_holds_it()
+    {
+        const string module = "./js/storage-environment.js";
+        var first = _session.Page;
+        var second = await _session.NewPageAsync();
+
+        Assert.True(await BrowserSession.CallModuleAsync<bool>(first, module, "tryTakeWriterLock"));
+        Assert.False(await BrowserSession.CallModuleAsync<bool>(second, module, "tryTakeWriterLock"));
+        Assert.True(await BrowserSession.CallModuleAsync<bool>(first, module, "tryTakeWriterLock"));
+    }
+}

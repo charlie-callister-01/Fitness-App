@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- Browser tests need Chromium, so a plain `dotnet test` of the solution skips this project (it is still built).
+         The browser-tests CI job opts in with -p:RunBrowserTests=true. See README.md in this folder. -->
+    <IsTestProject Condition="'$(RunBrowserTests)' != 'true'">false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+    <!-- The shared contract suite (DataStoreContract) lives here; its subclasses in this project run it against IndexedDB. -->
+    <ProjectReference Include="..\Core.Tests\Core.Tests.csproj" />
+    <!-- Same compile-in as Web.Tests: the Web host is a WebAssembly app project and cannot be referenced. -->
+    <Compile Include="..\Web\Storage\*.cs" LinkBase="WebStorage" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The real JavaScript modules under test, served to the browser from the test output. -->
+    <Content Include="..\Web\wwwroot\js\*.js" Link="wwwroot\js\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
