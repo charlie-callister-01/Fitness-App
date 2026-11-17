@@ -4,12 +4,12 @@
 
 **Blocked by:** 05 (Weeks, counted Workouts, Streak and consistency messages), 06 (Week schedule data in the exchange format)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Week schedule for a week starts from each Session's default day, applies that week's moves, and marks Break days
-- [ ] A benchmark Session appears only in the weeks its interval says and never counts towards the weekly target
-- [ ] A Missed session is a scheduled Session on a date before today with no Workout from that Session in the same week; today's Session is not missed
-- [ ] A Session made up on a different day in the same week (a Workout made from it) is not missed; Break days and weeks before the Plan start are excluded
-- [ ] A Missed session stays missed even if its Exercises were later done in a Custom workout
-- [ ] The shape used for the schedule is reusable by rearrangement, Benchmarks and Nudges
-- [ ] Tests use explicit "today" and dated scenarios covering each rule above
+- [x] The Week schedule for a week starts from each Session's default day, applies that week's moves, and marks Break days
+- [x] A benchmark Session appears only in the weeks its interval says and never counts towards the weekly target
+- [x] A Missed session is a scheduled Session on a date before today with no Workout from that Session in the same week; today's Session is not missed
+- [x] A Session made up on a different day in the same week (a Workout made from it) is not missed; Break days and weeks before the Plan start are excluded
+- [x] A Missed session stays missed even if its Exercises were later done in a Custom workout
+- [x] The shape used for the schedule is reusable by rearrangement, Benchmarks and Nudges
+- [x] Tests use explicit "today" and dated scenarios covering each rule above
