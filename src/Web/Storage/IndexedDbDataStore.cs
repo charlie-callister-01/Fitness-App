@@ -16,18 +16,8 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
     internal const string RecordFormatVersionKey = "recordFormatVersion";
     internal const string InitialisedKey = "initialised";
 
-    private static readonly Dictionary<RecordKind, string> ModuleKinds = new()
-    {
-        [RecordKind.Exercise] = "exercises",
-        [RecordKind.Settings] = "settings",
-        [RecordKind.Plan] = "plans",
-        [RecordKind.WeighIn] = "weighIns",
-        [RecordKind.Break] = "breaks",
-        [RecordKind.Badge] = "badges",
-        [RecordKind.Guide] = "guides",
-        [RecordKind.Workout] = "workouts",
-        [RecordKind.WeekSchedule] = "weekSchedules",
-    };
+    private static readonly Dictionary<RecordKind, string> ModuleKinds =
+        Enum.GetValues<RecordKind>().ToDictionary(kind => kind, kind => kind.WireName());
 
     private bool _opened;
 

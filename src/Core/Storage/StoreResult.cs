@@ -36,4 +36,12 @@ public abstract record StoreResult<T>
     public sealed record Success(T Value) : StoreResult<T>;
 
     public sealed record Failure(StoreFailure Error) : StoreResult<T>;
+
+    /// <summary>Handles both outcomes, so a caller cannot forget one.</summary>
+    public TOut Match<TOut>(Func<T, TOut> onSuccess, Func<StoreFailure, TOut> onFailure) => this switch
+    {
+        Success success => onSuccess(success.Value),
+        Failure failure => onFailure(failure.Error),
+        _ => throw new InvalidOperationException("StoreResult has only Success and Failure."),
+    };
 }

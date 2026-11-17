@@ -3,63 +3,51 @@ using Core.Serialisation;
 namespace Core.Storage;
 
 /// <summary>
-/// The in-memory model of the whole dataset. <see cref="OpenAsync"/> loads every stored record through the same reader and validator
-/// that read a Backup and builds an immutable <see cref="DataSnapshot"/>. A record that cannot be read is left out of the snapshot and
-/// reported, never deleted. "Restart" is calling <see cref="OpenAsync"/> again over the same store.
+/// The in-memory model of the whole dataset. <see cref="OpenAsync(IDataStore, IStorageEnvironment?)"/> loads every stored record
+/// through the same reader and validator that read a Backup and builds an immutable <see cref="DataSnapshot"/>. A record that cannot be
+/// read is left out of the snapshot and reported, never deleted. "Restart" is calling <c>OpenAsync</c> again over the same store.
 /// </summary>
 public sealed partial class AppData
 {
+    /// <summary>What changes together: the dataset, the device metadata and what startup found. Swapped in one assignment.</summary>
+    private sealed record State(DataSnapshot Snapshot, StoreMetadata Metadata, StartupResult Startup);
+
     /// <summary>Commits run one at a time, in the order they asked (the semaphore queues waiters first in, first out).</summary>
     private readonly SemaphoreSlim _writer = new(1, 1);
 
-    private DataSnapshot _snapshot;
-    private StoreMetadata _metadata;
+    private State _state;
     private readonly int _currentVersion;
 
-    private AppData(IDataStore store, StartupResult startup, StoreMetadata metadata, int currentVersion)
+    private AppData(IDataStore store, State state, EnvironmentFacts environment, int currentVersion)
     {
         _currentVersion = currentVersion;
         Store = store;
-        Startup = startup;
-        _snapshot = startup.Snapshot;
-        _metadata = metadata;
+        _state = state;
+        _environment = environment;
     }
 
     /// <summary>The store this model reads and writes.</summary>
     internal IDataStore Store { get; }
 
     /// <summary>What startup found. Changes only when a replace-all succeeds (see <see cref="ReplaceAllAsync"/>).</summary>
-    public StartupResult Startup { get; private set; }
+    public StartupResult Startup => _state.Startup;
 
     /// <summary>
     /// The current dataset. Always present, whatever the startup state. A reader that keeps this value keeps a dataset that never changes:
     /// a commit publishes a new snapshot rather than editing this one.
     /// </summary>
-    public DataSnapshot Snapshot => _snapshot;
+    public DataSnapshot Snapshot => _state.Snapshot;
 
     /// <summary>
     /// Raised once after each successful commit (and after a recorded Backup), once the new snapshot is current, so a handler reading
     /// <see cref="Snapshot"/> sees the change. Never raised for a rejected or failed commit. Handlers run inside the write queue, so a
-    /// handler that starts another commit does not deadlock; that commit runs after this one.
+    /// handler that starts another commit does not deadlock; that commit runs after this one. A handler that throws cannot make the
+    /// commit look failed (it has already been saved and published): the exception is traced and the remaining handlers still run.
     /// </summary>
     public event Action? Changed;
 
     /// <summary>When the last Backup was made or restored on this device; null if never. Device bookkeeping, not part of a Backup.</summary>
-    public DateTimeOffset? LastBackupAt => _metadata.LastBackupAt;
-
-    /// <summary>Opens over <paramref name="store"/> with a default environment (writable, persistence granted, no marker). Tests and tools; the app passes the real one.</summary>
-    public static Task<AppData> OpenAsync(IDataStore store) => OpenAsync(store, new InMemoryStorageEnvironment(), ExchangeFormat.CurrentVersion);
-
-    /// <summary>Opens over <paramref name="store"/> and <paramref name="environment"/>; see <see cref="OpenAsync(IDataStore, IStorageEnvironment, int)"/>.</summary>
-    public static Task<AppData> OpenAsync(IDataStore store, IStorageEnvironment environment) =>
-        OpenAsync(store, environment, ExchangeFormat.CurrentVersion);
-
-    /// <summary>
-    /// Test seam: <paramref name="currentVersion"/> stands in for the app's record format version, so an older stored version can be
-    /// exercised before a real format bump exists. Production code uses <see cref="OpenAsync(IDataStore)"/>.
-    /// </summary>
-    internal static Task<AppData> OpenAsync(IDataStore store, int currentVersion) =>
-        OpenAsync(store, new InMemoryStorageEnvironment(), currentVersion);
+    public DateTimeOffset? LastBackupAt => _state.Metadata.LastBackupAt;
 
     /// <summary>A commit of one change; see <see cref="CommitAsync(IReadOnlyList{Change})"/>.</summary>
     public Task<CommitResult> CommitAsync(Change change) => CommitAsync([change]);
@@ -69,86 +57,88 @@ public sealed partial class AppData
     /// old snapshot stays, nothing is raised and the failure kind comes back. The first successful commit also marks the store initialised,
     /// in the same unit as the save, and records the record format version (always the current one).
     /// </summary>
-    public async Task<CommitResult> CommitAsync(IReadOnlyList<Change> changes)
+    public Task<CommitResult> CommitAsync(IReadOnlyList<Change> changes) =>
+        WithWriterAsync<CommitResult>(failure => new CommitResult.StoreFailed(failure), () => CommitWhileWritingAsync(changes));
+
+    private async Task<CommitResult> CommitWhileWritingAsync(IReadOnlyList<Change> changes)
     {
-        if (Startup.State is StartupState.CannotRead or StartupState.StorageFailed)
+        var state = _state;
+        if (state.Startup.State is StartupState.CannotRead or StartupState.StorageFailed)
         {
-            return new CommitResult.Blocked(Startup.State);
+            return new CommitResult.Blocked(state.Startup.State);
         }
 
-        if (WriterLockFailure() is { } lockFailure)
-        {
-            return new CommitResult.StoreFailed(lockFailure);
-        }
-
-        if (SetAsideRejection(changes) is { } setAside)
+        if (SetAsideRejection(state.Startup, changes) is { } setAside)
         {
             return setAside;
         }
 
-        await _writer.WaitAsync();
-        try
+        var candidate = changes.Aggregate(state.Snapshot, (snapshot, change) => change.ApplyTo(snapshot));
+        if (ExchangeFormat.Validate(candidate.ToDocument()) is { Count: > 0 } issues)
         {
-            var candidate = changes.Aggregate(_snapshot, (snapshot, change) => change.ApplyTo(snapshot));
-            if (ExchangeFormat.Validate(candidate.ToDocument()) is { Count: > 0 } issues)
-            {
-                return new CommitResult.Rejected(issues);
-            }
-
-            var firstSave = !_metadata.Initialised;
-            var metadata = _metadata is { Initialised: true } && _metadata.RecordFormatVersion == _currentVersion
-                ? null
-                : _metadata with { Initialised = true, RecordFormatVersion = _currentVersion };
-            if (await Store.ApplyAsync([.. changes.Select(change => change.ToStoreChange())], metadata) is StoreResult<Unit>.Failure failure)
-            {
-                return new CommitResult.StoreFailed(failure.Error);
-            }
-
-            _snapshot = candidate;
-            _metadata = metadata ?? _metadata;
-            if (firstSave)
-            {
-                await WriteMarkerAsync();
-            }
-
-            Changed?.Invoke();
-            return new CommitResult.Committed();
+            return new CommitResult.Rejected(issues);
         }
-        finally
+
+        var firstSave = !state.Metadata.Initialised;
+        var metadata = state.Metadata is { Initialised: true } && state.Metadata.RecordFormatVersion == _currentVersion
+            ? null
+            : state.Metadata with { Initialised = true, RecordFormatVersion = _currentVersion };
+        if (await Store.ApplyAsync([.. changes.Select(change => change.ToStoreChange())], metadata) is StoreResult<Unit>.Failure failure)
         {
-            _writer.Release();
+            return new CommitResult.StoreFailed(failure.Error);
         }
+
+        _state = state with { Snapshot = candidate, Metadata = metadata ?? state.Metadata };
+        if (firstSave)
+        {
+            await WriteMarkerAsync();
+        }
+
+        RaiseChanged();
+        return new CommitResult.Committed();
     }
 
     /// <summary>
     /// Remembers when a Backup was made or restored on this device (the caller supplies the time, from the clock), for the Backup Nudge.
     /// It is device bookkeeping: it is never in the exchange format or a Backup. Other metadata is kept. On failure nothing is remembered.
     /// </summary>
-    public async Task<StoreResult<Unit>> RecordBackupAsync(DateTimeOffset at)
-    {
-        // The stored metadata is unknown, so writing it could wipe real values.
-        if (Startup is { State: StartupState.StorageFailed, Failure: { } startupFailure })
+    public Task<StoreResult<Unit>> RecordBackupAsync(DateTimeOffset at) =>
+        WithWriterAsync<StoreResult<Unit>>(failure => new StoreResult<Unit>.Failure(failure), async () =>
         {
-            return new StoreResult<Unit>.Failure(startupFailure);
-        }
+            var state = _state;
+            // The stored metadata is unknown, so writing it could wipe real values.
+            if (state.Startup is { State: StartupState.StorageFailed, Failure: { } startupFailure })
+            {
+                return new StoreResult<Unit>.Failure(startupFailure);
+            }
 
-        if (WriterLockFailure() is { } lockFailure)
+            var metadata = state.Metadata with { LastBackupAt = at };
+            var result = await Store.WriteMetadataAsync(metadata);
+            if (result is StoreResult<Unit>.Success)
+            {
+                _state = state with { Metadata = metadata };
+                RaiseChanged();
+            }
+
+            return result;
+        });
+
+    /// <summary>
+    /// Runs <paramref name="work"/> as the one writer: refused with <paramref name="lockHeld"/> when another window holds the writer lock,
+    /// otherwise queued behind any write already running. Everything <paramref name="work"/> reads from the current state is read only
+    /// once it holds the queue, so it never decides on state that a write ahead of it has since changed.
+    /// </summary>
+    private async Task<TResult> WithWriterAsync<TResult>(Func<StoreFailure, TResult> lockHeld, Func<Task<TResult>> work)
+    {
+        if (!_environment.HasWriterLock)
         {
-            return new StoreResult<Unit>.Failure(lockFailure);
+            return lockHeld(new StoreFailure(StoreFailureKind.WriterLockHeld));
         }
 
         await _writer.WaitAsync();
         try
         {
-            var metadata = _metadata with { LastBackupAt = at };
-            var result = await Store.WriteMetadataAsync(metadata);
-            if (result is StoreResult<Unit>.Success)
-            {
-                _metadata = metadata;
-                Changed?.Invoke();
-            }
-
-            return result;
+            return await work();
         }
         finally
         {
@@ -160,10 +150,10 @@ public sealed partial class AppData
     /// A record set aside at startup stays in storage untouched, so a put or delete of the same kind and key is rejected until a
     /// replace-all (restore) replaces everything.
     /// </summary>
-    private CommitResult.Rejected? SetAsideRejection(IReadOnlyList<Change> changes)
+    private static CommitResult.Rejected? SetAsideRejection(StartupResult startup, IReadOnlyList<Change> changes)
     {
         var issues = changes
-            .Where(change => Startup.Issues.Any(issue => issue.Kind == change.Kind && issue.Key == change.Key))
+            .Where(change => startup.Issues.Any(issue => issue.Kind == change.Kind && issue.Key == change.Key))
             .Select(change => new FormatIssue(
                 $"{change.Kind}/{change.Key}",
                 "record_set_aside",
@@ -172,56 +162,18 @@ public sealed partial class AppData
         return issues.Count == 0 ? null : new CommitResult.Rejected(issues);
     }
 
-    /// <summary>
-    /// Reads the records, setting aside the ones the reader or validator names, until what is left reads cleanly. Setting one aside can
-    /// leave another dangling (a Workout naming a removed Exercise), so this repeats. Errors that name no record cannot be set aside:
-    /// the data as a whole cannot be read.
-    /// </summary>
-    private static StartupResult Read(StoredData data, int currentVersion)
+    private void RaiseChanged()
     {
-        var remaining = data.Records.ToList();
-        var issues = new List<LoadIssue>();
-        var version = data.Metadata.RecordFormatVersion ?? currentVersion;
-
-        while (true)
+        foreach (var handler in Changed?.GetInvocationList() ?? [])
         {
-            var assembled = StoredRecords.Assemble(remaining, version);
-            SetAside(remaining, issues, assembled.Malformed.Select(record => (record, "This record is not valid JSON.")));
-
-            var result = ExchangeFormat.Read(assembled.Json);
-            if (result.IsSuccess)
+            try
             {
-                return Succeeded(data, result.Document!, issues);
+                ((Action)handler)();
             }
-
-            var named = result.Errors
-                .Select(error => (Record: assembled.RecordAt(error.Path), error.Message))
-                .Where(error => error.Record is not null)
-                .GroupBy(error => error.Record!)
-                .Select(group => (group.Key, string.Join(" ", group.Select(error => error.Message).Distinct())))
-                .ToList();
-            if (named.Count == 0)
+            catch (Exception ex)
             {
-                issues.AddRange(result.Errors.Select(error => new LoadIssue(null, null, error.Message)));
-                return new StartupResult(StartupState.CannotRead, DataSnapshot.Empty, issues);
+                System.Diagnostics.Trace.TraceError($"A Changed handler threw after a successful save: {ex}");
             }
-
-            SetAside(remaining, issues, named);
-        }
-    }
-
-    private static StartupResult Succeeded(StoredData data, Model.ExchangeDocument document, List<LoadIssue> issues)
-    {
-        var firstRun = data.Records.Count == 0 && !data.Metadata.Initialised;
-        return new StartupResult(firstRun ? StartupState.FirstRun : StartupState.Ready, DataSnapshot.From(document), issues);
-    }
-
-    private static void SetAside(List<StoredRecord> remaining, List<LoadIssue> issues, IEnumerable<(StoredRecord Record, string Message)> found)
-    {
-        foreach (var (record, message) in found.ToList())
-        {
-            remaining.Remove(record);
-            issues.Add(new LoadIssue(record.Kind, record.Key, message));
         }
     }
 }

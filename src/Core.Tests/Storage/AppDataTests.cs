@@ -93,14 +93,14 @@ public class AppDataTests
 
         var records = StoredRecords.FromDocument(original);
 
-        Assert.Equal(original.Exercises!.Select(RecordKeys.ForExercise).Order(), KeysOf(records, RecordKind.Exercise));
-        Assert.Equal(original.Plans!.Select(RecordKeys.ForPlan).Order(), KeysOf(records, RecordKind.Plan));
-        Assert.Equal(original.Workouts!.Select(RecordKeys.ForWorkout).Order(), KeysOf(records, RecordKind.Workout));
-        Assert.Equal(original.Guides!.Select(RecordKeys.ForGuide).Order(), KeysOf(records, RecordKind.Guide));
-        Assert.Equal(original.WeighIns!.Select(RecordKeys.ForWeighIn).Order(), KeysOf(records, RecordKind.WeighIn));
-        Assert.Equal(original.Breaks!.Select(RecordKeys.ForBreak).Order(), KeysOf(records, RecordKind.Break));
-        Assert.Equal(original.Badges!.Select(RecordKeys.ForBadge).Order(), KeysOf(records, RecordKind.Badge));
-        Assert.Equal([RecordKeys.SettingsKey], KeysOf(records, RecordKind.Settings));
+        Assert.Equal(original.Exercises!.Select(RecordKeys.For).Order(), KeysOf(records, RecordKind.Exercise));
+        Assert.Equal(original.Plans!.Select(RecordKeys.For).Order(), KeysOf(records, RecordKind.Plan));
+        Assert.Equal(original.Workouts!.Select(RecordKeys.For).Order(), KeysOf(records, RecordKind.Workout));
+        Assert.Equal(original.Guides!.Select(RecordKeys.For).Order(), KeysOf(records, RecordKind.Guide));
+        Assert.Equal(original.WeighIns!.Select(RecordKeys.For).Order(), KeysOf(records, RecordKind.WeighIn));
+        Assert.Equal(original.Breaks!.Select(RecordKeys.For).Order(), KeysOf(records, RecordKind.Break));
+        Assert.Equal(original.Badges!.Select(RecordKeys.For).Order(), KeysOf(records, RecordKind.Badge));
+        Assert.Equal(["settings"], KeysOf(records, RecordKind.Settings));
         Assert.Equal(["2026-11-16"], KeysOf(records, RecordKind.WeekSchedule));
     }
 
