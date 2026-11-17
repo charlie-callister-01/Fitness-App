@@ -67,6 +67,20 @@ public partial class DataSpecConformanceTests
     }
 
     [Fact]
+    public void Week_schedule_example_in_the_data_spec_is_read_cleanly_by_the_real_reader()
+    {
+        var example = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).Single(j => j.Contains("\"weekSchedules\""));
+
+        var result = ExchangeFormat.Read(example);
+
+        Assert.True(result.IsSuccess && result.Warnings.Count == 0, string.Join("; ", result.Errors.Concat(result.Warnings).Select(e => $"{e.Path}: {e.Message}")));
+        var schedules = result.Document!.WeekSchedules!;
+        Assert.Equal(2, schedules.Count);
+        Assert.Equal(new Core.Model.SessionMove("c-engine", new DateOnly(2026, 11, 22)), schedules[0].Moves[1]);
+        Assert.Empty(schedules[1].Moves);
+    }
+
+    [Fact]
     public void Every_document_example_in_the_data_spec_is_read_cleanly_by_the_real_reader()
     {
         var examples = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).Where(j => j.Contains("\"formatVersion\"")).ToList();

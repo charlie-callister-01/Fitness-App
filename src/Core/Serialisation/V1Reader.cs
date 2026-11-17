@@ -27,10 +27,11 @@ internal static class V1Reader
         var bodyAndGuides = BodyAndGuideReader.Read(fields);
         var plans = PlanReader.Read(fields);
         var workouts = WorkoutReader.Read(fields);
+        var weekSchedules = WeekScheduleReader.Read(fields);
         fields.WarnAboutUnknownFields();
 
         var document = new ExchangeDocument(version, exportedAt, exportedFrom, exercises, settings,
-            bodyAndGuides.WeighIns, bodyAndGuides.Breaks, bodyAndGuides.Badges, bodyAndGuides.Guides, plans, workouts);
+            bodyAndGuides.WeighIns, bodyAndGuides.Breaks, bodyAndGuides.Badges, bodyAndGuides.Guides, plans, workouts, weekSchedules);
         context.Sink.ReportAll(DocumentValidator.Validate(document, context.Findings));
         return ReadResult.From(document, context.Sink);
     }
