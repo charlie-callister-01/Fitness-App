@@ -31,7 +31,7 @@ public static class NudgeRules
         Plan plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
         IReadOnlyList<Workout> workouts, DateTimeOffset? lastBackup, DateOnly today)
     {
-        if (breaks.Any(b => today >= b.StartDate && today <= b.EndDate)) return [];
+        if (BreakCalendar.IsBreakDay(breaks, today)) return [];
 
         var monday = WeekCalendar.MondayOf(today);
         var nudges = new List<Nudge>();
@@ -53,9 +53,8 @@ public static class NudgeRules
 
     private static IEnumerable<Nudge> RepeatedPain(IReadOnlyList<Workout> workouts, DateOnly monday)
     {
-        var sunday = monday.AddDays(6);
         return workouts
-            .Where(w => w.Date >= monday && w.Date <= sunday && w.PainCheck is { Status: PainStatus.Reported })
+            .Where(w => WeekCalendar.InWeek(monday, w.Date) && w.PainCheck is { Status: PainStatus.Reported })
             .SelectMany(w => w.PainCheck!.Areas.Distinct().Select(a => (w.Id, Area: a)))
             .GroupBy(x => x.Area)
             .Where(g => g.Select(x => x.Id).Distinct().Count() >= 2)

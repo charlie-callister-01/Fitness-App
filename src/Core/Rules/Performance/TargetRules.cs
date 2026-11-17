@@ -120,23 +120,36 @@ internal static class TargetRules
         return Stepped(kind, best, steps, $"Best {Describe(kind, best)}{lead}{StepText(kind, steps)}");
     }
 
-    private static SuggestedTarget Stepped(LogKind kind, WorkoutSet from, int steps, string reason) => kind switch
+    /// <summary>One progression step for a kind: <see cref="Amount"/> in the stored unit, shown as <see cref="Amount"/> / <see cref="PerDisplayUnit"/> of <see cref="Unit"/>.</summary>
+    private sealed record Step(double Amount, double PerDisplayUnit, string Unit, bool Pluralise = false);
+
+    private static Step StepFor(LogKind kind) => kind switch
     {
-        LogKind.Reps => new(null, from.Reps!.Value + steps, null, null, null, reason),
-        LogKind.Seconds => new(null, null, null, from.DurationSeconds!.Value + 5 * steps, null, reason),
-        LogKind.Minutes => new(null, null, null, from.DurationSeconds!.Value + 60 * steps, null, reason),
-        LogKind.DistanceKm => new(null, null, null, null, from.DistanceKm!.Value + 0.5 * steps, reason),
-        _ => new(null, null, from.DistanceM!.Value + 10 * steps, null, null, reason),
+        LogKind.Reps => new(1, 1, "rep", Pluralise: true),
+        LogKind.Seconds => new(TimeStepSeconds, 1, "s"),
+        LogKind.Minutes => new(60, 60, "min"),
+        LogKind.DistanceKm => new(0.5, 1, "km"),
+        _ => new(10, 1, "m"),
     };
 
-    private static string StepText(LogKind kind, int steps) => kind switch
+    private static SuggestedTarget Stepped(LogKind kind, WorkoutSet from, int steps, string reason)
     {
-        LogKind.Reps => Plural(steps, "rep"),
-        LogKind.Seconds => $"{5 * steps} s",
-        LogKind.Minutes => $"{steps} min",
-        LogKind.DistanceKm => $"{Num(0.5 * steps)} km",
-        _ => $"{10 * steps} m",
-    };
+        var add = StepFor(kind).Amount * steps;
+        return kind switch
+        {
+            LogKind.Reps => new(null, from.Reps!.Value + (int)add, null, null, null, reason),
+            LogKind.Seconds or LogKind.Minutes => new(null, null, null, from.DurationSeconds!.Value + (int)add, null, reason),
+            LogKind.DistanceKm => new(null, null, null, null, from.DistanceKm!.Value + add, reason),
+            _ => new(null, null, from.DistanceM!.Value + add, null, null, reason),
+        };
+    }
+
+    private static string StepText(LogKind kind, int steps)
+    {
+        var step = StepFor(kind);
+        var shown = step.Amount * steps / step.PerDisplayUnit;
+        return step.Pluralise ? Plural(shown, step.Unit) : $"{Num(shown)} {step.Unit}";
+    }
 
     private static string Describe(LogKind kind, WorkoutSet s) => kind switch
     {

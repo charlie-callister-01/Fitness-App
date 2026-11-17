@@ -8,6 +8,6 @@
 
 - [x] Current Plan week and current Phase come from the Plan's start date and the Phase week ranges, with explicit states for before the start and after the last Phase
 - [x] Week N of M within the Phase is returned
-- [x] Phase goal readiness reports which goals are met (a best loaded Set at or above the goal weight with at least the goal reps) and whether all are met, with a message
+- [x] Phase goal readiness reports which goals are met (any single Set of the Exercise at or above the goal weight and the goal reps) and whether all are met, with a message
 - [x] A Session's Exercise rows for a date resolve through the current Phase's Override when one exists, else the Plan default
 - [x] Tests cover Phase boundaries, before start and after end, a goal met by a heavier set, and an Override versus default

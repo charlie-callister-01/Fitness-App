@@ -42,20 +42,20 @@ public static class WeekRearrangement
         var outstanding = plan.Sessions
             .Select(s => layout.Sessions.FirstOrDefault(l => l.SessionId == s.Id))
             .OfType<ScheduledSession>()
-            .Where(l => missed.Contains(l.SessionId) || (l.Date >= today && !DoneThisWeek(workouts, l.SessionId, layout.Monday, sunday)))
+            .Where(l => missed.Contains(l.SessionId) || (l.Date >= today && !DoneThisWeek(workouts, l.SessionId, layout.Monday)))
             .ToList();
         if (outstanding.Count == 0) return new RearrangementResult.NothingToRearrange();
 
         var groups = outstanding.ToDictionary(l => l.SessionId, l => MuscleGroups(plan, exercises, l.SessionId));
         if (IsWorkable(outstanding, groups, today)) return new RearrangementResult.NothingToRearrange();
 
-        var days = Enumerable.Range(0, 7).Select(layout.Monday.AddDays)
+        var days = WeekCalendar.DaysOf(layout.Monday)
             .Where(d => d >= today && d <= sunday && !layout.BreakDays.Contains(d)).ToList();
         return Place(layout.Monday, outstanding.Select(o => o.SessionId).ToList(), groups, days);
     }
 
-    private static bool DoneThisWeek(IReadOnlyList<Workout> workouts, string sessionId, DateOnly monday, DateOnly sunday) =>
-        workouts.Any(w => w.SessionId == sessionId && w.Date >= monday && w.Date <= sunday);
+    private static bool DoneThisWeek(IReadOnlyList<Workout> workouts, string sessionId, DateOnly monday) =>
+        workouts.Any(w => w.SessionId == sessionId && WeekCalendar.InWeek(monday, w.Date));
 
     private static bool IsWorkable(
         IReadOnlyList<ScheduledSession> outstanding, Dictionary<string, HashSet<string>> groups, DateOnly today)

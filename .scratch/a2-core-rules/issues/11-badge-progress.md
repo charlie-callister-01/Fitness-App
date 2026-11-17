@@ -6,8 +6,8 @@
 
 **Status:** done
 
-- [x] Supported metrics: sessions (counted Workouts), streak, best week, prs, or an Exercise (its best value in its own measure)
-- [x] A target of `bodyweight` means the latest Weigh-in; a negative target on a measurement means a drop of that size from the start
+- [x] Supported metrics: sessions (counted Workouts), streak, bestweek (best week), prs, bodyweight (Weigh-ins), or an Exercise (its best value in its own measure)
+- [x] `bodyweight` is a metric (the latest Weigh-in), not a target value; a target is any non-zero number, and a negative target on a measurement means a drop of that size from the start
 - [x] An unknown metric returns a "not measurable" result carrying the metric name and never throws
 - [x] Progress percentage is capped sensibly and reached is true at or past the target
 - [x] Tests cover each metric, the bodyweight target, a negative target and an unknown metric

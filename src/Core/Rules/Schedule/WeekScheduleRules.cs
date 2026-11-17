@@ -16,15 +16,15 @@ public static class WeekScheduleRules
     {
         var monday = WeekCalendar.MondayOf(weekDate);
         var sunday = WeekCalendar.SundayOf(monday);
-        var breakDays = Enumerable.Range(0, 7).Select(monday.AddDays).Where(d => IsBreakDay(breaks, d)).ToList();
+        var breakDays = WeekCalendar.DaysOf(monday).Where(d => BreakCalendar.IsBreakDay(breaks, d)).ToList();
         if (WeekRules.PlanWeekNumber(plan, sunday) is null) return new(monday, [], breakDays);
 
         var moves = schedules.FirstOrDefault(s => s.WeekStart == monday)?.Moves ?? [];
         var placed = new List<ScheduledSession>();
         foreach (var session in plan.Sessions.Where(s => BenchmarkWeeks.IsScheduledInWeek(plan, s, monday)))
         {
-            var move = moves.FirstOrDefault(m => m.SessionId == session.Id && m.Date >= monday && m.Date <= sunday);
-            var date = move?.Date ?? DefaultDate(monday, session.DefaultDay);
+            var move = moves.FirstOrDefault(m => m.SessionId == session.Id && WeekCalendar.InWeek(monday, m.Date));
+            var date = move?.Date ?? WeekCalendar.DefaultDate(monday, session.DefaultDay);
             placed.Add(new(session.Id, date, move is not null, breakDays.Contains(date), BenchmarkWeeks.IsBenchmark(session)));
         }
 
@@ -41,10 +41,9 @@ public static class WeekScheduleRules
         IReadOnlyList<Workout> workouts, DateOnly weekDate, DateOnly today)
     {
         var layout = Layout(plan, schedules, breaks, weekDate);
-        var sunday = WeekCalendar.SundayOf(layout.Monday);
         return layout.Sessions
             .Where(s => s.Date < today && s.Date >= plan.StartDate && !s.IsBreakDay)
-            .Where(s => !workouts.Any(w => w.SessionId == s.SessionId && w.Date >= layout.Monday && w.Date <= sunday))
+            .Where(s => !workouts.Any(w => w.SessionId == s.SessionId && WeekCalendar.InWeek(layout.Monday, w.Date)))
             .Select(s => new MissedSession(s.SessionId, s.Date))
             .ToList();
     }
@@ -60,10 +59,4 @@ public static class WeekScheduleRules
             result.AddRange(MissedInWeek(plan, schedules, breaks, workouts, monday, today));
         return result;
     }
-
-    private static DateOnly DefaultDate(DateOnly monday, DayOfWeek day) =>
-        monday.AddDays(((int)day + 6) % 7);
-
-    private static bool IsBreakDay(IReadOnlyList<Break> breaks, DateOnly day) =>
-        breaks.Any(b => day >= b.StartDate && day <= b.EndDate);
 }

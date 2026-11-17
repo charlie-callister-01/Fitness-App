@@ -27,7 +27,7 @@ public sealed record BadgeProgress(
 
 /// <summary>
 /// Badge progress. Supported metrics (case-insensitive): <c>sessions</c> (counted Workouts ever), <c>streak</c> (best-ever Streak run),
-/// <c>bestweek</c> (most counted Workouts in one week), <c>prs</c> (PRs across all Exercises), <c>bodyweight</c> (Weigh-ins),
+/// <c>bestweek</c> (also accepted as <c>best week</c>, the product brief's prose name; most counted Workouts in one week), <c>prs</c> (PRs across all Exercises), <c>bodyweight</c> (Weigh-ins),
 /// or an Exercise ID (its best value in its own measure; a body measurement uses its latest reading).
 /// A negative target on a measurement means a drop of that size from its first reading.
 /// </summary>

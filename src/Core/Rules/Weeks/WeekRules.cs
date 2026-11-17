@@ -22,8 +22,7 @@ public static class WeekRules
     /// <summary>Counted Workouts in the week starting on <paramref name="monday"/>.</summary>
     public static int CountedWorkouts(Plan plan, IReadOnlyList<Workout> workouts, DateOnly monday)
     {
-        var sunday = monday.AddDays(6);
-        return workouts.Count(w => w.Date >= monday && w.Date <= sunday && IsCounted(plan, w));
+        return workouts.Count(w => WeekCalendar.InWeek(monday, w.Date) && IsCounted(plan, w));
     }
 
     public static StreakResult Streak(Plan plan, IReadOnlyList<Workout> workouts, IReadOnlyList<Break> breaks, DateOnly today)
@@ -37,7 +36,7 @@ public static class WeekRules
         {
             var count = CountedWorkouts(plan, workouts, monday);
             bestWeek = Math.Max(bestWeek, count);
-            if (HasBreakDay(breaks, monday)) continue;
+            if (BreakCalendar.TouchesWeek(breaks, monday)) continue;
 
             if (count >= plan.StreakMinWorkoutsPerWeek)
             {
@@ -63,7 +62,7 @@ public static class WeekRules
 
         var daysLeft = 0;
         for (var day = today; day <= WeekCalendar.SundayOf(today); day = day.AddDays(1))
-            if (!IsBreakDay(breaks, day)) daysLeft++;
+            if (!BreakCalendar.IsBreakDay(breaks, day)) daysLeft++;
 
         var days = daysLeft == 1 ? "day" : "days";
         if (remaining > daysLeft)
@@ -87,10 +86,4 @@ public static class WeekRules
         var session = plan.Sessions.FirstOrDefault(s => s.Id == w.SessionId);
         return session is not { Type: SessionType.Test, BenchmarkIntervalWeeks: not null };
     }
-
-    private static bool IsBreakDay(IReadOnlyList<Break> breaks, DateOnly day) =>
-        breaks.Any(b => day >= b.StartDate && day <= b.EndDate);
-
-    private static bool HasBreakDay(IReadOnlyList<Break> breaks, DateOnly monday) =>
-        breaks.Any(b => b.StartDate <= monday.AddDays(6) && b.EndDate >= monday);
 }
