@@ -53,6 +53,22 @@ internal static class DocumentValidator
     /// <summary>A real ID: not null and not the blank placeholder the parse phase leaves for an unreadable one.</summary>
     private static bool IsSet(string? id) => id is { Length: > 0 };
 
+    /// <summary>
+    /// The IDs a reference may point at. Unchecked when the document doesn't contain the referenced collection (it is resolved on import),
+    /// so nothing is unknown; otherwise any ID outside the set is.
+    /// </summary>
+    private sealed class ReferenceScope
+    {
+        private static readonly ReferenceScope Unchecked = new(null);
+        private readonly HashSet<string>? _known;
+
+        private ReferenceScope(HashSet<string>? known) => _known = known;
+
+        public static ReferenceScope Of(IEnumerable<string>? ids) => ids is null ? Unchecked : new(ids.ToHashSet());
+
+        public bool IsUnknown(string id) => _known is not null && !_known.Contains(id);
+    }
+
     /// <summary>The Exercise a skipped or swapped entry names, which must come from the Workout's planned rows.</summary>
     private sealed record PlannedReference(string Field, string? ExerciseId, string Verb);
 
@@ -60,16 +76,16 @@ internal static class DocumentValidator
     {
         private readonly ExchangeDocument _document;
         private readonly ParseFindings _findings;
-        private readonly HashSet<string>? _exerciseIds;
-        private readonly HashSet<string>? _sessionIds;
+        private readonly ReferenceScope _exercises;
+        private readonly ReferenceScope _sessions;
         private readonly Dictionary<RecordKind, HashSet<string>> _seenIds = [];
 
         public Checker(ExchangeDocument document, ParseFindings findings)
         {
             _document = document;
             _findings = findings;
-            _exerciseIds = document.Exercises?.Select(e => e.Id).ToHashSet();
-            _sessionIds = document.Plans?.SelectMany(p => p.Sessions).Select(s => s.Id).ToHashSet();
+            _exercises = ReferenceScope.Of(document.Exercises?.Select(e => e.Id));
+            _sessions = ReferenceScope.Of(document.Plans?.SelectMany(p => p.Sessions).Select(s => s.Id));
         }
 
         public List<FormatIssue> Issues { get; } = [];
@@ -97,7 +113,7 @@ internal static class DocumentValidator
             }
         }
 
-        private bool IsUnknownExercise(string? id) => IsSet(id) && _exerciseIds is not null && !_exerciseIds.Contains(id!);
+        private bool IsUnknownExercise(string? id) => IsSet(id) && _exercises.IsUnknown(id!);
 
         private void CheckExercise(string path, string? id)
         {
@@ -314,7 +330,7 @@ internal static class DocumentValidator
 
         private void CheckWorkoutSession(Workout workout, string path)
         {
-            if (IsSet(workout.SessionId) && _sessionIds is not null && !_sessionIds.Contains(workout.SessionId!))
+            if (IsSet(workout.SessionId) && _sessions.IsUnknown(workout.SessionId!))
             {
                 Error($"{path}.sessionId", "unknown_session", $"{path}.sessionId \"{workout.SessionId}\" is not a Session in any Plan in this document.");
             }

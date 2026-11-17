@@ -73,9 +73,9 @@ internal sealed partial class FieldReader
     /// </summary>
     public T? ReadRecord<T>(Func<FieldReader, T?> read) where T : class
     {
-        var attempt = Attempt(() => read(this));
+        var record = read(this);
         WarnAboutUnknownFields();
-        return attempt.Value;
+        return record;
     }
 
     /// <summary>
@@ -156,49 +156,26 @@ internal sealed partial class FieldReader
         return null;
     }
 
-    public bool OptionalBool(string name, bool defaultValue)
-    {
-        if (!TryTakeField(name, out var value))
-        {
-            return defaultValue;
-        }
+    public bool OptionalBool(string name, bool defaultValue) =>
+        TryTakeField(name, out var value) ? ParseBool(ChildPath(name), value) ?? defaultValue : defaultValue;
 
+    public bool RequiredBool(string name) =>
+        TryTakeRequired(name, out var value) && (ParseBool(ChildPath(name), value) ?? false);
+
+    private bool? ParseBool(string path, JsonElement value)
+    {
         if (value.ValueKind is JsonValueKind.True or JsonValueKind.False)
         {
             return value.GetBoolean();
         }
 
-        Sink.Error(ChildPath(name), "wrong_type", $"{ChildPath(name)} must be true or false.");
-        return defaultValue;
-    }
-
-    public bool RequiredBool(string name)
-    {
-        if (!TryTakeField(name, out var value))
-        {
-            Sink.Error(ChildPath(name), "missing_field", $"{ChildPath(name)} is required.");
-            return false;
-        }
-
-        if (value.ValueKind is JsonValueKind.True or JsonValueKind.False)
-        {
-            return value.GetBoolean();
-        }
-
-        Sink.Error(ChildPath(name), "wrong_type", $"{ChildPath(name)} must be true or false.");
-        return false;
+        Sink.Error(path, "wrong_type", $"{path} must be true or false.");
+        return null;
     }
 
     public int RequiredInt(string name, int min)
     {
-        var path = ChildPath(name);
-        if (!TryTakeField(name, out var value))
-        {
-            Sink.Error(path, "missing_field", $"{path} is required.");
-            return 0;
-        }
-
-        return ParseInt(path, value, min) ?? 0;
+        return TryTakeRequired(name, out var value) ? ParseInt(ChildPath(name), value, min) ?? 0 : 0;
     }
 
     /// <summary>An optional whole number; null when absent or invalid (invalid is reported).</summary>
@@ -225,14 +202,7 @@ internal sealed partial class FieldReader
     /// <summary>A required number that must be greater than zero.</summary>
     public double RequiredPositiveDouble(string name)
     {
-        var path = ChildPath(name);
-        if (!TryTakeField(name, out var value))
-        {
-            Sink.Error(path, "missing_field", $"{path} is required.");
-            return 0;
-        }
-
-        return PositiveDouble(path, value);
+        return TryTakeRequired(name, out var value) ? PositiveDouble(ChildPath(name), value) : 0;
     }
 
     /// <summary>An optional number that, when present, must be greater than zero.</summary>
@@ -249,14 +219,7 @@ internal sealed partial class FieldReader
 
     public T RequiredEnum<T>(string name) where T : struct, Enum
     {
-        var path = ChildPath(name);
-        if (!TryTakeField(name, out var value))
-        {
-            Sink.Error(path, "missing_field", $"{path} is required.");
-            return default;
-        }
-
-        return ParseEnum<T>(path, value) ?? default;
+        return TryTakeRequired(name, out var value) ? ParseEnum<T>(ChildPath(name), value) ?? default : default;
     }
 
     /// <summary>Reads an enum written as its camelCase name; reports and returns null when it isn't one.</summary>
@@ -339,13 +302,7 @@ internal sealed partial class FieldReader
 
     public FieldReader? RequiredObject(string name)
     {
-        if (TryTakeField(name, out var value))
-        {
-            return Open(value, ChildPath(name), Context);
-        }
-
-        Sink.Error(ChildPath(name), "missing_field", $"{ChildPath(name)} is required.");
-        return null;
+        return TryTakeRequired(name, out var value) ? Open(value, ChildPath(name), Context) : null;
     }
 
     /// <summary>The elements of an optional array of objects, or null when the array is absent (or not an array, which is reported).</summary>
@@ -410,6 +367,19 @@ internal sealed partial class FieldReader
 
     private static string AllowedValues<T>() where T : struct, Enum =>
         string.Join(", ", Enum.GetValues<T>().Select(v => JsonNamingPolicy.CamelCase.ConvertName(v.ToString())));
+
+    /// <summary>Takes a field that must be present, reporting <c>missing_field</c> when it isn't.</summary>
+    private bool TryTakeRequired(string name, out JsonElement value)
+    {
+        if (TryTakeField(name, out value))
+        {
+            return true;
+        }
+
+        var path = ChildPath(name);
+        Sink.Error(path, "missing_field", $"{path} is required.");
+        return false;
+    }
 
     /// <summary>Looks up a field and takes it: marks it as known (so it is not reported as unknown). JSON null counts as absent.</summary>
     private bool TryTakeField(string name, out JsonElement value)

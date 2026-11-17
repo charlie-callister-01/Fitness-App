@@ -11,14 +11,7 @@ internal sealed partial class FieldReader
     /// <summary>A required calendar date; null (after reporting) when absent or invalid, so a failed read can't be mistaken for a real date.</summary>
     public DateOnly? RequiredDateOrNull(string name)
     {
-        var path = ChildPath(name);
-        if (!TryTakeField(name, out var value))
-        {
-            Sink.Error(path, "missing_field", $"{path} is required.");
-            return null;
-        }
-
-        return ParseDate(path, value);
+        return TryTakeRequired(name, out var value) ? ParseDate(ChildPath(name), value) : null;
     }
 
     /// <summary>An optional calendar date written <c>yyyy-MM-dd</c>; null when absent or invalid (invalid is reported).</summary>
