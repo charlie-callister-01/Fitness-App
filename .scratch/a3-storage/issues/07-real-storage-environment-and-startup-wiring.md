@@ -4,12 +4,12 @@
 
 **Blocked by:** 05 (Storage environment and health), 06 (IndexedDB module and `IDataStore`)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The browser `IStorageEnvironment`: persistent-storage request and check, usage and quota estimate, an exclusive Web Locks writer lock held for the life of the tab, and the cleared-data marker in browser local storage
-- [ ] Unsupported browser APIs report "unsupported" instead of throwing
-- [ ] Host startup builds the real store and environment, loads `AppData` and registers it (and its health) for injection into the UI; the existing clock and build-info registrations are kept
-- [ ] If IndexedDB is unavailable (for example private browsing) startup falls back to the in-memory store with health "unavailable"
-- [ ] The app still builds, installs as a PWA and opens offline as before (the existing PWA manual checks still apply)
-- [ ] `Ui` receives only `AppData` and the health value to inject; it contains no storage rules
-- [ ] The existing Core and Ui test runs stay green
+- [x] The browser `IStorageEnvironment`: persistent-storage request and check, usage and quota estimate, an exclusive Web Locks writer lock held for the life of the tab, and the cleared-data marker in browser local storage
+- [x] Unsupported browser APIs report "unsupported" instead of throwing
+- [x] Host startup builds the real store and environment, loads `AppData` and registers it (and its health) for injection into the UI; the existing clock and build-info registrations are kept
+- [x] If IndexedDB is unavailable (for example private browsing) startup falls back to the in-memory store with health "unavailable"
+- [x] The app still builds, installs as a PWA and opens offline as before (the existing PWA manual checks still apply)
+- [x] `Ui` receives only `AppData` and the health value to inject; it contains no storage rules
+- [x] The existing Core and Ui test runs stay green
