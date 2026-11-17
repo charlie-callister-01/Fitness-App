@@ -20,18 +20,18 @@ internal static class ExportSlicer
         var exercises = request.Exercises ? snapshot.Exercises : [.. snapshot.Exercises.Where(e => referenced.Contains(e.Id))];
 
         return new ExchangeDocument(
-            ExchangeFormat.CurrentVersion,
-            null,
-            null,
-            exercises,
-            null,
-            request.WeighIns ? [.. snapshot.WeighIns.Where(w => InRange(request, w.Date))] : null,
-            request.Plan ? [.. snapshot.Breaks.Where(b => request.Range is null || request.Range.Overlaps(b.StartDate, b.EndDate))] : null,
-            null,
-            request.Guides ? SliceGuides(snapshot, exercises) : null,
-            plans,
-            workouts,
-            plans is null ? null : SliceWeekSchedules(snapshot, request, plans));
+            FormatVersion: ExchangeFormat.CurrentVersion,
+            ExportedAt: null,
+            ExportedFrom: null,
+            Exercises: exercises,
+            Settings: null,
+            WeighIns: request.WeighIns ? [.. snapshot.WeighIns.Where(w => InRange(request, w.Date))] : null,
+            Breaks: request.Plan ? [.. snapshot.Breaks.Where(b => request.Range is null || request.Range.Overlaps(b.StartDate, b.EndDate))] : null,
+            Badges: null,
+            Guides: request.Guides ? SliceGuides(snapshot, exercises) : null,
+            Plans: plans,
+            Workouts: workouts,
+            WeekSchedules: plans is null ? null : SliceWeekSchedules(snapshot, request, plans));
     }
 
     private static bool InRange(ExportRequest request, DateOnly date) => request.Range?.Contains(date) ?? true;

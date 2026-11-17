@@ -52,22 +52,7 @@ internal sealed class GuidesImport : IImportKind
             }
         }
 
-        var summary = new List<string>();
-        if (added > 0)
-        {
-            summary.Add($"Adds {Wording.Counted(added, Wording.Names[RecordKind.Guide])}.");
-        }
-
-        if (replaced > 0)
-        {
-            summary.Add($"Replaces {Wording.Counted(replaced, Wording.Names[RecordKind.Guide])}.");
-        }
-
-        if (kept > 0)
-        {
-            summary.Add($"Keeps {kept} existing {(kept == 1 ? "Guide" : "Guides")}. Choose to replace {(kept == 1 ? "it" : "them")} to use the file's version.");
-        }
-
+        var summary = Wording.AddedReplacedKept(RecordKind.Guide, "Replaces", added, replaced, kept);
         return exercises.Then(new KindResult(changes, items, summary)).ClosedForKindsThatLeaveWorkoutsAlone();
     }
 

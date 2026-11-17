@@ -103,22 +103,6 @@ internal sealed class MergeImport : IImportKind
             }
         }
 
-        var summary = new List<string>();
-        if (added > 0)
-        {
-            summary.Add($"Adds {Wording.Counted(added, Wording.Names[kind])}.");
-        }
-
-        if (replaced > 0)
-        {
-            summary.Add($"Changes {Wording.Counted(replaced, Wording.Names[kind])}.");
-        }
-
-        if (kept > 0)
-        {
-            summary.Add($"Keeps {kept} existing {(kept == 1 ? Wording.Names[kind].Singular : Wording.Names[kind].Plural)}. Choose to replace {(kept == 1 ? "it" : "them")} to use the file's version.");
-        }
-
-        return new KindResult(changes, items, summary);
+        return new KindResult(changes, items, Wording.AddedReplacedKept(kind, "Changes", added, replaced, kept));
     }
 }

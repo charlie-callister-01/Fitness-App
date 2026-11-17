@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Core.Model;
 using Core.Serialisation;
+using Core.Storage;
 
 namespace Core.Exchange;
 
@@ -90,23 +91,22 @@ public static partial class ImportInput
         return first >= 0 && last > first ? (body[first..(last + 1)], true) : (body, false);
     }
 
+    /// <summary>Only Plans and Guides can be a Plan or Guides Import (with Exercises alongside); any other collection makes it a merge.</summary>
     private static ImportKind SuggestKind(ExchangeDocument d)
     {
-        var isCompleteBackup = d.Exercises is not null && d.Settings is not null && d.WeighIns is not null && d.Breaks is not null
-            && d.Badges is not null && d.Guides is not null && d.Plans is not null && d.Workouts is not null;
-        if (isCompleteBackup)
+        var present = DocumentCollections.PresentKinds(d);
+        if (DocumentCollections.MissingFromBackup(d).Count == 0)
         {
             return ImportKind.Restore;
         }
 
-        var hasOther = d.Settings is not null || d.WeighIns is not null || d.Breaks is not null || d.Badges is not null
-            || d.Workouts is not null || d.WeekSchedules is not null;
-        if (hasOther)
+        var others = present.Where(k => k is not (RecordKind.Exercise or RecordKind.Plan or RecordKind.Guide));
+        if (others.Any())
         {
             return ImportKind.Merge;
         }
 
-        return (d.Guides is not null, d.Plans is not null) switch
+        return (present.Contains(RecordKind.Guide), present.Contains(RecordKind.Plan)) switch
         {
             (true, false) => ImportKind.Guides,
             (false, true) => ImportKind.Plan,

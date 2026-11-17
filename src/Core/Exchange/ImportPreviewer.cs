@@ -18,6 +18,14 @@ public static class ImportPreviewer
         [ImportKind.Restore] = new RestoreImport(),
     };
 
+    /// <summary>
+    /// Previews against the live <see cref="AppData"/>: the snapshot to compare with, and for a Restore the number of records startup set aside
+    /// (which the restore removes). Prefer this over the snapshot overload so a caller cannot forget either.
+    /// </summary>
+    /// <param name="now">Used only by Restore: the Backup date when the file has no <c>exportedAt</c>.</param>
+    public static ImportPreview Preview(AppData appData, Inspected inspected, ImportKind kind, ImportDecisions decisions, DateTimeOffset now) =>
+        Preview(appData.Snapshot, inspected, kind, decisions, now, appData.Startup.Issues.Count(i => i.Kind is not null));
+
     /// <param name="now">Used only by Restore: the Backup date when the file has no <c>exportedAt</c>.</param>
     /// <param name="setAsideCount">Used only by Restore: how many records startup set aside (the count of <c>AppData.Startup.Issues</c> that name a record), which a restore removes.</param>
     public static ImportPreview Preview(
@@ -75,7 +83,7 @@ public static class ImportPreviewer
 
     private static IEnumerable<ImportItem> IgnoredItems(ExchangeDocument document, IImportKind rules)
     {
-        foreach (var (kind, count) in PresentCollections(document))
+        foreach (var (kind, count) in DocumentCollections.Present(document))
         {
             if (!rules.Reads.Contains(kind.WireName()))
             {
@@ -87,18 +95,4 @@ public static class ImportPreviewer
     private static string IgnoredText(RecordKind kind, int? count, IImportKind rules) => count is { } n
         ? $"Ignored: {Wording.Counted(n, Wording.Names[kind])} in the file. {rules.Name} does not use them."
         : $"Ignored: the file's {Wording.Names[kind].Plural}. {rules.Name} does not use them.";
-
-    /// <summary>The kinds of record the document carries, with how many of each (null for Settings, which is one record).</summary>
-    private static IEnumerable<(RecordKind Kind, int? Count)> PresentCollections(ExchangeDocument d)
-    {
-        if (d.Exercises is { } exercises) { yield return (RecordKind.Exercise, exercises.Count); }
-        if (d.Settings is not null) { yield return (RecordKind.Settings, null); }
-        if (d.Plans is { } plans) { yield return (RecordKind.Plan, plans.Count); }
-        if (d.WeighIns is { } weighIns) { yield return (RecordKind.WeighIn, weighIns.Count); }
-        if (d.Breaks is { } breaks) { yield return (RecordKind.Break, breaks.Count); }
-        if (d.Badges is { } badges) { yield return (RecordKind.Badge, badges.Count); }
-        if (d.Guides is { } guides) { yield return (RecordKind.Guide, guides.Count); }
-        if (d.Workouts is { } workouts) { yield return (RecordKind.Workout, workouts.Count); }
-        if (d.WeekSchedules is { } weeks) { yield return (RecordKind.WeekSchedule, weeks.Count); }
-    }
 }

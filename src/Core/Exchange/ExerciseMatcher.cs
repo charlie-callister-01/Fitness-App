@@ -63,22 +63,12 @@ public static class ExerciseMatcher
         var known = file.Select(e => e.Id).Concat(libraryById.Keys).ToHashSet();
         var rewritten = ExerciseReferences.Rewrite(
             document,
-            (path, id) =>
-            {
-                if (idMap.TryGetValue(id, out var mapped))
-                {
-                    return mapped;
-                }
-
-                if (!known.Contains(id))
-                {
-                    findings.Add(new MatchFinding(MatchFindingKind.Blocker, path, "unknown_exercise",
-                        $"{path} \"{id}\" is not in the Exercise library. Add it to exercises or use an existing ID."));
-                }
-
-                return id;
-            },
+            (_, id) => idMap.GetValueOrDefault(id, id),
             metric => idMap.GetValueOrDefault(metric, metric));
+        findings.AddRange(ExerciseReferences.Paths(document)
+            .Where(reference => !idMap.ContainsKey(reference.Id) && !known.Contains(reference.Id))
+            .Select(reference => new MatchFinding(MatchFindingKind.Blocker, reference.Path, "unknown_exercise",
+                $"{reference.Path} \"{reference.Id}\" is not in the Exercise library. Add it to exercises or use an existing ID.")));
         findings.AddRange(UnknownSessions(snapshot, document));
 
         return new ExerciseMatching(

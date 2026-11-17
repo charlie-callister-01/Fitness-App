@@ -15,6 +15,30 @@ public class ExportTicksTests
         ExchangeTestData.ReadBack(Exporter.Export(snapshot ?? ExchangeTestData.Snapshot(), request, "test", ExchangeTestData.Now).Text);
 
     [Fact]
+    public void A_sliced_Export_carries_the_records_it_includes_unchanged()
+    {
+        var snapshot = ExchangeTestData.Snapshot();
+        var document = Export(Everything() with { PainChecks = true, Guides = true }, snapshot);
+
+        AssertSame(snapshot.Exercises, document.Exercises!);
+        AssertSame(snapshot.WeighIns.Where(w => NovemberToDecember.Contains(w.Date)), document.WeighIns!);
+        // The Session link is dropped when its Plan is not exported (documented in the spec), so compare without it.
+        AssertSame(
+            snapshot.Workouts.Where(w => NovemberToDecember.Contains(w.Date)).Select(w => w with { SessionId = null }),
+            document.Workouts!.Select(w => w with { SessionId = null }));
+        AssertSame(snapshot.Plans.Where(p => p.IsActive), document.Plans!);
+        AssertSame(snapshot.Guides.Select(g => g with { PersonalNotes = null }), document.Guides!);
+    }
+
+    private static void AssertSame<T>(IEnumerable<T> source, IEnumerable<T> exported)
+        where T : class
+    {
+        var expected = source.ToDictionary(RecordKeys.For);
+        Assert.NotEmpty(exported);
+        Assert.All(exported, record => Assert.True(StoredJson.Same(record, expected[RecordKeys.For(record)]), RecordKeys.For(record)));
+    }
+
+    [Fact]
     public void Unticked_kinds_are_absent_from_the_document()
     {
         var document = Export(Everything() with { Workouts = false, Plan = false, WeighIns = false, PainChecks = false, Guides = false });

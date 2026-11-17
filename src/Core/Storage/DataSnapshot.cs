@@ -30,6 +30,10 @@ public sealed record DataSnapshot
 
     public static DataSnapshot Empty { get; } = new();
 
+    /// <summary>True when no record of any kind exists. Settings do not count: they always exist, so an empty dataset still has them.</summary>
+    public bool IsEmpty =>
+        Exercises.Count + WeighIns.Count + Breaks.Count + Badges.Count + Guides.Count + Plans.Count + Workouts.Count + WeekSchedules.Count == 0;
+
     /// <summary>This snapshot as an exchange document, for validation and for writing a Backup.</summary>
     public ExchangeDocument ToDocument() =>
         new(ExchangeFormat.CurrentVersion, null, null, Exercises, Settings, WeighIns, Breaks, Badges, Guides, Plans, Workouts, WeekSchedules);

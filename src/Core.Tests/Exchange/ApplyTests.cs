@@ -19,7 +19,7 @@ public class ApplyTests
     }
 
     private static ImportPreview Preview(AppData app, ExchangeDocument file, ImportKind kind) =>
-        ImportPreviewer.Preview(app.Snapshot, Incoming(file), kind, ImportDecisions.None, Now, app.Startup.Issues.Count(i => i.Kind is not null));
+        ImportPreviewer.Preview(app, Incoming(file), kind, ImportDecisions.None, Now);
 
     private static async Task<AppData> OpenWith(DataSnapshot snapshot, InMemoryDataStore? store = null)
     {
@@ -215,6 +215,35 @@ public class ApplyTests
         Assert.IsType<ApplyOutcome.Applied>(outcome);
         Assert.Equal(ExchangeFormat.Write(source.Snapshot.ToDocument()), ExchangeFormat.Write(wiped.Snapshot.ToDocument()));
         Assert.Equal(Now, wiped.LastBackupAt);
+    }
+
+    [Fact]
+    public async Task A_restore_of_a_file_without_exportedAt_stamps_the_time_given_to_apply()
+    {
+        var app = await OpenWith(ExchangeTestData.Snapshot());
+        var file = WholeDatasetTests.Everything() with { ExportedAt = null };
+        var preview = ImportPreviewer.Preview(app.Snapshot, Incoming(file), ImportKind.Restore, ImportDecisions.None);
+        var later = Now.AddDays(1);
+
+        var outcome = await ImportApplier.ApplyAsync(app, preview, new RecordingBackupSink(), later);
+
+        Assert.IsType<ApplyOutcome.Applied>(outcome);
+        Assert.Equal(later, app.LastBackupAt);
+    }
+
+    [Fact]
+    public async Task The_AppData_overload_counts_set_aside_records_and_passes_the_time_for_a_restore()
+    {
+        var store = new InMemoryDataStore();
+        await store.ReplaceAllAsync(StoredRecords.FromDocument(ExchangeTestData.Snapshot().ToDocument()), null);
+        await store.ApplyAsync([new StoreChange.Put(new StoredRecord(RecordKind.Exercise, "bad", """{"id":"bad","name":"Bad","logKind":"nonsense"}"""))]);
+        var app = await AppData.OpenAsync(store);
+        var file = WholeDatasetTests.Everything() with { ExportedAt = null };
+
+        var preview = ImportPreviewer.Preview(app, Incoming(file), ImportKind.Restore, ImportDecisions.None, Now);
+
+        Assert.Equal(Now, preview.BackupStamp);
+        Assert.Contains("Removes 1 record that could not be read and was set aside.", preview.Summary);
     }
 
     [Fact]

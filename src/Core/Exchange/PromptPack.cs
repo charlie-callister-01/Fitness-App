@@ -11,10 +11,10 @@ namespace Core.Exchange;
 public static partial class PromptPack
 {
     /// <summary>
-    /// "Analyse my training": instructions, then the Export text unchanged at the end.
+    /// "Analyse my training": instructions, the Exercise library (so the IDs in the Export line up with names), then the Export text unchanged at the end.
     /// <paramref name="range"/> is the range the Export covers (null for all time); it is stated in the prompt so the LLM knows the period.
     /// </summary>
-    public static string Analyse(ExportResult export, DateRange? range) => Lines(
+    public static string Analyse(DataSnapshot snapshot, ExportResult export, DateRange? range) => Lines(
         "You are a strength and conditioning coach. Below is an export of my training, weight and pain data from my fitness app.",
         "Analyse it and tell me what is going well, what is not, and what I should change next.",
         "",
@@ -27,6 +27,9 @@ public static partial class PromptPack
         "Only use what is in the export. If something you need is missing, say so instead of guessing.",
         "",
         "Reply in plain text. Look at: progress on the main lifts, how consistent I was, my weight trend, and any pain that keeps coming back.",
+        "",
+        "My Exercise library, one Exercise per line (id, name, logKind and tags):",
+        LibraryJson(snapshot.Exercises),
         "",
         "Export:",
         "") + export.Text;

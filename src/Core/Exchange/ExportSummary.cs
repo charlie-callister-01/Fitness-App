@@ -1,5 +1,6 @@
 using System.Globalization;
 using Core.Model;
+using Core.Storage;
 
 namespace Core.Exchange;
 
@@ -27,28 +28,33 @@ internal static class ExportSummary
     public static string FileName(ExportRequest request, DateTimeOffset now)
     {
         var extension = request.Format == ExportFormat.Json ? "json" : "md";
-        var today = Iso(DateOnly.FromDateTime(now.DateTime));
         return request switch
         {
-            { IsBackup: true } => $"fitness-backup-{today}.{extension}",
+            { IsBackup: true } => BackupFileName(now),
             { Range: { } range } => $"fitness-export-{Iso(range.From)}-to-{Iso(range.To)}.{extension}",
-            _ => $"fitness-export-all-time-{today}.{extension}",
+            _ => $"fitness-export-all-time-{Today(now)}.{extension}",
         };
     }
+
+    /// <summary>The one place Backup files are named: <c>fitness-backup-2026-11-17.json</c>, or <c>fitness-backup-before-import-…</c> for the automatic one.</summary>
+    public static string BackupFileName(DateTimeOffset now, bool beforeImport = false) =>
+        $"fitness-backup-{(beforeImport ? "before-import-" : "")}{Today(now)}.json";
+
+    private static string Today(DateTimeOffset now) => Iso(DateOnly.FromDateTime(now.DateTime));
 
     private static IEnumerable<string> Counts(ExchangeDocument document)
     {
         var painChecks = document.Workouts?.Count(w => w.PainCheck is not null);
-        var counts = new (int? Count, string Singular, string Plural)[]
+        var counts = new (int? Count, (string Singular, string Plural) Name)[]
         {
-            (document.Workouts?.Count, "Workout", "Workouts"),
-            (document.Plans?.Count, "Plan", "Plans"),
-            (document.WeighIns?.Count, "Weigh-in", "Weigh-ins"),
-            (painChecks, "Pain check", "Pain checks"),
-            (document.Guides?.Count, "Guide", "Guides"),
-            (document.Exercises?.Count, "Exercise", "Exercises"),
+            (document.Workouts?.Count, Wording.Names[RecordKind.Workout]),
+            (document.Plans?.Count, Wording.Names[RecordKind.Plan]),
+            (document.WeighIns?.Count, Wording.Names[RecordKind.WeighIn]),
+            (painChecks, Wording.PainCheck),
+            (document.Guides?.Count, Wording.Names[RecordKind.Guide]),
+            (document.Exercises?.Count, Wording.Names[RecordKind.Exercise]),
         };
-        return counts.Where(c => c.Count.HasValue).Select(c => $"{c.Count} {(c.Count == 1 ? c.Singular : c.Plural)}");
+        return counts.Where(c => c.Count.HasValue).Select(c => Wording.Counted(c.Count!.Value, c.Name));
     }
 
     /// <summary>"26 Aug to 17 Nov 2026"; the first year is spelled out only when it differs.</summary>

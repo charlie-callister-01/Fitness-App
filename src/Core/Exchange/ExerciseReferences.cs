@@ -20,6 +20,14 @@ internal static class ExerciseReferences
         Workouts = d.Workouts?.Select((w, i) => Workout(w, $"workouts[{i}]", exercise)).ToList(),
     };
 
+    /// <summary>Every Exercise ID the document names, with the path it sits at, in document order.</summary>
+    public static IReadOnlyList<(string Path, string Id)> Paths(ExchangeDocument d)
+    {
+        var found = new List<(string Path, string Id)>();
+        Rewrite(d, (path, id) => { found.Add((path, id)); return id; }, metric => metric);
+        return found;
+    }
+
     private static Plan Plan(Plan plan, string path, Func<string, string, string> exercise) => plan with
     {
         Sessions = plan.Sessions.Select((s, i) => s with { Exercises = Rows(s.Exercises, $"{path}.sessions[{i}].exercises", exercise) }).ToList(),

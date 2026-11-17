@@ -30,7 +30,7 @@ internal sealed class RestoreImport : IImportKind
     public KindResult Build(ImportContext context)
     {
         var document = context.Inspected.Document;
-        var missing = Missing(document);
+        var missing = DocumentCollections.MissingFromBackup(document);
         if (missing.Count > 0)
         {
             var text = $"This file is not a complete Backup, so it cannot replace your data. It is missing: {string.Join(", ", missing)}.";
@@ -84,16 +84,4 @@ internal sealed class RestoreImport : IImportKind
     private static string JoinWithAnd(List<string> parts) =>
         parts.Count == 1 ? parts[0] : $"{string.Join(", ", parts.SkipLast(1))} and {parts[^1]}";
 
-    /// <summary>The wire names of the required parts the file does not have.</summary>
-    private static List<string> Missing(ExchangeDocument d) => new (string Name, bool Present)[]
-    {
-        ("exercises", d.Exercises is not null),
-        ("settings", d.Settings is not null),
-        ("plans", d.Plans is not null),
-        ("weighIns", d.WeighIns is not null),
-        ("breaks", d.Breaks is not null),
-        ("badges", d.Badges is not null),
-        ("guides", d.Guides is not null),
-        ("workouts", d.Workouts is not null),
-    }.Where(part => !part.Present).Select(part => part.Name).ToList();
 }

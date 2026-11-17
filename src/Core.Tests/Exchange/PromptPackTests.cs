@@ -150,8 +150,8 @@ public class PromptPackTests
     {
         var export = new ExportResult("{}", "x.json", [], false);
 
-        var ranged = PromptPack.Analyse(export, new DateRange(new DateOnly(2026, 8, 26), new DateOnly(2026, 11, 17)));
-        var everything = PromptPack.Analyse(export, null);
+        var ranged = PromptPack.Analyse(ExchangeTestData.Snapshot(), export, new DateRange(new DateOnly(2026, 8, 26), new DateOnly(2026, 11, 17)));
+        var everything = PromptPack.Analyse(ExchangeTestData.Snapshot(), export, null);
 
         Assert.Contains("2026-08-26 to 2026-11-17", ranged);
         Assert.Contains("all time", everything);
@@ -163,7 +163,7 @@ public class PromptPackTests
     [Fact]
     public void Analyse_asks_for_a_plain_reply_not_JSON()
     {
-        var prompt = PromptPack.Analyse(new ExportResult("{}", "x.json", [], false), null);
+        var prompt = PromptPack.Analyse(ExchangeTestData.Snapshot(), new ExportResult("{}", "x.json", [], false), null);
 
         Assert.Contains("Reply in plain text", prompt);
         Assert.DoesNotContain("JSON object", prompt);
@@ -175,9 +175,21 @@ public class PromptPackTests
         var request = ExportRequest.Default(ExchangeTestData.Today);
         var export = Exporter.Export(ExchangeTestData.Snapshot(), request, "test", ExchangeTestData.Now);
 
-        var prompt = PromptPack.Analyse(export, request.Range);
+        var prompt = PromptPack.Analyse(ExchangeTestData.Snapshot(), export, request.Range);
 
         Assert.EndsWith(export.Text, prompt.TrimEnd('\r', '\n'));
         Assert.True(prompt.IndexOf(export.Text, StringComparison.Ordinal) > prompt.IndexOf("analyse", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Analyse_carries_the_Exercise_library_so_IDs_line_up()
+    {
+        var snapshot = ExchangeTestData.Snapshot();
+
+        var prompt = PromptPack.Analyse(snapshot, new ExportResult("{}", "x.json", [], false), null);
+
+        // Names in the test data are non-ASCII and the JSON escapes them, so check the IDs and that every Exercise has a name.
+        Assert.All(snapshot.Exercises, e => Assert.Contains($"\"id\":\"{e.Id}\"", prompt));
+        Assert.Equal(snapshot.Exercises.Count, prompt.Split("\"name\":").Length - 1);
     }
 }
