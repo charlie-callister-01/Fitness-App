@@ -43,7 +43,8 @@ public sealed partial class AppData
         {
             case StoreResult<StoredData>.Success success:
                 var (startup, metadata) = await UpgradeIfOlderAsync(store, success.Value, Read(success.Value, currentVersion), currentVersion);
-                app = new AppData(store, Classify(startup, success.Value, marker), metadata, currentVersion);
+                // With no database the marker says nothing about this (in-memory) store, so it is not consulted.
+                app = new AppData(store, Classify(startup, success.Value, marker && databaseAvailable), metadata, currentVersion);
                 break;
             case StoreResult<StoredData>.Failure failure:
                 app = new AppData(
@@ -64,10 +65,14 @@ public sealed partial class AppData
     /// <summary>Asks the environment again for usage and quota (for example when a health screen opens).</summary>
     public async Task RefreshEstimateAsync() => _estimate = await _environment.EstimateAsync();
 
-    /// <summary>An empty store is a first run only if nothing says data once existed: the marker or the initialised metadata means the browser cleared it.</summary>
+    /// <summary>
+    /// The browser cleared the data only if the marker (outside the database) says something was saved, yet the database is empty and
+    /// not marked initialised. The initialised flag lives inside the database, so if it is still set the database was not wiped: an
+    /// empty store is then simply empty (<see cref="StartupState.Ready"/>).
+    /// </summary>
     private static StartupResult Classify(StartupResult read, StoredData data, bool markerPresent) =>
-        data.Records.Count == 0 && read.State is StartupState.Ready or StartupState.FirstRun
-            ? read with { State = markerPresent || data.Metadata.Initialised ? StartupState.BrowserCleared : StartupState.FirstRun }
+        data.Records.Count == 0 && markerPresent && !data.Metadata.Initialised && read.State is StartupState.Ready or StartupState.FirstRun
+            ? read with { State = StartupState.BrowserCleared }
             : read;
 
     private StoreFailure? WriterLockFailure() => _hasWriterLock ? null : new StoreFailure(StoreFailureKind.WriterLockHeld);

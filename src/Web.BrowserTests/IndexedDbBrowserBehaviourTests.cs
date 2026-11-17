@@ -97,6 +97,32 @@ public sealed class IndexedDbBrowserBehaviourTests(BrowserFixture browser) : IAs
     }
 
     [Fact]
+    public async Task The_store_reopens_after_the_module_closed_its_connection()
+    {
+        var (interop, store, _) = NewStore();
+        await Seed(store, Before);
+        // What a versionchange or a browser-side close leaves behind: the module's connection is gone, the store still thinks it is open.
+        Assert.Null((await interop.CloseAsync()).Failure);
+
+        var write = await store.ApplyAsync([new StoreChange.Put(Plan("plan_2", "after"))]);
+        Assert.Null((await interop.CloseAsync()).Failure);
+        var data = await store.LoadAllAsync();
+
+        Assert.IsType<StoreResult<Unit>.Success>(write);
+        Assert.Equal([Plan("plan_1", "before"), Plan("plan_2", "after")], Assert.IsType<StoreResult<StoredData>.Success>(data).Value.Records.OrderBy(r => r.Key));
+    }
+
+    [Fact]
+    public async Task A_new_database_records_its_layout_version_in_meta()
+    {
+        var (_, store, _) = NewStore();
+
+        var data = await Load(store);
+
+        Assert.Equal(1, data.Metadata.LayoutVersion);
+    }
+
+    [Fact]
     public async Task A_database_created_at_layout_version_1_opens_and_keeps_its_data()
     {
         // Layout version 1 is written out longhand on purpose: this is a frozen copy of what shipped, not the module's own code.

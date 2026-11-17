@@ -3,7 +3,7 @@
 //
 // Result shapes (all JSON text):
 //   success: { "ok": true, ... }
-//   failure: { "ok": false, "kind": "blocked"|"quota"|"unavailable"|"unexpected", "detail": "..." }
+//   failure: { "ok": false, "kind": "blocked"|"quota"|"unavailable"|"notOpen"|"unexpected", "detail": "..." }
 //
 // Layout version 1: one object store per record kind (out-of-line key = record key, value = the
 // record as JSON text) plus "meta" (key -> string value). No secondary indexes.
@@ -43,6 +43,8 @@ const upgradeSteps = [
 function onUpgrade(event) {
     const d = event.target.result;
     for (let v = event.oldVersion; v < event.newVersion; v++) upgradeSteps[v](d);
+    // Record the layout version in the same (upgrade) transaction, so meta always says which layout the database has.
+    event.target.transaction.objectStore(META).put(String(event.newVersion), 'layoutVersion');
 }
 
 /** Opens (creating or upgrading) the database. Idempotent while open. */
@@ -89,9 +91,13 @@ export async function destroy(name) {
 /** Runs fn(tx) in one transaction over the given stores; resolves when the transaction commits, rejects if it aborts. */
 function transact(stores, mode, fn) {
     return new Promise((resolve, reject) => {
-        if (!db) { reject(new StoreError('unavailable', 'Database is not open')); return; }
+        if (!db) { reject(new StoreError('notOpen', 'Database is not open')); return; }
         let tx;
-        try { tx = db.transaction(stores, mode); } catch (e) { reject(e); return; }
+        try { tx = db.transaction(stores, mode); } catch (e) {
+            // A connection the browser closed behind our back throws InvalidStateError: treat it as not open so the caller reopens.
+            if (e && e.name === 'InvalidStateError') { db = null; reject(new StoreError('notOpen', 'Database connection was closed')); } else reject(e);
+            return;
+        }
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error ?? new DOMException('Transaction aborted', 'AbortError'));

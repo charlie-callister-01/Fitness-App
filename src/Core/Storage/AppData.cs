@@ -81,6 +81,11 @@ public sealed partial class AppData
             return new CommitResult.StoreFailed(lockFailure);
         }
 
+        if (SetAsideRejection(changes) is { } setAside)
+        {
+            return setAside;
+        }
+
         await _writer.WaitAsync();
         try
         {
@@ -121,6 +126,12 @@ public sealed partial class AppData
     /// </summary>
     public async Task<StoreResult<Unit>> RecordBackupAsync(DateTimeOffset at)
     {
+        // The stored metadata is unknown, so writing it could wipe real values.
+        if (Startup is { State: StartupState.StorageFailed, Failure: { } startupFailure })
+        {
+            return new StoreResult<Unit>.Failure(startupFailure);
+        }
+
         if (WriterLockFailure() is { } lockFailure)
         {
             return new StoreResult<Unit>.Failure(lockFailure);
@@ -143,6 +154,22 @@ public sealed partial class AppData
         {
             _writer.Release();
         }
+    }
+
+    /// <summary>
+    /// A record set aside at startup stays in storage untouched, so a put or delete of the same kind and key is rejected until a
+    /// replace-all (restore) replaces everything.
+    /// </summary>
+    private CommitResult.Rejected? SetAsideRejection(IReadOnlyList<Change> changes)
+    {
+        var issues = changes
+            .Where(change => Startup.Issues.Any(issue => issue.Kind == change.Kind && issue.Key == change.Key))
+            .Select(change => new FormatIssue(
+                $"{change.Kind}/{change.Key}",
+                "record_set_aside",
+                "The stored copy of this record could not be read, so it has been left untouched. Restore a Backup or contact the owner to fix it."))
+            .ToList();
+        return issues.Count == 0 ? null : new CommitResult.Rejected(issues);
     }
 
     /// <summary>

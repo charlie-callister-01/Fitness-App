@@ -10,6 +10,10 @@ public class IndexedDbDataStoreTests
         public IndexedDbFailure? OpenFailure { get; set; }
         public IndexedDbFailure? CallFailure { get; set; }
         public int OpenCalls { get; private set; }
+        /// <summary>The next this-many calls (after open) report that the module lost its connection.</summary>
+        public int NotOpenResponses { get; set; }
+        private IndexedDbFailure? NextFailure() =>
+            NotOpenResponses-- > 0 ? new IndexedDbFailure(IndexedDbFailureKind.NotOpen, "closed") : CallFailure;
         public LoadedData Loaded { get; set; } = new(new Dictionary<string, IReadOnlyList<RawRecord>>(), new Dictionary<string, string>());
         public IReadOnlyList<IndexedDbOperation>? AppliedOps { get; private set; }
         public IReadOnlyDictionary<string, string?>? AppliedMeta { get; private set; }
@@ -22,20 +26,20 @@ public class IndexedDbDataStoreTests
             return Task.FromResult(new IndexedDbResult<object?>(null, OpenFailure));
         }
 
-        public Task<IndexedDbResult<LoadedData>> LoadAllAsync() => Task.FromResult(new IndexedDbResult<LoadedData>(Loaded, CallFailure));
+        public Task<IndexedDbResult<LoadedData>> LoadAllAsync() => Task.FromResult(new IndexedDbResult<LoadedData>(Loaded, NextFailure()));
 
         public Task<IndexedDbResult<object?>> ApplyAsync(IReadOnlyList<IndexedDbOperation> ops, IReadOnlyDictionary<string, string?>? meta = null)
         {
             AppliedOps = ops;
             AppliedMeta = meta;
-            return Task.FromResult(new IndexedDbResult<object?>(null, CallFailure));
+            return Task.FromResult(new IndexedDbResult<object?>(null, NextFailure()));
         }
 
         public Task<IndexedDbResult<object?>> ReplaceAllAsync(IReadOnlyDictionary<string, IReadOnlyList<RawRecord>> records, IReadOnlyDictionary<string, string?>? meta = null)
         {
             Replaced = records;
             ReplacedMeta = meta;
-            return Task.FromResult(new IndexedDbResult<object?>(null, CallFailure));
+            return Task.FromResult(new IndexedDbResult<object?>(null, NextFailure()));
         }
     }
 
@@ -132,13 +136,15 @@ public class IndexedDbDataStoreTests
 
         Assert.Empty(fake.AppliedOps!);
         Assert.All(fake.AppliedMeta!.Values, Assert.Null);
-        Assert.Equal(4, fake.AppliedMeta.Count);
+        Assert.Equal(3, fake.AppliedMeta.Count);
+        Assert.DoesNotContain("layoutVersion", fake.AppliedMeta.Keys);
     }
 
     [Theory]
     [InlineData(IndexedDbFailureKind.Quota, StoreFailureKind.StorageFull, "d")]
     [InlineData(IndexedDbFailureKind.Unavailable, StoreFailureKind.StorageUnavailable, "d")]
-    [InlineData(IndexedDbFailureKind.Blocked, StoreFailureKind.Unexpected, "blocked: d")]
+    [InlineData(IndexedDbFailureKind.Blocked, StoreFailureKind.UpgradeBlocked, "d")]
+    [InlineData(IndexedDbFailureKind.NotOpen, StoreFailureKind.StorageUnavailable, "d")]
     [InlineData(IndexedDbFailureKind.Unexpected, StoreFailureKind.Unexpected, "d")]
     public async Task Module_failures_map_to_store_failure_kinds(IndexedDbFailureKind module, StoreFailureKind expected, string detail)
     {
@@ -149,6 +155,52 @@ public class IndexedDbDataStoreTests
 
         Assert.Equal(new StoreFailure(expected, detail), Assert.IsType<StoreResult<Unit>.Failure>(apply).Error);
         Assert.Equal(new StoreFailure(expected, detail), Assert.IsType<StoreResult<StoredData>.Failure>(load).Error);
+    }
+
+    [Fact]
+    public async Task A_connection_the_module_lost_is_reopened_and_the_call_retried_once()
+    {
+        var fake = new FakeInterop();
+        var store = new IndexedDbDataStore(fake);
+        await store.ApplyAsync([]);
+        fake.NotOpenResponses = 1;
+
+        var apply = await store.ApplyAsync([new StoreChange.Put(new Core.Storage.StoredRecord(RecordKind.Plan, "p", "{}"))]);
+        fake.NotOpenResponses = 1;
+        var load = await store.LoadAllAsync();
+
+        Assert.IsType<StoreResult<Unit>.Success>(apply);
+        Assert.IsType<StoreResult<StoredData>.Success>(load);
+        Assert.Equal(3, fake.OpenCalls);
+        Assert.Single(fake.AppliedOps!);
+    }
+
+    [Fact]
+    public async Task A_lost_connection_that_cannot_be_reopened_returns_the_open_failure()
+    {
+        var fake = new FakeInterop();
+        var store = new IndexedDbDataStore(fake);
+        await store.ApplyAsync([]);
+        fake.NotOpenResponses = 1;
+        fake.OpenFailure = new IndexedDbFailure(IndexedDbFailureKind.Blocked, "upgrade waiting");
+
+        var result = await store.ApplyAsync([]);
+
+        Assert.Equal(StoreFailureKind.UpgradeBlocked, Assert.IsType<StoreResult<Unit>.Failure>(result).Error.Kind);
+    }
+
+    [Fact]
+    public async Task A_connection_that_stays_closed_after_reopening_fails_instead_of_looping()
+    {
+        var fake = new FakeInterop();
+        var store = new IndexedDbDataStore(fake);
+        await store.ApplyAsync([]);
+        fake.NotOpenResponses = 5;
+
+        var result = await store.ApplyAsync([]);
+
+        Assert.Equal(StoreFailureKind.StorageUnavailable, Assert.IsType<StoreResult<Unit>.Failure>(result).Error.Kind);
+        Assert.Equal(2, fake.OpenCalls);
     }
 
     [Fact]

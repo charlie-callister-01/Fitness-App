@@ -12,17 +12,17 @@ public enum StoreFailureKind
     /// <summary>Another tab or window holds the exclusive writer lock.</summary>
     WriterLockHeld,
 
+    /// <summary>A storage upgrade is waiting on another open window; the UI says "close other windows and reopen".</summary>
+    UpgradeBlocked,
+
     /// <summary>Anything else; <see cref="StoreFailure.Detail"/> carries the diagnostics.</summary>
     Unexpected,
 }
 
 public sealed record StoreFailure(StoreFailureKind Kind, string? Detail = null)
 {
-    /// <summary>How a store words "a schema upgrade is waiting on another open window" in <see cref="Detail"/>, as it has no closed kind of its own.</summary>
-    public const string BlockedDetailPrefix = "blocked:";
-
-    /// <summary>True when the store could not open because another window must be closed first; the UI says "close other windows and reopen".</summary>
-    public bool IsBlockedByAnotherWindow => Detail?.StartsWith(BlockedDetailPrefix, StringComparison.Ordinal) == true;
+    /// <summary>True when the store could not open because another window must be closed first.</summary>
+    public bool IsBlockedByAnotherWindow => Kind == StoreFailureKind.UpgradeBlocked;
 }
 
 /// <summary>The value returned by operations that have nothing to return.</summary>

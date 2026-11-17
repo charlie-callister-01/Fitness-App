@@ -10,6 +10,14 @@ public abstract class DataStoreContract
 {
     protected abstract IDataStore CreateEmptyStore();
 
+    /// <summary>
+    /// A store that owns its storage layout version (IndexedDB stamps it when the database is created) reports it whatever the caller
+    /// wrote. Such a store returns the stamped version here; others return null and round-trip <see cref="StoreMetadata.LayoutVersion"/> as given.
+    /// </summary>
+    protected virtual int? StampedLayoutVersion => null;
+
+    private StoreMetadata Stamped(StoreMetadata metadata) => StampedLayoutVersion is { } stamp ? metadata with { LayoutVersion = stamp } : metadata;
+
     private static StoredRecord Rec(RecordKind kind, string key, string json = "{}") => new(kind, key, json);
 
     private static StoreChange Put(StoredRecord record) => new StoreChange.Put(record);
@@ -48,7 +56,7 @@ public abstract class DataStoreContract
         var data = await Ok(store.LoadAllAsync());
 
         Assert.Empty(data.Records);
-        Assert.Equal(StoreMetadata.Empty, data.Metadata);
+        Assert.Equal(Stamped(StoreMetadata.Empty), data.Metadata);
     }
 
     [Theory]
@@ -154,7 +162,7 @@ public abstract class DataStoreContract
         await Ok(store.ApplyAsync([Put(Rec(RecordKind.Plan, "plan_1"))], metadata));
 
         var data = await Ok(store.LoadAllAsync());
-        Assert.Equal(metadata, data.Metadata);
+        Assert.Equal(Stamped(metadata), data.Metadata);
         Assert.Single(data.Records);
     }
 
@@ -167,7 +175,7 @@ public abstract class DataStoreContract
 
         await store.ApplyAsync([Put(Rec(RecordKind.Plan, "plan_1"))], new StoreMetadata(null, null, null, true));
 
-        Assert.Equal(StoreMetadata.Empty, (await Ok(inner.LoadAllAsync())).Metadata);
+        Assert.Equal(Stamped(StoreMetadata.Empty), (await Ok(inner.LoadAllAsync())).Metadata);
     }
 
     [Fact]
@@ -208,7 +216,7 @@ public abstract class DataStoreContract
         Assert.IsType<StoreResult<Unit>.Failure>(result);
         var data = await Ok(inner.LoadAllAsync());
         Assert.Equal([Rec(RecordKind.Plan, "old")], data.Records);
-        Assert.Equal(metadata, data.Metadata);
+        Assert.Equal(Stamped(metadata), data.Metadata);
     }
 
     [Fact]
@@ -219,7 +227,7 @@ public abstract class DataStoreContract
 
         await Ok(store.WriteMetadataAsync(metadata));
 
-        Assert.Equal(metadata, (await Ok(store.LoadAllAsync())).Metadata);
+        Assert.Equal(Stamped(metadata), (await Ok(store.LoadAllAsync())).Metadata);
     }
 
     [Fact]
@@ -230,11 +238,11 @@ public abstract class DataStoreContract
         await Ok(store.WriteMetadataAsync(first));
 
         await Ok(store.ReplaceAllAsync([]));
-        Assert.Equal(first, (await Ok(store.LoadAllAsync())).Metadata);
+        Assert.Equal(Stamped(first), (await Ok(store.LoadAllAsync())).Metadata);
 
         var second = first with { RecordFormatVersion = 2 };
         await Ok(store.ReplaceAllAsync([], second));
-        Assert.Equal(second, (await Ok(store.LoadAllAsync())).Metadata);
+        Assert.Equal(Stamped(second), (await Ok(store.LoadAllAsync())).Metadata);
     }
 
     [Fact]
@@ -246,7 +254,7 @@ public abstract class DataStoreContract
 
         await Apply(store, Put(Rec(RecordKind.Plan, "plan_1")));
 
-        Assert.Equal(metadata, (await Ok(store.LoadAllAsync())).Metadata);
+        Assert.Equal(Stamped(metadata), (await Ok(store.LoadAllAsync())).Metadata);
     }
 
     [Fact]
