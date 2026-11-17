@@ -16,7 +16,14 @@ public enum StoreFailureKind
     Unexpected,
 }
 
-public sealed record StoreFailure(StoreFailureKind Kind, string? Detail = null);
+public sealed record StoreFailure(StoreFailureKind Kind, string? Detail = null)
+{
+    /// <summary>How a store words "a schema upgrade is waiting on another open window" in <see cref="Detail"/>, as it has no closed kind of its own.</summary>
+    public const string BlockedDetailPrefix = "blocked:";
+
+    /// <summary>True when the store could not open because another window must be closed first; the UI says "close other windows and reopen".</summary>
+    public bool IsBlockedByAnotherWindow => Detail?.StartsWith(BlockedDetailPrefix, StringComparison.Ordinal) == true;
+}
 
 /// <summary>The value returned by operations that have nothing to return.</summary>
 public readonly record struct Unit;

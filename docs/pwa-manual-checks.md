@@ -13,7 +13,7 @@ Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (d
 ## Automated or inspectable checks (no phone)
 
 1. `dotnet publish src/Web -c Release -o <dir>`.
-2. `<dir>/wwwroot/service-worker-assets.js` lists `_content/Ui/ui.css`, all `_framework/*.wasm`, icons, `index.html` and `manifest.webmanifest`.
+2. `<dir>/wwwroot/service-worker-assets.js` lists `js/indexeddb-store.js`, `js/storage-environment.js`, `_content/Ui/ui.css`, all `_framework/*.wasm`, icons, `index.html` and `manifest.webmanifest`.
 3. Changing any asset (for example `css/app.css`) and republishing changes `version`.
 4. Chrome DevTools, Application tab: Manifest shows no errors and "Installability" passes; Service workers shows activated; Cache storage shows one `offline-cache-*`.
 

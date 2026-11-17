@@ -92,7 +92,7 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
     {
         IndexedDbFailureKind.Quota => new StoreFailure(StoreFailureKind.StorageFull, failure.Detail),
         IndexedDbFailureKind.Unavailable => new StoreFailure(StoreFailureKind.StorageUnavailable, failure.Detail),
-        IndexedDbFailureKind.Blocked => new StoreFailure(StoreFailureKind.Unexpected, $"blocked: {failure.Detail}"),
+        IndexedDbFailureKind.Blocked => new StoreFailure(StoreFailureKind.Unexpected, $"{StoreFailure.BlockedDetailPrefix} {failure.Detail}"),
         _ => new StoreFailure(StoreFailureKind.Unexpected, failure.Detail),
     };
 
