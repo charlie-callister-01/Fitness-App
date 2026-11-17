@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Per planned row, compare the Workout's `planned` snapshot with its entries: done, skipped (with reason), swapped (with the replacement Exercise), or no entry which counts as skipped with no reason
-- [ ] An entry with no matching planned row is reported as an extra Exercise; a Custom workout (no snapshot) has only extras
-- [ ] A Workout is a Partial workout when any planned row was skipped or unrecorded, and it still counts
-- [ ] Unknown Exercise references are ignored rather than throwing
-- [ ] Tests build Workouts with mixed done, skipped, swapped, unrecorded and extra rows and assert the exact outcome per row
+- [x] Per planned row, compare the Workout's `planned` snapshot with its entries: done, skipped (with reason), swapped (with the replacement Exercise), or no entry which counts as skipped with no reason
+- [x] An entry with no matching planned row is reported as an extra Exercise; a Custom workout (no snapshot) has only extras
+- [x] A Workout is a Partial workout when any planned row was skipped or unrecorded, and it still counts
+- [x] Unknown Exercise references are ignored rather than throwing
+- [x] Tests build Workouts with mixed done, skipped, swapped, unrecorded and extra rows and assert the exact outcome per row
