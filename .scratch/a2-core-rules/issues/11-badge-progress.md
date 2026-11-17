@@ -4,10 +4,10 @@
 
 **Blocked by:** 03 (Best, PRs, Max sets and progress points), 05 (Weeks, counted Workouts, Streak and consistency messages)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Supported metrics: sessions (counted Workouts), streak, best week, prs, or an Exercise (its best value in its own measure)
-- [ ] A target of `bodyweight` means the latest Weigh-in; a negative target on a measurement means a drop of that size from the start
-- [ ] An unknown metric returns a "not measurable" result carrying the metric name and never throws
-- [ ] Progress percentage is capped sensibly and reached is true at or past the target
-- [ ] Tests cover each metric, the bodyweight target, a negative target and an unknown metric
+- [x] Supported metrics: sessions (counted Workouts), streak, best week, prs, or an Exercise (its best value in its own measure)
+- [x] A target of `bodyweight` means the latest Weigh-in; a negative target on a measurement means a drop of that size from the start
+- [x] An unknown metric returns a "not measurable" result carrying the metric name and never throws
+- [x] Progress percentage is capped sensibly and reached is true at or past the target
+- [x] Tests cover each metric, the bodyweight target, a negative target and an unknown metric
