@@ -33,6 +33,26 @@ public class ReadMeAndCultureTests
     }
 
     [Fact]
+    public void Writing_changes_nothing_but_inserting_the_readMe()
+    {
+        var original = WorkoutTestData.Rich() with
+        {
+            Exercises = [.. WorkoutTestData.Rich().Exercises!, PlanTestData.Exercise("unicode-ex") with { Name = "Rumänische \"Kreuzheben\" é \U0001F4AA <b>&" }],
+            WeighIns = [new WeighIn("wi-1", new DateOnly(2026, 11, 16), 84.35), new WeighIn("wi-2", new DateOnly(2026, 11, 17), 0.1 + 0.2)],
+        };
+
+        var written = ExchangeFormat.Write(original);
+
+        var result = ExchangeFormat.Read(written);
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(e => $"{e.Path}: {e.Message}")));
+        Assert.Equal(original.Exercises![^1].Name, result.Document!.Exercises![^1].Name);
+        Assert.Equal(0.1 + 0.2, result.Document.WeighIns![1].WeightKg);
+        Assert.Contains("0.30000000000000004", written);
+        Assert.Contains("Rumänische \\\"Kreuzheben\\\" é ", written);
+        Assert.Contains("<b>&", written);
+    }
+
+    [Fact]
     public void A_hand_written_readMe_of_any_shape_is_ignored_silently()
     {
         var result = ExchangeFormat.Read("""{ "formatVersion": 1, "readMe": "just a note" }""");

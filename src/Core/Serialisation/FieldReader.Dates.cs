@@ -5,22 +5,18 @@ namespace Core.Serialisation;
 
 internal sealed partial class FieldReader
 {
-    /// <summary>A required calendar date written <c>yyyy-MM-dd</c>.</summary>
-    public DateOnly RequiredDate(string name)
-    {
-        var path = ChildPath(name);
-        if (!TryAskFor(name, out var value))
-        {
-            Sink.Error(path, "missing_field", $"{path} is required.");
-            return default;
-        }
+    /// <summary>A required calendar date written <c>yyyy-MM-dd</c>; <c>default</c> (after reporting) when absent or invalid.</summary>
+    public DateOnly RequiredDate(string name) => RequiredDateOrNull(name) ?? default;
 
-        return ParseDate(path, value) ?? default;
+    /// <summary>A required calendar date; null (after reporting) when absent or invalid, so a failed read can't be mistaken for a real date.</summary>
+    public DateOnly? RequiredDateOrNull(string name)
+    {
+        return TryTakeRequired(name, out var value) ? ParseDate(ChildPath(name), value) : null;
     }
 
     /// <summary>An optional calendar date written <c>yyyy-MM-dd</c>; null when absent or invalid (invalid is reported).</summary>
     public DateOnly? OptionalDate(string name) =>
-        TryAskFor(name, out var value) ? ParseDate(ChildPath(name), value) : null;
+        TryTakeField(name, out var value) ? ParseDate(ChildPath(name), value) : null;
 
     private DateOnly? ParseDate(string path, JsonElement value)
     {
@@ -34,24 +30,28 @@ internal sealed partial class FieldReader
         return null;
     }
 
-    /// <summary>Reports <c>end_before_start</c> when both dates are real (not read-failure defaults) and the end is earlier.</summary>
-    public void CheckDateOrder(string startField, string endField, DateOnly start, DateOnly end)
+    /// <summary>
+    /// The one "this must not come before that" rule. Reports <paramref name="code"/> at <paramref name="laterField"/> when both values are present and
+    /// the later one is earlier. A value that failed to read is null, so it is never compared.
+    /// </summary>
+    private void CheckOrder<T>(string earlierField, string laterField, T? earlier, T? later, string code, string format)
+        where T : struct, IComparable<T>, IFormattable
     {
-        if (start != default && end != default && end < start)
+        if (earlier is { } from && later is { } to && to.CompareTo(from) < 0)
         {
-            Report(endField, "end_before_start",
-                $"{ChildPath(endField)} ({end:yyyy-MM-dd}) can't be before {ChildPath(startField)} ({start:yyyy-MM-dd}).");
+            var provider = CultureInfo.InvariantCulture;
+            Report(laterField, code,
+                $"{ChildPath(laterField)} ({to.ToString(format, provider)}) can't be before {ChildPath(earlierField)} ({from.ToString(format, provider)}).");
         }
     }
 
+    /// <summary>Reports <paramref name="code"/> (default <c>end_before_start</c>) when both dates are present and the second is earlier.</summary>
+    public void CheckDateOrder(string startField, string endField, DateOnly? start, DateOnly? end, string code = "end_before_start") =>
+        CheckOrder(startField, endField, start, end, code, "yyyy-MM-dd");
+
     /// <summary>Reports <c>end_before_start</c> when both timestamps are present and the end is earlier.</summary>
-    public void CheckTimestampOrder(string startField, string endField, DateTimeOffset? start, DateTimeOffset? end)
-    {
-        if (start is { } from && end is { } to && to < from)
-        {
-            Report(endField, "end_before_start", $"{ChildPath(endField)} ({to:O}) can't be before {ChildPath(startField)} ({from:O}).");
-        }
-    }
+    public void CheckTimestampOrder(string startField, string endField, DateTimeOffset? start, DateTimeOffset? end) =>
+        CheckOrder(startField, endField, start, end, "end_before_start", "O");
 
     /// <summary>An optional absolute http or https URL.</summary>
     public string? OptionalWebUrl(string name)
