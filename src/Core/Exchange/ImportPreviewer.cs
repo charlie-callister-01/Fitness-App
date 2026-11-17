@@ -14,7 +14,7 @@ public static class ImportPreviewer
     {
         [ImportKind.Plan] = new PlanImport(),
         [ImportKind.Guides] = new GuidesImport(),
-        [ImportKind.Merge] = new NotYetSupportedImport(ImportKind.Merge),
+        [ImportKind.Merge] = new MergeImport(),
         [ImportKind.Restore] = new NotYetSupportedImport(ImportKind.Restore),
     };
 
