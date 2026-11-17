@@ -83,7 +83,7 @@ The owner sees this as: it just works and is instant; a plain-language message a
 
 ## Implementation Decisions
 
-Items marked **(default)** are proposals made without the owner (see Further Notes); each can be changed in one place.
+Items marked **(default)** were proposed and then confirmed by the owner (see Further Notes); each can still be changed in one place.
 
 ### Shape
 - **Two small deep modules in `Core`, plus one browser-facing interface.** `IDataStore` (persistence, no rules), `AppData` (the in-memory model, commit, validation) and `IStorageEnvironment` (persist request, estimate, writer lock). The in-memory `IDataStore` and a fake `IStorageEnvironment` also live in `Core`, because the Web host's fallback and every test use them. The IndexedDB `IDataStore` and the real `IStorageEnvironment` live in the Web host with their JavaScript module. `Ui` gains nothing but the ability to inject `AppData` and read health state; it contains no storage rules.
@@ -150,13 +150,12 @@ Items marked **(default)** are proposals made without the owner (see Further Not
 
 ## Further Notes
 
-- **Seams and defaults were proposed without the owner** (the session was unattended), so they are flagged **(default)** above and need confirmation before `/to-tickets`. The single-seam choice (the `IDataStore` contract) follows the "highest seam, ideally one" rule.
-- **Open questions for the owner:**
-  1. **Two tabs:** is "second tab is read-only with an explanation" acceptable, or would the owner prefer both tabs to edit and stay in sync (more complex, last write per record wins)?
-  2. **Commit validation:** is rejecting a commit that breaks A1's rules the right call, or should some things (for example a dangling Exercise reference) be saved with a warning instead? The default is strict.
-  3. **Playwright in CI:** is adding Playwright and a headless Chromium job to CI acceptable in A3 to test the real IndexedDB code? The technical brief already plans Playwright for later end-to-end flows. If not, the IndexedDB module is tested by the manual checklist only.
-  4. **Unreadable records:** quarantining (the default) keeps the app usable but silently-excluded data could affect Streaks and PRs until the owner acts. Is a warning on every launch until resolved wanted? (The UI side is Track B.)
-  5. **Persistence request:** asking on every launch until granted is the default; some browsers show a permission prompt for it (Firefox), which could feel nagging. Acceptable, given Chrome and Safari grant or deny silently?
+- **Owner confirmed all defaults on 17 Nov 2026** ("go with your recommendations"), so every item marked **(default)** above is now a decision. The single-seam choice (the `IDataStore` contract) follows the "highest seam, ideally one" rule. Confirmed answers:
+  1. **Two tabs:** the second tab is read-only with an explanation. No two-way sync.
+  2. **Commit validation:** strict. A commit that breaks A1's rules is rejected with field-level reasons.
+  3. **Playwright in CI:** yes. A separate CI job runs the contract suite against the IndexedDB implementation in headless Chromium.
+  4. **Unreadable records:** quarantined and reported at startup. Whether to warn on every launch until resolved is a Track B UI decision; A3 only guarantees the load issues are available.
+  5. **Persistence request:** asked on every launch until granted.
 - **Housekeeping:** `docs/build-plan.md` and `docs/README.md` had a stale status (A1 listed as next); both are updated in the same commit as this spec. The A2 spec's nine assumptions still need checking against the old `view.js`, which is not yet in the repo.
 - **Ordering inside the stage** (proposed for `/to-tickets`): the interface, the in-memory implementation and the contract suite first (no dependencies); then `AppData` load, quarantine and commit; then storage environment, health and the cleared-data detection; then the IndexedDB module and implementation; then the browser contract run and the manual checklist. The IndexedDB module and its browser test run are the likeliest to need splitting.
 - Each ticket must fit one agent in roughly 150 to 200k tokens (see `CLAUDE.md`).

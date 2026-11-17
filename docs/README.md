@@ -1,6 +1,6 @@
 # Fitness App: documentation index
 
-Start here in a new session. The grilling session (usage, then practical, then technical) is **complete**. Stages A0 (scaffold and delivery), A1 (data model and exchange format) and A2 (core rules) are merged. The A3 (Storage) spec is written in `specs/a3-storage.md`; the next step is `/to-tickets` for A3, once the owner confirms its flagged defaults. See `build-plan.md`.
+Start here in a new session. The grilling session (usage, then practical, then technical) is **complete**. Stages A0 (scaffold and delivery), A1 (data model and exchange format) and A2 (core rules) are merged. The A3 (Storage) spec is written in `specs/a3-storage.md`; the next step is `/to-tickets` for A3, its defaults are confirmed. See `build-plan.md`.
 
 | Read this | For |
 |---|---|

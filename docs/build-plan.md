@@ -44,7 +44,7 @@ None of these block A0 to A4.
 ## Status and next step
 **A0 is merged and deployed** (spec #1, tickets #2 to #6, PR #7; deploy fix PR #9). GitHub Pages source is set to "GitHub Actions" and the Deploy run succeeds. Still to confirm by hand, because they need a phone or a throwaway PR: install, offline open and update pickup (see `pwa-manual-checks.md`); that a deep link restores in a real browser; that CI fails on a deliberately failing test; and the `lan` run profile from a phone.
 
-**A1 and A2 are merged** (539 Core and 9 Ui tests green). The A3 spec is written; **next:** the owner answers its open questions, then `/to-tickets` for **A3 (Storage)** with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
+**A1 and A2 are merged** (539 Core and 9 Ui tests green). The A3 spec is written and its defaults are confirmed by the owner; **next:** `/to-tickets` for **A3 (Storage)** with the 150-200k token sizing. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first.
 
 ## Open items to settle during specs
 - ~~The exact .NET LTS version and Blazor template details.~~ Settled: .NET 10 LTS, standalone Blazor WebAssembly PWA template ([ADR 0004](adr/0004-dotnet-10-lts-pinned.md)).
