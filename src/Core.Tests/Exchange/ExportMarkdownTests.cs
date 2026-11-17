@@ -63,7 +63,7 @@ public class ExportMarkdownTests
             - Farmers Carry: skipped (Grip was gone)
             - Five K Run (swapped from Romanian Deadlift): 5 km in 25:30, RPE 6
             - Pain check: Knee, Lower back, moderate, during Goblet Squat: "Twinge on the way up"
-            """,
+            """.ReplaceLineEndings("\n"),
             Workout(text, "Mon 16 Nov 2026: A: Lower + core").Trim().ReplaceLineEndings("\n"));
     }
 
@@ -77,7 +77,7 @@ public class ExportMarkdownTests
             - Farmers Carry: 32 kg x 40 m in 1:00
             - Waist: 86.5 cm
             - Pain check: none
-            """,
+            """.ReplaceLineEndings("\n"),
             Workout(text, "Tue 10 Nov 2026: Custom workout (logged afterwards)").Trim().ReplaceLineEndings("\n"));
         Assert.Contains("- Nothing logged. Planned: Five K Run", Workout(text, "Tue 17 Nov 2026: C: Engine"));
     }
@@ -108,7 +108,7 @@ public class ExportMarkdownTests
             | --- | --- |
             | Mon 16 Nov 2026 | 84.35 |
             | Tue 17 Nov 2026 | 83.1 |
-            """,
+            """.ReplaceLineEndings("\n"),
             weighIns.Trim().ReplaceLineEndings("\n"));
     }
 
