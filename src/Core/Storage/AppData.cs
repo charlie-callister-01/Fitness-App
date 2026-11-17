@@ -9,31 +9,117 @@ namespace Core.Storage;
 /// </summary>
 public sealed class AppData
 {
-    private AppData(IDataStore store, StartupResult startup)
+    /// <summary>Commits run one at a time, in the order they asked (the semaphore queues waiters first in, first out).</summary>
+    private readonly SemaphoreSlim _writer = new(1, 1);
+
+    private DataSnapshot _snapshot;
+    private StoreMetadata _metadata;
+
+    private AppData(IDataStore store, StartupResult startup, StoreMetadata metadata)
     {
         Store = store;
         Startup = startup;
+        _snapshot = startup.Snapshot;
+        _metadata = metadata;
     }
 
-    /// <summary>The store this model reads and (from the commit ticket on) writes.</summary>
+    /// <summary>The store this model reads and writes.</summary>
     internal IDataStore Store { get; }
 
     /// <summary>What startup found. Never changes after open.</summary>
     public StartupResult Startup { get; }
 
-    /// <summary>The current dataset. Always present, whatever the startup state.</summary>
-    public DataSnapshot Snapshot => Startup.Snapshot;
+    /// <summary>
+    /// The current dataset. Always present, whatever the startup state. A reader that keeps this value keeps a dataset that never changes:
+    /// a commit publishes a new snapshot rather than editing this one.
+    /// </summary>
+    public DataSnapshot Snapshot => _snapshot;
 
-    public static async Task<AppData> OpenAsync(IDataStore store) => new(store, await LoadAsync(store));
+    /// <summary>
+    /// Raised once after each successful commit (and after a recorded Backup), once the new snapshot is current, so a handler reading
+    /// <see cref="Snapshot"/> sees the change. Never raised for a rejected or failed commit. Handlers run inside the write queue, so a
+    /// handler that starts another commit does not deadlock; that commit runs after this one.
+    /// </summary>
+    public event Action? Changed;
 
-    private static async Task<StartupResult> LoadAsync(IDataStore store)
+    /// <summary>When the last Backup was made or restored on this device; null if never. Device bookkeeping, not part of a Backup.</summary>
+    public DateTimeOffset? LastBackupAt => _metadata.LastBackupAt;
+
+    public static async Task<AppData> OpenAsync(IDataStore store)
     {
         return await store.LoadAllAsync() switch
         {
-            StoreResult<StoredData>.Success success => Read(success.Value),
-            StoreResult<StoredData>.Failure failure => new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error),
+            StoreResult<StoredData>.Success success => new AppData(store, Read(success.Value), success.Value.Metadata),
+            StoreResult<StoredData>.Failure failure => new AppData(
+                store, new StartupResult(StartupState.StorageFailed, DataSnapshot.Empty, [], failure.Error), StoreMetadata.Empty),
             _ => throw new InvalidOperationException("Unreachable: StoreResult has two cases."),
         };
+    }
+
+    /// <summary>A commit of one change; see <see cref="CommitAsync(IReadOnlyList{Change})"/>.</summary>
+    public Task<CommitResult> CommitAsync(Change change) => CommitAsync([change]);
+
+    /// <summary>
+    /// Saves the changes as one atomic batch, then publishes the new snapshot and raises <see cref="Changed"/>. If the store fails, the
+    /// old snapshot stays, nothing is raised and the failure kind comes back. The first successful commit also marks the store initialised,
+    /// in the same unit as the save.
+    /// </summary>
+    public async Task<CommitResult> CommitAsync(IReadOnlyList<Change> changes)
+    {
+        if (Startup.State is StartupState.CannotRead or StartupState.StorageFailed)
+        {
+            return new CommitResult.Blocked(Startup.State);
+        }
+
+        await _writer.WaitAsync();
+        try
+        {
+            var candidate = changes.Aggregate(_snapshot, (snapshot, change) => change.ApplyTo(snapshot));
+            if (ExchangeFormat.Validate(candidate.ToDocument()) is { Count: > 0 } issues)
+            {
+                return new CommitResult.Rejected(issues);
+            }
+
+            var metadata = _metadata.Initialised ? null : _metadata with { Initialised = true };
+            if (await Store.ApplyAsync([.. changes.Select(change => change.ToStoreChange())], metadata) is StoreResult<Unit>.Failure failure)
+            {
+                return new CommitResult.StoreFailed(failure.Error);
+            }
+
+            _snapshot = candidate;
+            _metadata = metadata ?? _metadata;
+            Changed?.Invoke();
+            return new CommitResult.Committed();
+        }
+        finally
+        {
+            _writer.Release();
+        }
+    }
+
+    /// <summary>
+    /// Remembers when a Backup was made or restored on this device (the caller supplies the time, from the clock), for the Backup Nudge.
+    /// It is device bookkeeping: it is never in the exchange format or a Backup. Other metadata is kept. On failure nothing is remembered.
+    /// </summary>
+    public async Task<StoreResult<Unit>> RecordBackupAsync(DateTimeOffset at)
+    {
+        await _writer.WaitAsync();
+        try
+        {
+            var metadata = _metadata with { LastBackupAt = at };
+            var result = await Store.WriteMetadataAsync(metadata);
+            if (result is StoreResult<Unit>.Success)
+            {
+                _metadata = metadata;
+                Changed?.Invoke();
+            }
+
+            return result;
+        }
+        finally
+        {
+            _writer.Release();
+        }
     }
 
     /// <summary>

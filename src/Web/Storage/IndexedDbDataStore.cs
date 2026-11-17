@@ -47,7 +47,7 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
         return new StoreResult<StoredData>.Success(new StoredData(records, ReadMetadata(loaded.Meta)));
     }
 
-    public async Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes)
+    public async Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes, StoreMetadata? metadata = null)
     {
         var ops = changes.Select(c => c switch
         {
@@ -55,7 +55,7 @@ public sealed class IndexedDbDataStore(IIndexedDbInterop interop, string databas
             StoreChange.Delete d => IndexedDbOperation.Delete(ModuleKinds[d.Kind], d.Key),
             _ => throw new ArgumentOutOfRangeException(nameof(changes), c, "Unknown change type"),
         }).ToList();
-        return await RunAsync(() => interop.ApplyAsync(ops));
+        return await RunAsync(() => interop.ApplyAsync(ops, metadata is null ? null : WriteMetadata(metadata)));
     }
 
     public Task<StoreResult<Unit>> ReplaceAllAsync(IReadOnlyList<Core.Storage.StoredRecord> records, StoreMetadata? metadata = null)
