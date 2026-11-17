@@ -189,7 +189,7 @@ public class BodyAndGuideTests
     }
 
     [Fact]
-    public void Badge_needs_a_name_metric_and_positive_target()
+    public void Badge_needs_a_name_metric_and_non_zero_target()
     {
         var json = """{"formatVersion":1,"badges":[{"id":"b","name":" ","metric":"","target":0}]}""";
 
@@ -198,6 +198,15 @@ public class BodyAndGuideTests
         Assert.Contains(errors, e => e is { Path: "badges[0].name", Code: "missing_field" });
         Assert.Contains(errors, e => e is { Path: "badges[0].metric", Code: "missing_field" });
         Assert.Contains(errors, e => e is { Path: "badges[0].target", Code: "out_of_range" });
+    }
+
+    [Fact]
+    public void Badge_accepts_a_negative_target_meaning_a_drop()
+    {
+        var result = ExchangeFormat.Read("""{"formatVersion":1,"badges":[{"id":"b","name":"Lean","metric":"bodyweight","target":-5}]}""");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(-5, result.Document!.Badges![0].Target);
     }
 
     [Fact]

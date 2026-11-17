@@ -48,6 +48,14 @@ public class WorkoutErrorTests
         Check(r => W(r)["painCheck"]!["exerciseId"] = "nope", "workouts[0].painCheck.exerciseId", "unknown_exercise");
 
     [Fact]
+    public void Measurement_cm_cannot_be_combined_with_weight() =>
+        Check(r => S(r)["measurementCm"] = 86.5, "workouts[0].entries[0].sets[0].measurementCm", "invalid_value");
+
+    [Fact]
+    public void Zero_measurement_cm_is_rejected() =>
+        Check(r => S(r, 0, 0)["measurementCm"] = 0, "workouts[0].entries[0].sets[0].measurementCm", "out_of_range");
+
+    [Fact]
     public void Negative_weight_is_rejected() =>
         Check(r => S(r)["weightKg"] = -1, "workouts[0].entries[0].sets[0].weightKg", "out_of_range");
 

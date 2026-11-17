@@ -1,0 +1,116 @@
+using Core.Model;
+
+namespace Core.Rules.Weeks;
+
+public enum ConsistencyKind
+{
+    OnTrack,
+    Behind,
+    TargetOutOfReach,
+    TargetHit,
+}
+
+/// <summary>How the current week is going, with a one-line reason for the dashboard.</summary>
+public sealed record ConsistencyMessage(ConsistencyKind Kind, string Message);
+
+/// <summary>Current Streak, best-ever run of Streak weeks and the best week's counted Workouts.</summary>
+public sealed record StreakResult(int Current, int BestRun, int BestWeekCount);
+
+/// <summary>Weeks, counted Workouts, Streak and consistency, all derived from history. "Today" is always passed in.</summary>
+public static class WeekRules
+{
+    /// <summary>Counted Workouts in the week starting on <paramref name="monday"/>.</summary>
+    public static int CountedWorkouts(Plan plan, IReadOnlyList<Workout> workouts, DateOnly monday)
+    {
+        return workouts.Count(w => WeekCalendar.InWeek(monday, w.Date) && IsCounted(plan, w));
+    }
+
+    /// <summary>Counted Workouts per week (keyed by the week's Monday) across all history. Weeks with none are absent.</summary>
+    public static IReadOnlyDictionary<DateOnly, int> CountedWorkoutsByWeek(Plan plan, IReadOnlyList<Workout> workouts) =>
+        workouts
+            .Where(w => IsCounted(plan, w))
+            .GroupBy(w => WeekCalendar.MondayOf(w.Date))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+    /// <summary>
+    /// The Streak over the Plan's weeks up to and including today's: the current run of Streak weeks, the best run ever,
+    /// and the most counted Workouts in any one week (Break weeks included for that last figure).
+    /// </summary>
+    public static StreakResult Streak(Plan plan, IReadOnlyList<Workout> workouts, IReadOnlyList<Break> breaks, DateOnly today)
+    {
+        var thisMonday = WeekCalendar.MondayOf(today);
+        var countsByWeek = CountedWorkoutsByWeek(plan, workouts);
+        var weeks = PlanMondays(plan, thisMonday)
+            .Select(monday => (Monday: monday, Count: countsByWeek.GetValueOrDefault(monday)))
+            .ToList();
+
+        var bestWeekCount = weeks.Select(w => w.Count).DefaultIfEmpty(0).Max();
+        var streakWeeks = weeks.Where(w => !BreakCalendar.TouchesWeek(breaks, w.Monday));
+        var (current, bestRun) = Runs(streakWeeks, plan.StreakMinWorkoutsPerWeek, thisMonday);
+        return new StreakResult(current, bestRun, bestWeekCount);
+    }
+
+    /// <summary>
+    /// Runs of consecutive weeks reaching the minimum, over weeks already stripped of Break weeks (a Break week neither
+    /// adds nor breaks a run). A week below the minimum ends the run, except the current week: it is still in progress.
+    /// </summary>
+    private static (int Current, int Best) Runs(IEnumerable<(DateOnly Monday, int Count)> weeks, int minimum, DateOnly thisMonday)
+    {
+        var current = 0;
+        var best = 0;
+        foreach (var (monday, count) in weeks)
+        {
+            if (count >= minimum)
+            {
+                current++;
+                best = Math.Max(best, current);
+            }
+            else if (monday < thisMonday)
+            {
+                current = 0;
+            }
+        }
+
+        return (current, best);
+    }
+
+    private static IEnumerable<DateOnly> PlanMondays(Plan plan, DateOnly lastMonday)
+    {
+        for (var monday = WeekCalendar.MondayOf(plan.StartDate); monday <= lastMonday; monday = WeekCalendar.AddWeeks(monday, 1))
+            yield return monday;
+    }
+
+    public static ConsistencyMessage Consistency(Plan plan, IReadOnlyList<Workout> workouts, IReadOnlyList<Break> breaks, DateOnly today)
+    {
+        var done = CountedWorkouts(plan, workouts, WeekCalendar.MondayOf(today));
+        var remaining = Math.Max(0, plan.WeeklyTarget - done);
+        if (remaining == 0)
+            return new(ConsistencyKind.TargetHit, $"Target hit: {done} of {plan.WeeklyTarget} done this week.");
+
+        var daysLeft = 0;
+        for (var day = today; day <= WeekCalendar.SundayOf(today); day = day.AddDays(1))
+            if (!BreakCalendar.IsBreakDay(breaks, day)) daysLeft++;
+
+        var days = daysLeft == 1 ? "day" : "days";
+        if (remaining > daysLeft)
+            return new(ConsistencyKind.TargetOutOfReach, $"Target out of reach this week: {remaining} to go, {daysLeft} available {days} left.");
+        if (remaining == daysLeft)
+            return new(ConsistencyKind.Behind, $"Behind: {remaining} to go and {daysLeft} available {days} left, so no spare day.");
+        return new(ConsistencyKind.OnTrack, $"On track: {remaining} to go with {daysLeft} available {days} left.");
+    }
+
+    /// <summary>The Plan week number (1 for the week containing the start date), or null before the Plan starts.</summary>
+    public static int? PlanWeekNumber(Plan plan, DateOnly date)
+    {
+        if (date < plan.StartDate) return null;
+        return (WeekCalendar.MondayOf(date).DayNumber - WeekCalendar.MondayOf(plan.StartDate).DayNumber) / 7 + 1;
+    }
+
+    private static bool IsCounted(Plan plan, Workout w)
+    {
+        if (!w.Entries.Any(e => e.Status is EntryStatus.Done or EntryStatus.Swapped)) return false;
+        if (w.SessionId is null) return plan.StreakCountsCustomWorkouts;
+        var session = plan.Sessions.FirstOrDefault(s => s.Id == w.SessionId);
+        return session is not { Type: SessionType.Test, BenchmarkIntervalWeeks: not null };
+    }
+}

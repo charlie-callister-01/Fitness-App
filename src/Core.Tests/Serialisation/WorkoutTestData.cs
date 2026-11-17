@@ -39,7 +39,10 @@ internal static class WorkoutTestData
                 ],
                 PainCheck: new PainCheck("p-1", PainStatus.Reported, [BodyArea.Knee, BodyArea.LowerBack], PainSeverity.Moderate, "Twinge on the way up", "goblet-squat")),
             new Workout("w-2", new DateOnly(2026, 11, 10), null, true, null, null, [],
-                [new WorkoutEntry("farmers-carry", EntryStatus.Done, null, null, null, [new WorkoutSet("s-4", 32, null, null, 60, 40, false)])],
+                [
+                    new WorkoutEntry("farmers-carry", EntryStatus.Done, null, null, null, [new WorkoutSet("s-4", 32, null, null, 60, 40, false)]),
+                    new WorkoutEntry("waist", EntryStatus.Done, null, null, null, [new WorkoutSet("s-5", null, null, null, null, null, false, MeasurementCm: 86.5)]),
+                ],
                 new PainCheck("p-2", PainStatus.None, [], null, null, null)),
             new Workout("w-3", new DateOnly(2026, 11, 17), "c-engine", false, null, null,
                 [new SessionExercise("5k-run", 1, null, null, "Easy pace")], [], null),

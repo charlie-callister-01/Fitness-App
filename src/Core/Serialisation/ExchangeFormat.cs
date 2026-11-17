@@ -21,8 +21,14 @@ public static class ExchangeFormat
         [1] = V1Reader.Read,
     };
 
+    /// <summary>
+    /// Writes the document, with the "how to read this" block straight after <c>formatVersion</c>. Each property of the serialised document is
+    /// copied across as it is, so numbers and strings come out exactly as the serialiser wrote them.
+    /// </summary>
     public static string Write(ExchangeDocument document, bool indented = false)
     {
+        var body = JsonSerializer.SerializeToElement(document, ExchangeJsonContext.Default.ExchangeDocument);
+
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
         {
@@ -30,11 +36,28 @@ public static class ExchangeFormat
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         }))
         {
-            JsonSerializer.Serialize(writer, document, ExchangeJsonContext.Default.ExchangeDocument);
+            writer.WriteStartObject();
+            foreach (var property in body.EnumerateObject())
+            {
+                property.WriteTo(writer);
+                if (property.NameEquals(VersionField))
+                {
+                    writer.WritePropertyName(ExchangeReadMe.Field);
+                    ExchangeReadMe.Build().WriteTo(writer);
+                }
+            }
+
+            writer.WriteEndObject();
         }
 
         return System.Text.Encoding.UTF8.GetString(stream.ToArray());
     }
+
+    /// <summary>
+    /// Checks every cross-record rule (unique IDs, references, the single active Plan, Phase week coverage, planned rows) on a document that
+    /// is already in memory. Returns the problems found, empty when the document is valid. <see cref="Read"/> runs this after parsing.
+    /// </summary>
+    public static IReadOnlyList<FormatIssue> Validate(ExchangeDocument document) => DocumentValidator.Validate(document);
 
     public static ReadResult Read(string json)
     {

@@ -18,6 +18,7 @@ The written definition of the app's data and its one JSON exchange format (the B
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `formatVersion` | integer | yes | Starts at 1. See Versioning. |
+| `readMe` | object | no | The "how to read this" block. See below. |
 | `exportedAt` | timestamp | no | When the document was written. |
 | `exportedFrom` | string | no | App build that wrote it. |
 | `exercises` | array of Exercise | no | |
@@ -28,8 +29,13 @@ The written definition of the app's data and its one JSON exchange format (the B
 | `badges` | array of Badge | no | |
 | `guides` | array of Guide | no | |
 | `workouts` | array of Workout | no | Each holds its Sets and Pain check. See Workout. |
+| `weekSchedules` | array of Week schedule | no | One-week-only Session moves. Added without a version bump. See Week schedule. |
 
 An absent collection means "not part of this document". That is how partial documents (Plan-only, Guides-only) work with no second format. A present-but-empty collection means "none".
+
+### The `readMe` block
+
+The writer puts a short `readMe` object straight after `formatVersion`, so an LLM or person handed the bare file understands it. It holds plain-text strings: `about` (points at this spec for the given `formatVersion`), `formatVersion` (what the version number means), `units` (kg, km, metres, seconds, date and timestamp formats), `ids` (the ID rules) and `absentFields` (absent versus null, absent collections). The reader accepts a `readMe` of any shape and ignores it: no warning, no error, and it is not kept in the model. Written content is the same in every document, so it never affects round-tripping.
 
 ### Versioning
 
@@ -252,7 +258,9 @@ A user-editable achievement. Only its definition is stored; progress is always w
 | `id` | string | yes | Unique among Badges. |
 | `name` | string | yes | Non-blank. |
 | `metric` | string | yes | Non-blank name of what is measured. The set of metrics and how progress is computed belong to stage A2, so A1 does not restrict the value. |
-| `target` | number > 0 | yes | Value the metric must reach. |
+| `target` | number, not 0 | yes | Value the metric must reach. A negative target on a measurement metric (`bodyweight` or a body-measurement Exercise) means "drop by this much" from the first reading. Zero is `out_of_range`. |
+
+Supported `metric` values (case-insensitive; A2 works progress out from history): `sessions` (counted Workouts ever), `streak` (best-ever Streak run in weeks), `bestweek` (most counted Workouts in one week), `prs` (PRs across all Exercises), `bodyweight` (the latest Weigh-in), or an Exercise `id` (its best value in the Exercise's own measure; for a body measurement, its latest reading). Any other value is accepted and stored, and shows as "not measurable".
 
 ## Guide
 
@@ -303,6 +311,7 @@ One real occurrence of training on a date. Its Sets and its Pain check live insi
 | `distanceM` | number > 0 | no | Carry distance. Not allowed together with `distanceKm` (`invalid_value`). |
 | `durationSeconds` | integer >= 1 | no | |
 | `isMax` | boolean | no | Default `false`. A Max set (a 1 or 3 rep max attempt). |
+| `measurementCm` | number > 0 | no | A body measurement in cm (for a `bodyMeasurementCm` Exercise). Not allowed together with `weightKg`, `distanceKm` or `distanceM` (`invalid_value`). A body measurement in kg is a plain `weightKg`. |
 
 Which fields a Set should have for an Exercise's log kind is behaviour (stage A2), not checked on read.
 
@@ -328,7 +337,8 @@ This block is parsed and validated by the real reader in the test suite. It has 
     { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load" },
     { "id": "farmers-carry", "name": "Farmers carry", "logKind": "carry" },
     { "id": "5k-run", "name": "5 km run", "logKind": "time" },
-    { "id": "rdl", "name": "Romanian deadlift", "logKind": "load" }
+    { "id": "rdl", "name": "Romanian deadlift", "logKind": "load" },
+    { "id": "waist", "name": "Waist", "logKind": "bodyMeasurementCm" }
   ],
   "workouts": [
     {
@@ -380,10 +390,42 @@ This block is parsed and validated by the real reader in the test suite. It has 
           "exerciseId": "farmers-carry",
           "status": "done",
           "sets": [{ "id": "s-4", "weightKg": 32, "distanceM": 40, "durationSeconds": 60 }]
+        },
+        {
+          "exerciseId": "waist",
+          "status": "done",
+          "sets": [{ "id": "s-5", "measurementCm": 86.5 }]
         }
       ],
       "painCheck": { "id": "p-2", "status": "none" }
     }
+  ]
+}
+```
+
+## Week schedule
+
+The one-week-only moves of Sessions to other days. A Session not listed is on its default day, so the collection holds only exceptions. "Make this the new default" is a Plan edit (the Session's `defaultDay`), not a Week schedule.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `weekStart` | date | yes | The week's Monday (weeks run Monday to Sunday). Not a Monday is `invalid_value`. One Week schedule per week: a repeat is `duplicate_id`. |
+| `moves` | array of move | no | Absent or empty means no moves that week. |
+
+A move has `sessionId` (required; a Session ID from a Plan, `unknown_session` otherwise, and left to Import when the document has no `plans`) and `date` (required; between `weekStart` and the Sunday after it, else `out_of_range`). A Session can be moved once per week: a second move of it is `duplicate_id` at the second move's `sessionId`.
+
+```json
+{
+  "formatVersion": 1,
+  "weekSchedules": [
+    {
+      "weekStart": "2026-11-16",
+      "moves": [
+        { "sessionId": "a-lower", "date": "2026-11-18" },
+        { "sessionId": "c-engine", "date": "2026-11-22" }
+      ]
+    },
+    { "weekStart": "2026-11-23", "moves": [] }
   ]
 }
 ```
@@ -470,6 +512,7 @@ This block is parsed and validated by the real reader in the test suite.
 | `unknown_exercise`, `unknown_session` | A reference (Plan row, Phase goal, Guide, Workout entry, planned snapshot row, Pain check) to an Exercise or Session ID that does not exist. |
 | `no_active_plan`, `multiple_active_plans` | Plans present but not exactly one active. |
 | `phase_gap`, `phase_overlap` | Phase week ranges leave a week uncovered or share a week. |
+| `not_in_planned` | A skipped entry's `exerciseId`, or a swapped entry's `swappedFromExerciseId`, is not one of the Workout's `planned` rows. Only checked when `planned` is not empty. |
 | `end_before_start` | A Break's `endDate` is before its `startDate`, or a Workout's `endedAt` is before its `startedAt`. |
 | `invalid_version`, `unsupported_version` | See Versioning. |
 | `unknown_field` | Warning only: an unrecognised field was ignored. |

@@ -15,4 +15,5 @@ public sealed record ExchangeDocument(
     IReadOnlyList<Badge>? Badges = null,
     IReadOnlyList<Guide>? Guides = null,
     IReadOnlyList<Plan>? Plans = null,
-    IReadOnlyList<Workout>? Workouts = null);
+    IReadOnlyList<Workout>? Workouts = null,
+    IReadOnlyList<WeekSchedule>? WeekSchedules = null);

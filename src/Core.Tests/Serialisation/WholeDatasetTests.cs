@@ -7,6 +7,21 @@ namespace Core.Tests.Serialisation;
 /// <summary>The whole exchange document at once: every entity, every enum value, unicode and decimals, references across entities.</summary>
 public class WholeDatasetTests
 {
+    /// <summary>An entry shaped to be valid for its status: skipped has a reason and no Sets, swapped names what it replaced.</summary>
+    private static WorkoutEntry EntryWithStatus(EntryStatus status, int index)
+    {
+        var skipReason = status == EntryStatus.Skipped ? "Tired" : null;
+        var swappedFrom = status == EntryStatus.Swapped ? "goblet-squat" : null;
+        IReadOnlyList<WorkoutSet> sets = status == EntryStatus.Skipped ? [] : [new WorkoutSet($"s-status-{index}", 0.125, 1, null, null, null, false)];
+        return new WorkoutEntry("ex-load", status, skipReason, swappedFrom, null, sets);
+    }
+
+    private static PainCheck PainCheckOfArea(int index)
+    {
+        var severity = index == 1 ? PainSeverity.Mild : PainSeverity.Moderate;
+        return new PainCheck($"p-status-{index}", PainStatus.Reported, [BodyArea.Other], severity, null, null);
+    }
+
     private static ExchangeDocument Everything()
     {
         var logKinds = Enum.GetValues<LogKind>().Select(k => new Exercise($"ex-{k}".ToLowerInvariant(), $"Übung {k} — 深蹲 🏋️", k, null, false)).ToList();
@@ -23,9 +38,8 @@ public class WholeDatasetTests
         var everyBodyArea = new PainCheck("p-all", PainStatus.Reported, Enum.GetValues<BodyArea>(), PainSeverity.Sharp, "Ouch — ça fait mal", "ex-load");
         var extraWorkouts = Enum.GetValues<EntryStatus>().Select((status, i) => new Workout(
             $"w-status-{i}", new DateOnly(2026, 11, 20 + i), "s-test", false, null, null, [],
-            [new WorkoutEntry("ex-load", status, status == EntryStatus.Skipped ? "Tired" : null, status == EntryStatus.Swapped ? "goblet-squat" : null, null,
-                status == EntryStatus.Skipped ? [] : [new WorkoutSet($"s-status-{i}", 0.125, 1, null, null, null, false)])],
-            i == 0 ? everyBodyArea : new PainCheck($"p-status-{i}", PainStatus.Reported, [BodyArea.Other], i == 1 ? PainSeverity.Mild : PainSeverity.Moderate, null, null)));
+            [EntryWithStatus(status, i)],
+            i == 0 ? everyBodyArea : PainCheckOfArea(i)));
 
         return rich with
         {
