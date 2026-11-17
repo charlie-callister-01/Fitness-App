@@ -4,14 +4,14 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Best Set ordering per log kind: load by Epley estimated 1RM; bodyweight sets rank below any loaded set; carry by weight then distance; time lowest; seconds, minutes, reps and distance highest; body measurements, text and tick-only have no best
-- [ ] When a Max set exists it is the source of truth for the best (the best Max set)
-- [ ] A PR is a Workout's best Set that strictly beats the best of all earlier Workouts; an equal repeat is not a PR; the first ever result is a baseline, not a PR
-- [ ] PRs are recomputed in chronological order from all history, so a back-dated Workout slots in correctly
-- [ ] Only Sets from done or swapped entries count, attributed to the Exercise actually done (a Swapped exercise's Sets do not count for the planned original)
-- [ ] Progress points give one point per day (the day's best Set) and a series is only offered for an Exercise logged on two or more days
-- [ ] Body measurements report change since the start and never produce PRs
-- [ ] Last, Best and (later) Suggested target are returned together as one per-Exercise snapshot shape for the log screen; Last and Best are filled by this ticket
-- [ ] Tests build short dated histories and assert the exact best, PR flags and points, including the edge cases listed in the spec
+- [x] Best Set ordering per log kind: load by Epley estimated 1RM; bodyweight sets rank below any loaded set; carry by weight then distance; time lowest; seconds, minutes, reps and distance highest; body measurements, text and tick-only have no best
+- [x] When a Max set exists it is the source of truth for the best (the best Max set)
+- [x] A PR is a Workout's best Set that strictly beats the best of all earlier Workouts; an equal repeat is not a PR; the first ever result is a baseline, not a PR
+- [x] PRs are recomputed in chronological order from all history, so a back-dated Workout slots in correctly
+- [x] Only Sets from done or swapped entries count, attributed to the Exercise actually done (a Swapped exercise's Sets do not count for the planned original)
+- [x] Progress points give one point per day (the day's best Set) and a series is only offered for an Exercise logged on two or more days
+- [x] Body measurements report change since the start and never produce PRs
+- [x] Last, Best and (later) Suggested target are returned together as one per-Exercise snapshot shape for the log screen; Last and Best are filled by this ticket
+- [x] Tests build short dated histories and assert the exact best, PR flags and points, including the edge cases listed in the spec
