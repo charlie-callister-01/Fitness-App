@@ -9,6 +9,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<Ui.IBuildInfo, AssemblyBuildInfo>();
-builder.Services.AddScoped<Web.Storage.IndexedDbInterop>(); // TODO(ticket 07): register IndexedDbDataStore as IDataStore and wire startup
+builder.Services.AddSingleton<Web.Storage.IndexedDbInterop>();
+builder.Services.AddSingleton<Web.Storage.IIndexedDbInterop>(sp => sp.GetRequiredService<Web.Storage.IndexedDbInterop>());
+builder.Services.AddSingleton<Core.Storage.IDataStore>(sp => new Web.Storage.IndexedDbDataStore(sp.GetRequiredService<Web.Storage.IIndexedDbInterop>()));
 
 await builder.Build().RunAsync();
