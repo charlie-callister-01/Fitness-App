@@ -13,18 +13,16 @@ public class InputParserTests
     private static ParsedSet Ok(InputParser parser, string text, LogKind kind)
     {
         var result = parser.Parse(text, kind);
-        Assert.True(result.IsSuccess, $"'{text}' as {kind}: {result.Error}");
-        Assert.Null(result.Error);
-        return result.Set!;
+        var success = Assert.IsType<ParseResult.Success>(result);
+        return success.Set;
     }
 
     private static string Fail(InputParser parser, string? text, LogKind kind)
     {
         var result = parser.Parse(text, kind);
-        Assert.False(result.IsSuccess, $"'{text}' as {kind} should fail");
-        Assert.Null(result.Set);
-        Assert.False(string.IsNullOrWhiteSpace(result.Error));
-        return result.Error!;
+        var failure = Assert.IsType<ParseResult.Failure>(result);
+        Assert.False(string.IsNullOrWhiteSpace(failure.Error));
+        return failure.Error;
     }
 
     [Theory]
@@ -282,7 +280,16 @@ public class InputParserTests
 
     [Fact]
     public void Undefined_log_kind_fails_without_throwing() =>
-        Assert.False(Metric.Parse("5", (LogKind)999).IsSuccess);
+        Assert.IsType<ParseResult.Failure>(Metric.Parse("5", (LogKind)999));
+
+    [Fact]
+    public void ToWorkoutSet_carries_every_measured_field_and_the_given_id_and_max_flag()
+    {
+        var parsed = new ParsedSet(20, 10, 5, 90, 40, 92.5, "ignored");
+
+        Assert.Equal(new WorkoutSet("s1", 20, 10, 5, 90, 40, true, 92.5), parsed.ToWorkoutSet("s1", true));
+        Assert.Equal(new WorkoutSet("s2", null, null, null, null, null, false), ParsedSet.Empty.ToWorkoutSet("s2", false));
+    }
 
     [Theory]
     [InlineData("de-DE")]

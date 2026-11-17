@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Core.Model;
+using Core.Rules.LogKinds;
 using Core.Rules.Units;
 
 namespace Core.Rules.Parsing;
@@ -20,16 +21,24 @@ public sealed record ParsedSet(
 {
     /// <summary>The value of a tick-only entry: done, with nothing measured.</summary>
     public static ParsedSet Empty { get; } = new(null, null, null, null, null, null, null);
+
+    /// <summary>The Set to store for this value. Free <see cref="Text"/> is not part of a Set and is not carried over.</summary>
+    public WorkoutSet ToWorkoutSet(string id, bool isMax) =>
+        new(id, WeightKg, Reps, DistanceKm, DurationSeconds, DistanceM, isMax, MeasurementCm);
 }
 
-/// <summary>Either a parsed Set or a plain-language reason saying what was expected.</summary>
-public sealed record ParseResult(ParsedSet? Set, string? Error)
+/// <summary>Either a parsed Set or a plain-language reason saying what was expected. Never both, never neither.</summary>
+public abstract record ParseResult
 {
-    public bool IsSuccess => Set is not null;
+    private ParseResult()
+    {
+    }
 
-    public static ParseResult Success(ParsedSet set) => new(set, null);
+    /// <summary>The input fitted the kind.</summary>
+    public sealed record Success(ParsedSet Set) : ParseResult;
 
-    public static ParseResult Failure(string expected) => new(null, expected);
+    /// <summary>The input did not fit; <see cref="Error"/> says what was expected.</summary>
+    public sealed record Failure(string Error) : ParseResult;
 }
 
 /// <summary>
@@ -42,24 +51,38 @@ public sealed partial class InputParser
     private const double SecondsPerMinute = 60;
     private const double MetresPerKm = 1000;
 
-    private const string LoadExpected = "Expected weight x reps, like 20x10";
-    private const string BodyweightExpected = "Expected bwxreps or added weight x reps, like bwx8 or 10x8";
-    private const string CarryExpected = "Expected weight x metres, like 32x40";
-    private const string TimeExpected = "Expected a time like 4:32, 1:04:10 or seconds";
-    private const string SecondsExpected = "Expected seconds, like 45 or 45s";
-    private const string MinutesExpected = "Expected minutes, like 3 or 3min";
-    private const string KmExpected = "Expected a distance in km, like 5 or 5km";
-    private const string MetresExpected = "Expected a distance in metres, like 400 or 400m";
-    private const string RepsExpected = "Expected a whole number of reps, like 12";
-    private const string BodyKgExpected = "Expected a weight, like 82.3";
-    private const string BodyCmExpected = "Expected a length in cm, like 92.5";
-    private const string TextExpected = "Expected some text";
-
     private static readonly char[] Separators = ['x', 'X', '×', '*'];
 
     private readonly UnitConverter _units;
+    private readonly Dictionary<LogKind, Scalar> _scalars;
 
-    public InputParser(UnitConverter units) => _units = units;
+    public InputParser(UnitConverter units)
+    {
+        _units = units;
+        _scalars = new()
+        {
+            [LogKind.Seconds] = Duration(bareUnitSeconds: 1),
+            [LogKind.Minutes] = Duration(bareUnitSeconds: SecondsPerMinute),
+            [LogKind.DistanceKm] = new(
+                new() { [""] = units.DistanceFromDisplay, ["km"] = v => v, ["m"] = v => v / MetresPerKm },
+                v => Positive(v, d => Empty with { DistanceKm = d })),
+            [LogKind.DistanceM] = new(
+                new() { [""] = v => v, ["m"] = v => v, ["km"] = v => v * MetresPerKm },
+                v => Positive(v, d => Empty with { DistanceM = d })),
+            [LogKind.BodyMeasurementKg] = new(
+                new() { [""] = units.WeightFromDisplay },
+                v => Positive(v, kg => Empty with { WeightKg = kg })),
+            [LogKind.BodyMeasurementCm] = new(
+                new() { [""] = v => v },
+                v => Positive(v, cm => Empty with { MeasurementCm = cm })),
+        };
+    }
+
+    /// <summary>
+    /// A kind typed as one number and an optional unit suffix: <see cref="Suffixes"/> turns the number into the canonical
+    /// value (the empty suffix is the bare number), and <see cref="Build"/> makes the Set, or null when the value is not valid.
+    /// </summary>
+    private sealed record Scalar(Dictionary<string, Func<double, double>> Suffixes, Func<double, ParsedSet?> Build);
 
     public ParseResult Parse(string? text, LogKind kind) => kind switch
     {
@@ -67,17 +90,27 @@ public sealed partial class InputParser
         LogKind.BodyweightLoad => ParseBodyweightLoad(text),
         LogKind.Carry => ParseCarry(text),
         LogKind.Reps => ParseRepsOnly(text),
-        LogKind.Seconds => ParseDuration(text, SecondsExpected, bareUnitSeconds: 1),
-        LogKind.Minutes => ParseDuration(text, MinutesExpected, bareUnitSeconds: SecondsPerMinute),
-        LogKind.DistanceKm => ParseDistanceKm(text),
-        LogKind.DistanceM => ParseDistanceM(text),
         LogKind.Time => ParseTime(text),
-        LogKind.BodyMeasurementKg => ParseBodyKg(text),
-        LogKind.BodyMeasurementCm => ParseBodyCm(text),
         LogKind.Text => ParseFreeText(text),
-        LogKind.TickOnly => ParseResult.Success(ParsedSet.Empty),
-        _ => ParseResult.Failure("This kind of Exercise can't be logged from typed input"),
+        LogKind.TickOnly => new ParseResult.Success(ParsedSet.Empty),
+        _ when _scalars.TryGetValue(kind, out var scalar) => ParseScalar(text, kind, scalar),
+        _ => Fail(kind),
     };
+
+    private static Scalar Duration(double bareUnitSeconds) => new(
+        new() { [""] = v => v * bareUnitSeconds, ["s"] = v => v, ["sec"] = v => v, ["min"] = v => v * SecondsPerMinute },
+        v => ToSeconds(v) is { } whole ? Empty with { DurationSeconds = whole } : null);
+
+    private static ParsedSet? Positive(double value, Func<double, ParsedSet> build) => value > 0 ? build(value) : null;
+
+    private static ParseResult Fail(LogKind kind) => new ParseResult.Failure(LogKindRules.For(kind).Expected);
+
+    private ParseResult ParseScalar(string? text, LogKind kind, Scalar scalar) =>
+        TryNumberWithSuffix(StripWhitespace(text), out var value, out var suffix)
+            && scalar.Suffixes.TryGetValue(suffix, out var toCanonical)
+            && scalar.Build(toCanonical(value)) is { } set
+                ? new ParseResult.Success(set)
+                : Fail(kind);
 
     private ParseResult ParseLoad(string? text)
     {
@@ -85,27 +118,27 @@ public sealed partial class InputParser
             || !TryNumber(left, out var weight) || weight <= 0
             || !TryReps(right, out var reps))
         {
-            return ParseResult.Failure(LoadExpected);
+            return Fail(LogKind.Load);
         }
 
-        return ParseResult.Success(Empty with { WeightKg = _units.WeightFromDisplay(weight), Reps = reps });
+        return new ParseResult.Success(Empty with { WeightKg = _units.WeightFromDisplay(weight), Reps = reps });
     }
 
     private ParseResult ParseBodyweightLoad(string? text)
     {
         if (!TrySplitPair(text, out var left, out var right) || !TryReps(right, out var reps))
         {
-            return ParseResult.Failure(BodyweightExpected);
+            return Fail(LogKind.BodyweightLoad);
         }
 
         if (left.Equals("bw", StringComparison.OrdinalIgnoreCase))
         {
-            return ParseResult.Success(Empty with { Reps = reps });
+            return new ParseResult.Success(Empty with { Reps = reps });
         }
 
         return TryNumber(left, out var added) && added > 0
-            ? ParseResult.Success(Empty with { WeightKg = _units.WeightFromDisplay(added), Reps = reps })
-            : ParseResult.Failure(BodyweightExpected);
+            ? new ParseResult.Success(Empty with { WeightKg = _units.WeightFromDisplay(added), Reps = reps })
+            : Fail(LogKind.BodyweightLoad);
     }
 
     private ParseResult ParseCarry(string? text)
@@ -114,99 +147,30 @@ public sealed partial class InputParser
             || !TryNumber(left, out var weight) || weight <= 0
             || !TryNumber(right, out var metres) || metres <= 0)
         {
-            return ParseResult.Failure(CarryExpected);
+            return Fail(LogKind.Carry);
         }
 
-        return ParseResult.Success(Empty with { WeightKg = _units.WeightFromDisplay(weight), DistanceM = metres });
+        return new ParseResult.Success(Empty with { WeightKg = _units.WeightFromDisplay(weight), DistanceM = metres });
     }
 
     private static ParseResult ParseRepsOnly(string? text) =>
         TryReps(StripWhitespace(text), out var reps)
-            ? ParseResult.Success(Empty with { Reps = reps })
-            : ParseResult.Failure(RepsExpected);
-
-    private static ParseResult ParseDuration(string? text, string expected, double bareUnitSeconds)
-    {
-        if (!TryNumberWithSuffix(StripWhitespace(text), out var value, out var suffix))
-        {
-            return ParseResult.Failure(expected);
-        }
-
-        double? seconds = suffix switch
-        {
-            "" => value * bareUnitSeconds,
-            "s" or "sec" => value,
-            "min" => value * SecondsPerMinute,
-            _ => null,
-        };
-
-        return seconds is { } s && ToSeconds(s) is { } whole
-            ? ParseResult.Success(Empty with { DurationSeconds = whole })
-            : ParseResult.Failure(expected);
-    }
+            ? new ParseResult.Success(Empty with { Reps = reps })
+            : Fail(LogKind.Reps);
 
     private static ParseResult ParseTime(string? text)
     {
         var compact = StripWhitespace(text);
         var seconds = compact.Contains(':') ? ClockSeconds(compact) : PlainSeconds(compact);
         return seconds is { } whole
-            ? ParseResult.Success(Empty with { DurationSeconds = whole })
-            : ParseResult.Failure(TimeExpected);
+            ? new ParseResult.Success(Empty with { DurationSeconds = whole })
+            : Fail(LogKind.Time);
     }
-
-    private ParseResult ParseDistanceKm(string? text)
-    {
-        if (!TryNumberWithSuffix(StripWhitespace(text), out var value, out var suffix))
-        {
-            return ParseResult.Failure(KmExpected);
-        }
-
-        double? km = suffix switch
-        {
-            "" => _units.DistanceFromDisplay(value),
-            "km" => value,
-            "m" => value / MetresPerKm,
-            _ => null,
-        };
-
-        return km is > 0 and var distance
-            ? ParseResult.Success(Empty with { DistanceKm = distance })
-            : ParseResult.Failure(KmExpected);
-    }
-
-    private static ParseResult ParseDistanceM(string? text)
-    {
-        if (!TryNumberWithSuffix(StripWhitespace(text), out var value, out var suffix))
-        {
-            return ParseResult.Failure(MetresExpected);
-        }
-
-        double? metres = suffix switch
-        {
-            "" or "m" => value,
-            "km" => value * MetresPerKm,
-            _ => null,
-        };
-
-        return metres is > 0 and var distance
-            ? ParseResult.Success(Empty with { DistanceM = distance })
-            : ParseResult.Failure(MetresExpected);
-    }
-
-    private ParseResult ParseBodyKg(string? text) =>
-        TryNumber(StripWhitespace(text), out var value) && value > 0
-            ? ParseResult.Success(Empty with { WeightKg = _units.WeightFromDisplay(value) })
-            : ParseResult.Failure(BodyKgExpected);
-
-    private static ParseResult ParseBodyCm(string? text) =>
-        TryNumber(StripWhitespace(text), out var value) && value > 0
-            ? ParseResult.Success(Empty with { MeasurementCm = value })
-            : ParseResult.Failure(BodyCmExpected);
 
     private static ParseResult ParseFreeText(string? text) =>
         string.IsNullOrWhiteSpace(text)
-            ? ParseResult.Failure(TextExpected)
-            : ParseResult.Success(Empty with { Text = text.Trim() });
+            ? Fail(LogKind.Text)
+            : new ParseResult.Success(Empty with { Text = text.Trim() });
 
     private static ParsedSet Empty => ParsedSet.Empty;
 

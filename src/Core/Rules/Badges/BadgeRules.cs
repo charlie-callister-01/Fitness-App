@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.LogKinds;
 using Core.Rules.Performance;
 using Core.Rules.Weeks;
 
@@ -100,7 +101,7 @@ public static class BadgeRules
             return new Measured(change.Latest, change.Start - change.Latest);
 
         var best = ExercisePerformance.Best(exercise, h.Workouts);
-        double? value = best is null ? null : SetRanking.ChartValue(exercise.LogKind, best.Set);
-        return new Measured(value, null, exercise.LogKind == LogKind.Time);
+        double? value = best is null ? null : LogKindRules.For(exercise.LogKind).ChartValue(best.Set);
+        return new Measured(value, null, LogKindRules.For(exercise.LogKind).LowerIsBetter);
     }
 }

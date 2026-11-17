@@ -1,5 +1,6 @@
 using System.Globalization;
 using Core.Model;
+using Core.Rules.LogKinds;
 
 namespace Core.Rules.Performance;
 
@@ -10,7 +11,6 @@ internal static class TargetRules
     private const int CarryResetM = 20;
     private const int CarryStepM = 10;
     private const int RepDrop = 2;
-    private const int TimeStepSeconds = 5;
     private const int HoldRpe = 9;
     private const int EasyRpe = 6;
 
@@ -23,23 +23,23 @@ internal static class TargetRules
 
         return kind switch
         {
-            LogKind.Load or LogKind.BodyweightLoad when last.BestSet is { Reps: not null } s
-                => Load(kind, s, rpe, hold, steps, plan.WeightIncrementKg, row),
-            LogKind.Carry when last.BestSet is { DistanceM: not null } s
-                => Carry(s, rpe, hold, steps, plan.WeightIncrementKg),
+            LogKind.Load or LogKind.BodyweightLoad when last.BestSet is { Reps: { } reps } s
+                => Load(kind, s, reps, rpe, hold, steps, plan.WeightIncrementKg, row),
+            LogKind.Carry when last.BestSet is { DistanceM: { } distance } s
+                => Carry(s, distance, rpe, hold, steps, plan.WeightIncrementKg),
             LogKind.Time when best?.Set.DurationSeconds is { } bestSeconds
                 => Time(bestSeconds, last, rpe, hold, steps),
-            LogKind.Reps or LogKind.Seconds or LogKind.Minutes or LogKind.DistanceKm or LogKind.DistanceM when best is not null
-                => Other(kind, best.Set, last.BestSet, rpe, hold, steps),
+            _ when LogKindRules.For(kind).Scalar is { } scalar && best is not null
+                => Other(scalar, best.Set, last.BestSet, rpe, hold, steps),
+            // No target: load, carry or time without a usable Set; text, tick-only and body measurements; undefined kinds.
             _ => null,
         };
     }
 
-    private static SuggestedTarget Load(LogKind kind, WorkoutSet s, int? rpe, bool hold, int steps, double increment, SessionExercise? row)
+    private static SuggestedTarget Load(LogKind kind, WorkoutSet s, int reps, int? rpe, bool hold, int steps, double increment, SessionExercise? row)
     {
         var top = row?.RepsMax ?? row?.Reps;
         var weight = s.WeightKg ?? 0;
-        var reps = s.Reps!.Value;
         var did = top is { } t ? $"Hit {reps} of {t} reps{AtRpe(rpe)}" : $"Did {reps} reps{AtRpe(rpe)}";
 
         if (hold)
@@ -68,10 +68,9 @@ internal static class TargetRules
         return new(bodyweightOnly ? s.WeightKg : w, r, null, null, null, $"{did}: {Easy(steps)}{change}");
     }
 
-    private static SuggestedTarget Carry(WorkoutSet s, int? rpe, bool hold, int steps, double increment)
+    private static SuggestedTarget Carry(WorkoutSet s, double distance, int? rpe, bool hold, int steps, double increment)
     {
         var weight = s.WeightKg ?? 0;
-        var distance = s.DistanceM!.Value;
         var did = $"Carried {(weight > 0 ? $"{Num(weight)} kg for " : "")}{Num(distance)} m{AtRpe(rpe)}";
 
         if (hold)
@@ -100,65 +99,37 @@ internal static class TargetRules
                 : null;
         }
 
-        var step = TimeStepSeconds * steps;
+        var step = LogKindRules.SecondStep * steps;
         var reason = steps == 2
             ? $"Best {Clock(bestSeconds)}; RPE {rpe} last time, so beat it by {step} s"
             : $"Best {Clock(bestSeconds)}; beat it by {step} s";
         return new(null, null, null, Math.Max(1, bestSeconds - step), null, reason);
     }
 
-    private static SuggestedTarget? Other(LogKind kind, WorkoutSet best, WorkoutSet? lastBest, int? rpe, bool hold, int steps)
+    private static SuggestedTarget? Other(ScalarProgression p, WorkoutSet best, WorkoutSet? lastBest, int? rpe, bool hold, int steps)
     {
         if (hold)
         {
-            return lastBest is null
-                ? null
-                : Stepped(kind, lastBest, 0, $"Last {Describe(kind, lastBest)}{AtRpe(rpe)}: hold the same result");
+            return lastBest is not null && p.Measure(lastBest) is { } held
+                ? p.Target(held, $"Last {Describe(p, held)}{AtRpe(rpe)}: hold the same result")
+                : null;
         }
 
+        if (p.Measure(best) is not { } bestValue) return null;
+
         var lead = steps == 2 ? $"; RPE {rpe} last time, so add " : "; add ";
-        return Stepped(kind, best, steps, $"Best {Describe(kind, best)}{lead}{StepText(kind, steps)}");
+        return p.Target(bestValue + p.Amount * steps, $"Best {Describe(p, bestValue)}{lead}{StepText(p, steps)}");
     }
 
-    /// <summary>One progression step for a kind: <see cref="Amount"/> in the stored unit, shown as <see cref="Amount"/> / <see cref="PerDisplayUnit"/> of <see cref="Unit"/>.</summary>
-    private sealed record Step(double Amount, double PerDisplayUnit, string Unit, bool Pluralise = false);
-
-    private static Step StepFor(LogKind kind) => kind switch
+    private static string StepText(ScalarProgression p, int steps)
     {
-        LogKind.Reps => new(1, 1, "rep", Pluralise: true),
-        LogKind.Seconds => new(TimeStepSeconds, 1, "s"),
-        LogKind.Minutes => new(60, 60, "min"),
-        LogKind.DistanceKm => new(0.5, 1, "km"),
-        _ => new(10, 1, "m"),
-    };
-
-    private static SuggestedTarget Stepped(LogKind kind, WorkoutSet from, int steps, string reason)
-    {
-        var add = StepFor(kind).Amount * steps;
-        return kind switch
-        {
-            LogKind.Reps => new(null, from.Reps!.Value + (int)add, null, null, null, reason),
-            LogKind.Seconds or LogKind.Minutes => new(null, null, null, from.DurationSeconds!.Value + (int)add, null, reason),
-            LogKind.DistanceKm => new(null, null, null, null, from.DistanceKm!.Value + add, reason),
-            _ => new(null, null, from.DistanceM!.Value + add, null, null, reason),
-        };
+        var shown = p.Amount * steps / p.PerDisplayUnit;
+        return p.Pluralise ? Plural(shown, p.Unit) : $"{Num(shown)} {p.Unit}";
     }
 
-    private static string StepText(LogKind kind, int steps)
-    {
-        var step = StepFor(kind);
-        var shown = step.Amount * steps / step.PerDisplayUnit;
-        return step.Pluralise ? Plural(shown, step.Unit) : $"{Num(shown)} {step.Unit}";
-    }
-
-    private static string Describe(LogKind kind, WorkoutSet s) => kind switch
-    {
-        LogKind.Reps => $"{s.Reps} reps",
-        LogKind.Seconds => $"{s.DurationSeconds} s",
-        LogKind.Minutes => $"{Num(s.DurationSeconds!.Value / 60.0)} min",
-        LogKind.DistanceKm => $"{Num(s.DistanceKm!.Value)} km",
-        _ => $"{Num(s.DistanceM!.Value)} m",
-    };
+    /// <summary>A stored value in the kind's display unit. A pluralising unit always reads plural ("1 reps").</summary>
+    private static string Describe(ScalarProgression p, double stored) =>
+        $"{Num(stored / p.PerDisplayUnit)} {p.Unit}{(p.Pluralise ? "s" : "")}";
 
     private static string Clock(int seconds) =>
         seconds >= 3600

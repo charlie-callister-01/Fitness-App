@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.LogKinds;
 
 namespace Core.Rules.Performance;
 
@@ -29,8 +30,8 @@ public static class ExercisePerformance
             if (previous is not null
                 && current.WorkoutId == visit.Workout.Id
                 && SetRanking.Compare(
-                    SetRanking.KeyFor(exercise.LogKind, current.Set)!,
-                    SetRanking.KeyFor(exercise.LogKind, previous.Set)!) > 0)
+                    LogKindRules.For(exercise.LogKind).Key(current.Set)!,
+                    LogKindRules.For(exercise.LogKind).Key(previous.Set)!) > 0)
             {
                 prs.Add(new PersonalRecord(current.WorkoutId, current.Date, current.Set));
             }
@@ -58,10 +59,10 @@ public static class ExercisePerformance
     /// <summary>First reading, latest reading and the change between them. Null for non-measurements or with no readings.</summary>
     public static MeasurementChange? BodyChange(Exercise exercise, IEnumerable<Workout> history)
     {
-        if (!IsMeasurement(exercise.LogKind)) return null;
+        if (!LogKindRules.For(exercise.LogKind).IsMeasurement) return null;
         var readings = Visits(exercise, history)
             .SelectMany(v => v.Sets)
-            .Select(s => SetRanking.ChartValue(exercise.LogKind, s))
+            .Select(s => LogKindRules.For(exercise.LogKind).ChartValue(s))
             .OfType<double>()
             .ToList();
         return readings.Count == 0 ? null : new MeasurementChange(readings[0], readings[^1], readings[^1] - readings[0]);
@@ -93,19 +94,18 @@ public static class ExercisePerformance
         return new ExerciseSnapshot(exercise.Id, last, best, target);
     }
 
-    private static bool IsMeasurement(LogKind kind) => kind is LogKind.BodyMeasurementKg or LogKind.BodyMeasurementCm;
-
     private static ProgressPoint? DayPoint(LogKind kind, DateOnly date, IReadOnlyList<WorkoutSet> sets)
     {
-        WorkoutSet? chosen = IsMeasurement(kind)
-            ? sets.LastOrDefault(s => SetRanking.ChartValue(kind, s) is not null)
+        var rules = LogKindRules.For(kind);
+        WorkoutSet? chosen = rules.IsMeasurement
+            ? sets.LastOrDefault(s => rules.ChartValue(s) is not null)
             : sets
                 .Select(s => Candidate.Of(kind, s, date))
                 .OfType<Candidate>()
                 .Aggregate((Candidate?)null, (best, c) => best is null || SetRanking.Compare(c.Key, best.Key) > 0 ? c : best)
                 ?.Set;
 
-        return chosen is not null && SetRanking.ChartValue(kind, chosen) is { } value
+        return chosen is not null && LogKindRules.For(kind).ChartValue(chosen) is { } value
             ? new ProgressPoint(date, value, chosen)
             : null;
     }
@@ -152,6 +152,6 @@ public static class ExercisePerformance
     private sealed record Candidate(WorkoutSet Set, double[] Key, DateOnly Date, string WorkoutId)
     {
         public static Candidate? Of(LogKind kind, WorkoutSet set, DateOnly date, string workoutId = "") =>
-            SetRanking.KeyFor(kind, set) is { } key ? new Candidate(set, key, date, workoutId) : null;
+            LogKindRules.For(kind).Key(set) is { } key ? new Candidate(set, key, date, workoutId) : null;
     }
 }

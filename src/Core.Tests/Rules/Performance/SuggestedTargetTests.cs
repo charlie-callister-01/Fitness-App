@@ -274,6 +274,8 @@ public class SuggestedTargetTests
     [InlineData(LogKind.TickOnly)]
     [InlineData(LogKind.Text)]
     [InlineData(LogKind.BodyMeasurementKg)]
+    [InlineData(LogKind.BodyMeasurementCm)]
+    [InlineData((LogKind)999)]
     public void Kinds_without_a_target_get_none(LogKind kind)
     {
         Assert.Null(Target(kind, Last("2026-01-01", null, Set(kg: 80))));

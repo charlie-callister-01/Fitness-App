@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.LogKinds;
 using Core.Rules.Performance;
 using Core.Rules.Schedule;
 using Core.Rules.Weeks;
@@ -84,8 +85,8 @@ public static class BenchmarkRules
         var latest = results.Count > 0 ? results[^1] : null;
         var previous = results.Count > 1 ? results[^2] : null;
         double? change = latest is not null && previous is not null
-            && SetRanking.ChartValue(exercise.LogKind, latest.Set) is { } now
-            && SetRanking.ChartValue(exercise.LogKind, previous.Set) is { } before
+            && LogKindRules.For(exercise.LogKind).ChartValue(latest.Set) is { } now
+            && LogKindRules.For(exercise.LogKind).ChartValue(previous.Set) is { } before
                 ? now - before
                 : null;
         return new BenchmarkEntry(exercise, ExercisePerformance.Best(exercise, all), latest, previous, change);
