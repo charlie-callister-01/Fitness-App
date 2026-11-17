@@ -108,7 +108,7 @@ Rules are written to match the product brief's carried-over rules exactly. Where
 ### Phase position
 65. As the owner, I want the current Phase worked out from the date and the Plan's start date, so that Phases switch automatically.
 66. As the owner, I want to see the week number inside the Phase and its length, so that "week 3 of 11" is available.
-67. As the owner, I want a Phase goal's readiness (best set meeting the weight and reps) reported with a message, so that the app can say I'm ready to move on early.
+67. As the owner, I want a Phase goal's readiness (any single Set at or above the goal weight and reps) reported with a message, so that the app can say I'm ready to move on early.
 68. As the owner, I want the Exercise rows for a Session to resolve through the current Phase's Override (else the Plan default), so that the planned work for today is a single call.
 
 ### Week schedule and rearrangement
@@ -123,7 +123,7 @@ Rules are written to match the product brief's carried-over rules exactly. Where
 ### Badges and Benchmarks
 76. As the owner, I want Badge progress (value, target, percentage, reached or not) worked out from history, so that it can never get out of sync.
 77. As the owner, I want the metrics `sessions`, `streak`, `best week`, `prs` and "any Exercise" supported, so that the starter Badges work.
-78. As the owner, I want a Badge target of `bodyweight` (as the Exercise-name-free special case) to mean my latest Weigh-in, so that a weight-goal Badge works.
+78. As the owner, I want `bodyweight` to be a Badge metric (the Exercise-name-free special case) meaning my latest Weigh-in, so that a weight-goal Badge works.
 79. As the owner, I want a negative target on a measurement to mean "drop by this much from the start", so that weight-loss Badges work.
 80. As the owner, I want an unknown Badge metric to show as "not measurable" with its name, never crash, so that a Badge edited oddly doesn't break the Trophies screen.
 81. As the owner, I want benchmark Exercises' current best, previous test result and change listed together, so that the Benchmarks screen is one call.
@@ -180,7 +180,7 @@ Rules are written to match the product brief's carried-over rules exactly. Where
 
 ### Phase position
 - The current week number is derived from the Plan's `startDate` and today; the current Phase from the Phase week ranges; "week N of M" within the Phase; before the start or after the last Phase are explicit states.
-- **Phase goal readiness:** met when the Exercise's best loaded Set reaches the goal weight at or above the goal reps (a heavier Set with at least those reps also meets it); the result lists which goals are met.
+- **Phase goal readiness:** a goal is met when any single done or swapped-in Set of its Exercise has weight at least the goal weight and reps at least the goal reps (assumption 8); the result lists which goals are met.
 - A Session's Exercise rows for a date resolve through the current Phase's Override, else the Plan default.
 
 ### Week schedule and rearrangement
@@ -189,8 +189,9 @@ Rules are written to match the product brief's carried-over rules exactly. Where
 - **Rearrangement suggestion:** given outstanding Sessions (missed this week plus not yet reached), the coming non-Break days of the week and the Plan order, produce a proposed placement as a draft. It prefers Plan order, never places two Sessions on a day already holding one unless unavoidable, and avoids placing consecutive-day Sessions that share a muscle-group tag. It returns "nothing to rearrange" when the week is already workable. The result is only ever a proposal.
 
 ### Badges and Benchmarks
-- Badge progress is a pure function of the Badge definition and the full history. Supported metrics: `sessions` (counted Workouts), `streak`, `bestweek`, `prs`, or an Exercise (its best value in the Exercise's measure). A target of `bodyweight` means the latest Weigh-in; a negative target on a measurement means a drop of that size from the first Weigh-in/measurement. The metric value is a plain string in the data (A1 left it open); A2 defines the supported values and returns "not measurable" for anything else.
-- **Benchmarks:** the list of Benchmark exercises with current best, previous benchmark-test result and change; the next benchmark due date from the interval and the last benchmark Workout; and the Benchmark pre-fill rows for a benchmark Session.
+- Badge progress is a pure function of the Badge definition and the full history. Supported metrics: `sessions` (counted Workouts), `streak`, `bestweek`, `prs`, or an Exercise (its best value in the Exercise's measure). The metric `bodyweight` means the latest Weigh-in (it is a metric, not a target value; a target is any non-zero number); a negative target on a measurement means a drop of that size from the first Weigh-in/measurement. The metric value is a plain string in the data (A1 left it open); A2 defines the supported values and returns "not measurable" for anything else.
+- **Benchmarks:** the list of Benchmark exercises with current best, previous benchmark-test result and change; the next benchmark due date from the interval, the Week schedule (day moves) and the last benchmark Workout; and the Benchmark pre-fill rows for a benchmark Session, each Exercise shown with its previous result beside it.
+- **Benchmark week rule:** a benchmark Session is scheduled in Plan weeks 1, 1+N, 1+2N and so on (N is `benchmarkIntervalWeeks`, at least 1 in the format), a baseline in the first week, and never before the Plan starts. It is never a counted Workout.
 
 ### Nudges
 - Nudges are a computed list, never stored. Kinds: missed session, one short of target, repeated pain area, no Backup in 14 days. The Backup Nudge takes the last Backup timestamp as an input value supplied by the caller (its storage is A3 and A4). All quiet during a Break. Result ordering and de-duplication are deterministic.
@@ -226,7 +227,7 @@ Rules are written to match the product brief's carried-over rules exactly. Where
   5. A week containing any Break day is excused from Streak entirely rather than having its minimum scaled.
   6. Consistency: with R workouts remaining and D non-Break days left (including today), "target hit" if R is 0; "target out of reach" if R > D; "behind" if R = D (no spare day); otherwise "on track".
   7. "One short of target" Nudge shows from Thursday onwards.
-  8. A Set counts towards a Phase goal if its weight is at least the goal weight and its reps at least the goal reps.
+  8. A Set counts towards a Phase goal if its weight is at least the goal weight and its reps at least the goal reps. A goal is met by any single such Set, not only the best Set.
   9. Rearrangement muscle-group clash uses the Session Exercise rows' Exercise tags; any shared `muscleGroups` value counts as a clash.
 - **Ordering inside the stage** (proposed for `/to-tickets`): units and parsing first (no dependencies), exercise performance next (best, PR, target), then week/Streak/outcomes/Phase, then Week schedule (includes the small format addition) and rearrangement, then Badges/Benchmarks, then Nudges (depends on the rest). Several of these are independent and can run in parallel after the shared week helper exists.
 - Each ticket must fit one agent in roughly 150 to 200k tokens (see `CLAUDE.md`); the exercise-performance and Week-schedule areas are the likeliest to need splitting.
