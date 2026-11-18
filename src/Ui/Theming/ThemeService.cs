@@ -8,10 +8,21 @@ namespace Ui.Theming;
 /// to the page through <see cref="IThemeInterop"/>. Components read this and never touch the page or storage. It never throws into the
 /// UI: if the save fails the choice still applies for this session and <see cref="LastSaveFailure"/> says why.
 /// </summary>
+/// <remarks>
+/// A failed commit is not reported by <see cref="AppData.Health"/> (that describes the storage, not the last write), so the failure is
+/// kept here. After a failed save the localStorage mirror the page reads at first paint may briefly hold the unsaved choice; Settings
+/// win and the next startup reconciles the page and the mirror back to them.
+/// </remarks>
 public sealed class ThemeService : IDisposable
 {
     private readonly AppData _appData;
     private readonly IThemeInterop _interop;
+
+    // One choice at a time reaches the page and storage, so an older commit can never land after a newer one.
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
+    // True while this service's own commit runs, so the change it raises is not mistaken for one made underneath.
+    private bool _committing;
 
     // The Settings values last seen in the snapshot, so a change underneath (a restored Backup) is told from an unrelated commit.
     private (Theme Theme, Mode Mode) _stored;
@@ -20,9 +31,8 @@ public sealed class ThemeService : IDisposable
     {
         _appData = appData;
         _interop = interop;
-        _stored = (appData.Snapshot.Settings.Theme, appData.Snapshot.Settings.Mode);
-        Theme = _stored.Theme;
-        Mode = _stored.Mode;
+        _stored = StoredChoice();
+        (Theme, Mode) = _stored;
         _appData.Changed += OnAppDataChanged;
     }
 
@@ -47,31 +57,61 @@ public sealed class ThemeService : IDisposable
 
     private async Task ChooseAsync(Theme theme, Mode mode)
     {
+        // Held at once, so a second tap while this one is still saving builds on it.
         Theme = theme;
         Mode = mode;
-        await ApplyAsync();
-        Changed?.Invoke();
 
+        await _gate.WaitAsync();
         try
         {
-            var result = await _appData.CommitAsync(Change.Put(_appData.Snapshot.Settings with { Theme = theme, Mode = mode }));
-            LastSaveFailure = result is CommitResult.Committed ? null : result;
+            // Applies and saves whatever was chosen last, which may be newer than this call's own choice.
+            await ApplyAsync();
+            Changed?.Invoke();
+            await SaveAsync();
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        finally
         {
-            LastSaveFailure = new CommitResult.StoreFailed(new StoreFailure(StoreFailureKind.Unexpected, exception.Message));
+            _gate.Release();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _committing = true;
+        try
+        {
+            var settings = _appData.Snapshot.Settings with { Theme = Theme, Mode = Mode };
+            var error = await RunAsync(async () =>
+            {
+                var result = await _appData.CommitAsync(Change.Put(settings));
+                LastSaveFailure = result is CommitResult.Committed ? null : result;
+            });
+            if (error is not null)
+            {
+                LastSaveFailure = new CommitResult.StoreFailed(new StoreFailure(StoreFailureKind.Unexpected, error.Message));
+            }
+        }
+        finally
+        {
+            _committing = false;
+            _stored = StoredChoice();
         }
     }
 
     private void OnAppDataChanged()
     {
-        var settings = _appData.Snapshot.Settings;
-        if ((settings.Theme, settings.Mode) == _stored)
+        if (_committing)
         {
             return;
         }
 
-        _stored = (settings.Theme, settings.Mode);
+        var stored = StoredChoice();
+        if (stored == _stored)
+        {
+            return;
+        }
+
+        _stored = stored;
         if ((Theme, Mode) == _stored)
         {
             return;
@@ -87,15 +127,22 @@ public sealed class ThemeService : IDisposable
         Changed?.Invoke();
     }
 
-    private async Task ApplyAsync()
+    // If the look cannot be applied (the script is missing or blocked) the choice is still held, and Settings are unaffected.
+    private Task ApplyAsync() => RunAsync(() => _interop.ApplyAsync(Theme, Mode));
+
+    private (Theme Theme, Mode Mode) StoredChoice() => (_appData.Snapshot.Settings.Theme, _appData.Snapshot.Settings.Mode);
+
+    /// <summary>The one error policy: runs the work, never throws into the UI, and hands back what went wrong. Cancellation still escapes.</summary>
+    private static async Task<Exception?> RunAsync(Func<Task> work)
     {
         try
         {
-            await _interop.ApplyAsync(Theme, Mode);
+            await work();
+            return null;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // The look could not be applied (the script is missing or blocked). The choice is still held, and Settings are unaffected.
+            return exception;
         }
     }
 }
