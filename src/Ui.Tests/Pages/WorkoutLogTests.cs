@@ -284,6 +284,118 @@ public sealed class WorkoutLogTests : BunitContext
         Assert.Equal(Services.GetRequiredService<NavigationManager>().BaseUri, Services.GetRequiredService<NavigationManager>().Uri);
     }
 
+    // ---- Pager, Up next, jumping
+
+    private static string PrimaryLabel(IRenderedComponent<WorkoutLog> cut) => cut.Find(".fa-confirmbar .fa-btn--primary").TextContent.Trim();
+
+    private static void ConfirmSets(IRenderedComponent<WorkoutLog> cut, int count, string kg, string reps)
+    {
+        for (var set = 1; set <= count; set++)
+        {
+            Weight(cut, set).Input(kg);
+            Reps(cut, set).Input(reps);
+            Confirm(cut);
+        }
+    }
+
+    [Fact]
+    public async Task The_pager_has_a_numbered_chip_per_exercise_marks_the_current_and_ticks_complete_ones()
+    {
+        var cut = await OpenLogAsync();
+
+        var chips = cut.FindAll(".pager__chip");
+        Assert.Equal(2, chips.Count);
+        Assert.Equal("step", chips[0].GetAttribute("aria-current"));
+        Assert.Null(chips[1].GetAttribute("aria-current"));
+        Assert.Empty(cut.FindAll(".pager__chip .pager__done"));
+
+        ConfirmSets(cut, 3, "20", "8");
+
+        Assert.Contains("✓", cut.FindAll(".pager__chip")[0].TextContent);
+        Assert.Equal("Exercise 1: Goblet squat, done", cut.FindAll(".pager__chip")[0].GetAttribute("aria-label"));
+        Assert.DoesNotContain("✓", cut.FindAll(".pager__chip")[1].TextContent);
+    }
+
+    [Fact]
+    public async Task Tapping_a_chip_jumps_and_coming_back_keeps_confirmed_sets_and_unconfirmed_typing()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+        Weight(cut, 1).Input("20");
+        Reps(cut, 1).Input("8");
+        Confirm(cut);
+        Weight(cut, 2).Input("25");
+
+        cut.FindAll(".pager__chip")[1].Click();
+        Assert.Contains("Walking lunge", cut.Find(".fa-exercise__name").TextContent);
+        Assert.Equal("step", cut.FindAll(".pager__chip")[1].GetAttribute("aria-current"));
+
+        cut.FindAll(".pager__chip")[0].Click();
+        Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
+        Assert.Single(cut.FindAll(".fa-setrow--done"));
+        Assert.Equal("25", Weight(cut, 2).GetAttribute("value"));
+        Assert.Single(SquatSets(data));
+    }
+
+    [Fact]
+    public async Task The_up_next_strip_names_the_following_exercise_and_gives_way_on_the_last()
+    {
+        var cut = await OpenLogAsync();
+        Assert.Equal("Up next: Walking lunge", cut.Find(".fa-confirmbar__info").TextContent.Trim());
+
+        cut.FindAll(".pager__chip")[1].Click();
+
+        Assert.Empty(cut.FindAll(".fa-confirmbar__info"));
+    }
+
+    [Fact]
+    public async Task The_strip_says_the_last_exercise_is_done_once_every_exercise_is_complete()
+    {
+        var cut = await OpenLogAsync();
+        ConfirmSets(cut, 3, "20", "8");
+        Confirm(cut);
+        ConfirmSets(cut, 2, "10", "10");
+
+        Assert.Equal("Last Exercise done", cut.Find(".fa-confirmbar__info").TextContent.Trim());
+        Assert.Equal("Finish", PrimaryLabel(cut));
+    }
+
+    [Fact]
+    public async Task The_primary_label_goes_Confirm_Set_then_Next_then_Finish()
+    {
+        var cut = await OpenLogAsync();
+        Assert.Equal("Confirm Set", PrimaryLabel(cut));
+
+        ConfirmSets(cut, 2, "20", "8");
+        Assert.Equal("Confirm Set", PrimaryLabel(cut));
+        Weight(cut, 3).Input("20");
+        Reps(cut, 3).Input("8");
+        Confirm(cut);
+        Assert.Equal("Next: Walking lunge", PrimaryLabel(cut));
+
+        Confirm(cut);
+        Assert.Equal("Confirm Set", PrimaryLabel(cut));
+        ConfirmSets(cut, 2, "10", "10");
+        Assert.Equal("Finish", PrimaryLabel(cut));
+    }
+
+    [Fact]
+    public async Task Finish_stamps_the_end_once_leaves_the_log_and_Home_no_longer_has_a_workout_in_progress()
+    {
+        var squats = Enumerable.Range(1, 3).Select(i => Set($"s{i}", 20, 8)).ToArray();
+        var lunges = Enumerable.Range(1, 2).Select(i => Set($"l{i}", 10, 10)).ToArray();
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress("w-now",
+            new WorkoutEntry(Squat, EntryStatus.Done, null, null, null, squats),
+            new WorkoutEntry(Lunge, EntryStatus.Done, null, null, null, lunges)));
+        var cut = await OpenLogAsync(data);
+
+        Assert.Equal("Finish", PrimaryLabel(cut));
+        Confirm(cut);
+        Assert.Equal(Now, Stored(data).EndedAt);
+        Assert.Empty(cut.FindAll(".fa-confirmbar"));
+        Assert.DoesNotContain(data.Snapshot.Workouts, w => w.EndedAt is null);
+    }
+
     // ---- Resuming
 
     [Fact]
