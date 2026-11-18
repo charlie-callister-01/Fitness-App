@@ -39,7 +39,7 @@
     }
     @if (IsDone)
     {
-        <button type="button" class="fa-setrow__state fa-setrow__state--done" aria-label="@($"Edit set {Number}")" @onclick="OnReopen"><Icon Name="IconName.Check" /></button>
+        <button type="button" class="@StateClass" aria-label="@($"Edit set {Number}{(IsPr ? ", PR" : "")}")" @onclick="OnReopen">@if (IsPr) { <PrMarker /> } else { <Icon Name="IconName.Check" /> }</button>
     }
     else
     {
@@ -68,6 +68,10 @@
     /// <summary>The first field's text (weight, or "bw"), in display units.</summary>
     [Parameter]
     public string First { get; set; } = "";
+
+    /// <summary>True when this confirmed Set carries the PR marker: the state cell shows it and the reps label gains ", PR".</summary>
+    [Parameter]
+    public bool IsPr { get; set; }
 
     /// <summary>The second field's text (reps).</summary>
     [Parameter]
@@ -126,9 +130,12 @@
     /// <summary>A kind with no layout never reaches a row (the page shows a note instead); Load is only a safe default.</summary>
     private RowLayout Layout => RowLayout.For(Kind) ?? RowLayout.For(LogKind.Load)!;
 
-    private string FirstLabel => $"{Layout.FirstLabel}, set {Number}";
+    /// <summary>The PR suffix goes on the row's last input: the only one in a wide row, the second in a pair.</summary>
+    private string FirstLabel => $"{Layout.FirstLabel}, set {Number}{(Layout.Shape == RowShape.Wide && IsPr ? ", PR" : "")}";
 
-    private string SecondLabel => $"{Layout.SecondLabel}, set {Number}";
+    private string SecondLabel => $"{Layout.SecondLabel}, set {Number}{(IsPr ? ", PR" : "")}";
+
+    private string StateClass => IsPr ? "fa-setrow__state fa-setrow__state--pr" : "fa-setrow__state fa-setrow__state--done";
 
     private string ErrorId => $"set-{Number}-error";
 

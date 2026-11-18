@@ -26,7 +26,7 @@ else
             <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" OnClick="GoBack" />
             <div class="log__heading">
                 <h1 class="fa-title fa-title--m log__session">@view.SessionName</h1>
-                <p class="fa-muted log__progress" aria-live="polite">@view.DoneCount of @view.ExerciseCount done</p>
+                <p class="fa-muted log__progress" aria-live="polite">@view.DoneCount of @view.ExerciseCount done · @view.PrCount @(view.PrCount == 1 ? "PR" : "PRs")</p>
             </div>
         </header>
 
@@ -66,6 +66,7 @@ else
                                 First="@row.First"
                                 Second="@row.Second"
                                 Pending="row.Pending"
+                                IsPr="row.IsPr"
                                 IsMax="row.IsMax"
                                 FirstHint="@row.FirstHint"
                                 SecondHint="@row.SecondHint"
@@ -79,6 +80,11 @@ else
                                 OnReopen="() => Reopen(shown, row.Index)" />
                     }
                 </div>
+
+                @if (_toast is { } toast)
+                {
+                    <p class="fa-well fa-toast" role="status">@toast</p>
+                }
 
                 @if (shown.Rows.Count > 0)
                 {

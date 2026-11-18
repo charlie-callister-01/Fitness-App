@@ -32,6 +32,15 @@ public static class SetText
         _ => "",
     };
 
+    /// <summary>A result without the weight unit, for the "beats 22 × 8" half of the PR toast; every other kind reads as <see cref="Result"/>.</summary>
+    public static string Short(
+        LogKind kind, WorkoutSet set, UnitConverter units, WeightUnit unit, DistanceUnit distanceUnit = DistanceUnit.Km) => kind switch
+    {
+        LogKind.Load => $"{Number(units.DisplayWeight(set.WeightKg ?? 0))} × {set.Reps}",
+        LogKind.BodyweightLoad when set.WeightKg is > 0 => $"bw + {Number(units.DisplayWeight(set.WeightKg.Value))} × {set.Reps}",
+        _ => Result(kind, set, units, unit, distanceUnit),
+    };
+
     public static string Target(
         LogKind kind, SuggestedTarget target, UnitConverter units, WeightUnit unit, DistanceUnit distanceUnit = DistanceUnit.Km) =>
         Result(

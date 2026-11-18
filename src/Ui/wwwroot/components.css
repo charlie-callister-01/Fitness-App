@@ -46,6 +46,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-input--error { border: var(--border-thick) solid var(--pr); }
 .fa-setrow__state { height: var(--tap-log); display: flex; align-items: center; justify-content: center; border: 0; border-radius: var(--r-control); }
 .fa-setrow__state--done { background: var(--done); color: var(--on-done); box-shadow: var(--shadow-raised); }
+.fa-setrow__state--pr { background: transparent; color: var(--on-pr); padding: 0; cursor: pointer; }
 .fa-setrow__max { grid-column: 2 / -1; margin: 0; font-size: calc(12px * var(--display-scale)); font-family: var(--font-label); font-weight: var(--w-label); color: var(--pr-text); display: flex; gap: var(--space-1); align-items: center; }
 .fa-setrow__error { grid-column: 2 / -1; font-size: 13px; color: var(--text); display: flex; gap: var(--space-1); align-items: center; }
 .fa-colheads { display: grid; grid-template-columns: 24px 1fr 14px 1fr var(--tap-log); gap: var(--space-2); font-family: var(--font-label); font-size: calc(12px * var(--display-scale)); color: var(--text-muted); text-align: center; }
@@ -137,3 +138,6 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-setrow__tick--done { background: var(--done); color: var(--on-done); border-color: transparent; cursor: default; }
 .fa-setrow--current .fa-setrow__tick { border: var(--border-thick) solid var(--focus); }
 .fa-setrow__tick:focus-visible { outline: var(--border-thick) solid var(--focus); outline-offset: 2px; }
+
+/* Toast: a short static line under the rows (used with fa-well); no motion, so nothing to switch off for reduced motion. */
+.fa-toast { margin: 0; font-size: calc(16px * var(--display-scale)); }
