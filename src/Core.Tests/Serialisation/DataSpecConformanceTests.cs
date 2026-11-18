@@ -50,6 +50,22 @@ public partial class DataSpecConformanceTests
     }
 
     [Fact]
+    public void Settings_table_and_example_in_the_data_spec_carry_theme_and_mode_with_the_reader_defaults()
+    {
+        var spec = File.ReadAllText(SpecPath());
+        var example = JsonBlock().Matches(spec).Select(m => m.Groups["json"].Value).First(j => j.Contains("\"exportedAt\""));
+
+        var settings = ExchangeFormat.Read(example).Document!.Settings!;
+
+        Assert.Contains("| `theme` | `keep` or `clean` | no |", spec);
+        Assert.Contains("| `mode` | `system`, `dark` or `light` | no |", spec);
+        Assert.Contains("the Keep Theme and System Mode", spec);
+        Assert.Equal((Core.Model.Theme.Keep, Core.Model.Mode.System), (settings.Theme, settings.Mode));
+        Assert.Contains("\"theme\": \"keep\"", example);
+        Assert.Contains("\"mode\": \"system\"", example);
+    }
+
+    [Fact]
     public void Workout_example_in_the_data_spec_is_read_cleanly_by_the_real_reader()
     {
         var example = JsonBlock().Matches(File.ReadAllText(SpecPath())).Select(m => m.Groups["json"].Value).Single(j => j.Contains("\"workouts\""));

@@ -95,8 +95,10 @@ One object holding app-wide settings, so a Backup restores everything.
 | `goalWeightKg` | number > 0 | no | Body-weight goal. |
 | `streakMinWorkoutsPerWeek` | integer >= 1 | yes | Streak rule: Workouts needed in a week. |
 | `streakCountsCustomWorkouts` | boolean | yes | Streak rule: whether Custom workouts count. |
+| `theme` | `keep` or `clean` | no | Display only: the look of the app. Absent means `keep`. An unknown value reads as `keep` with a warning. |
+| `mode` | `system`, `dark` or `light` | no | Display only: dark or light, `system` follows the phone. Absent means `system`. An unknown value reads as `system` with a warning. |
 
-**First-run defaults.** When no Settings are stored (a first run, or Settings never changed), the app uses `Settings.Default`: kg, km, a 2.5 kg weight increment, a 90 second rest timer, no goal weight, a Streak minimum of 3 Workouts a week, and Custom workouts not counted toward the Streak. These are the app's starting product choices, not rules of the format, and the owner can adjust them (change the values in `Settings.Default`; existing stored Settings are unaffected).
+**First-run defaults.** When no Settings are stored (a first run, or Settings never changed), the app uses `Settings.Default`: kg, km, a 2.5 kg weight increment, a 90 second rest timer, no goal weight, a Streak minimum of 3 Workouts a week, and Custom workouts not counted toward the Streak, the Keep Theme and System Mode. These are the app's starting product choices, not rules of the format, and the owner can adjust them (change the values in `Settings.Default`; existing stored Settings are unaffected).
 
 ## Plan, Phase and Session
 
@@ -471,7 +473,9 @@ This block is parsed and validated by the real reader in the test suite.
     "restTimerSeconds": 90,
     "goalWeightKg": 82.5,
     "streakMinWorkoutsPerWeek": 3,
-    "streakCountsCustomWorkouts": true
+    "streakCountsCustomWorkouts": true,
+    "theme": "keep",
+    "mode": "system"
   },
   "weighIns": [
     { "id": "w-2026-11-16", "date": "2026-11-16", "weightKg": 84.35 }
