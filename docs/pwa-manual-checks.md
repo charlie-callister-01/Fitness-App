@@ -67,3 +67,14 @@ What is **NOT covered by CI** and is on this list: quota-full, the real persiste
 7. Open offline after install, with the storage modules loaded.
    - Trigger: install the app, open it once online until it has loaded (the service worker caches `js/indexeddb-store.js` and `js/storage-environment.js` with the rest), save something, close it, switch on airplane mode, open it again.
    - Expect: the app starts (no blank screen or failed module import), the saved data is still there and `StartupState` is `Ready`. Saving works offline because storage is on the device. Also check after an update pickup (see above) that the new modules are used and the old data still loads.
+
+## Theme and Mode manual checks (B0 ticket 03)
+
+CI covers `wwwroot/js/theme.js` in headless Chromium (`ThemeScriptBrowserTests`: pre-paint attributes, System following the colour scheme, chrome colour, blocked mirror). It does **not** run WebAssembly, so the real Blazor interop (`Web/Theming/ThemeInterop.cs` calling `FitnessTheme.apply`) and a real phone need these checks. Use the temporary page `/appearance-stub` (link on Home).
+
+1. All four looks. Pick each of Keep and Clean with each of Dark and Light. Expect the whole app to restyle instantly, and the browser bar (Android Chrome) to change colour: Keep dark `#4A4237`, Keep light `#E8DFC8`, Clean dark `#111315`, Clean light `#F4F5F7`.
+2. No flash. With a non-default choice (for example Clean, Light), reload and cold-start the installed app several times. Expect the first painted frame to already be the chosen look, never Keep dark first.
+3. Survives restart and airplane mode. Choose Clean, Light, close the app, switch on airplane mode, open it. Expect the same look (the script is in the offline cache).
+4. System follows the phone. Choose Mode System, then switch the phone between dark and light (Quick Settings) with the app open. Expect the app to follow without a reload.
+5. Source of truth. In DevTools (remote debugging) change `data-theme` on `<html>` by hand, then reload: the stored choice comes back. After restoring a Backup that has a different Theme or Mode, expect the app to show the restored look.
+6. Blocked storage. In a private tab, the look still switches for the session and may reset on reload; nothing errors.

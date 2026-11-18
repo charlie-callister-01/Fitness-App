@@ -1,0 +1,40 @@
+@using Core.Model
+@implements IDisposable
+@inject ThemeService Themes
+
+<section class="fa-root" aria-labelledby="appearance-heading">
+    <h2 id="appearance-heading" class="fa-title fa-title--m">Appearance</h2>
+
+    <div role="group" aria-labelledby="theme-label" class="fa-panel">
+        <p id="theme-label" class="fa-label">Theme</p>
+        <div class="fa-chips">
+            @foreach (var theme in Enum.GetValues<Theme>())
+            {
+                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Theme == theme)" @onclick="() => Themes.SetThemeAsync(theme)">@theme</button>
+            }
+        </div>
+    </div>
+
+    <div role="group" aria-labelledby="mode-label" class="fa-panel">
+        <p id="mode-label" class="fa-label">Mode</p>
+        <div class="fa-chips">
+            @foreach (var mode in Enum.GetValues<Mode>())
+            {
+                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Mode == mode)" @onclick="() => Themes.SetModeAsync(mode)">@mode</button>
+            }
+        </div>
+    </div>
+
+    @if (Themes.LastSaveFailure is not null)
+    {
+        <p class="fa-muted" role="status">This choice is applied now but could not be saved, so it may not be there next time.</p>
+    }
+</section>
+
+@code {
+    protected override void OnInitialized() => Themes.Changed += OnThemeChanged;
+
+    public void Dispose() => Themes.Changed -= OnThemeChanged;
+
+    private void OnThemeChanged() => _ = InvokeAsync(StateHasChanged);
+}
