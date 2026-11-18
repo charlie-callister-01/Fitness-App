@@ -1,22 +1,23 @@
 using Core.Model;
 using Core.Storage;
+using Ui.Saving;
 
 namespace Ui.Theming;
 
 /// <summary>
 /// Owns the current Theme and Mode. They are read from <see cref="AppData"/>, a choice is committed as a Settings change and applied
 /// to the page through <see cref="IThemeInterop"/>. Components read this and never touch the page or storage. It never throws into the
-/// UI: if the save fails the choice still applies for this session and <see cref="LastSaveFailure"/> says why.
+/// UI: if the save fails the choice still applies for this session and the failure goes to the <see cref="SaveFailureNotice"/>.
 /// </summary>
 /// <remarks>
-/// A failed commit is not reported by <see cref="AppData.Health"/> (that describes the storage, not the last write), so the failure is
-/// kept here. After a failed save the localStorage mirror the page reads at first paint may briefly hold the unsaved choice; Settings
+/// After a failed save the localStorage mirror the page reads at first paint may briefly hold the unsaved choice; Settings
 /// win and the next startup reconciles the page and the mirror back to them.
 /// </remarks>
 public sealed class ThemeService : IDisposable
 {
     private readonly AppData _appData;
     private readonly IThemeInterop _interop;
+    private readonly SaveFailureNotice _notice;
 
     // One choice at a time reaches the page and storage, so an older commit can never land after a newer one.
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -27,10 +28,11 @@ public sealed class ThemeService : IDisposable
     // The Settings values last seen in the snapshot, so a change underneath (a restored Backup) is told from an unrelated commit.
     private (Theme Theme, Mode Mode) _stored;
 
-    public ThemeService(AppData appData, IThemeInterop interop)
+    public ThemeService(AppData appData, IThemeInterop interop, SaveFailureNotice notice)
     {
         _appData = appData;
         _interop = interop;
+        _notice = notice;
         _stored = StoredChoice();
         (Theme, Mode) = _stored;
         _appData.Changed += OnAppDataChanged;
@@ -39,9 +41,6 @@ public sealed class ThemeService : IDisposable
     public Theme Theme { get; private set; }
 
     public Mode Mode { get; private set; }
-
-    /// <summary>Why the last choice was not saved, or null when it was (or nothing has been chosen). The choice is applied either way.</summary>
-    public CommitResult? LastSaveFailure { get; private set; }
 
     /// <summary>Raised after the current Theme or Mode changes, whether chosen here or changed underneath.</summary>
     public event Action? Changed;
@@ -83,12 +82,11 @@ public sealed class ThemeService : IDisposable
             var settings = _appData.Snapshot.Settings with { Theme = Theme, Mode = Mode };
             var error = await RunAsync(async () =>
             {
-                var result = await _appData.CommitAsync(Change.Put(settings));
-                LastSaveFailure = result is CommitResult.Committed ? null : result;
+                _notice.Report(await _appData.CommitAsync(Change.Put(settings)));
             });
             if (error is not null)
             {
-                LastSaveFailure = new CommitResult.StoreFailed(new StoreFailure(StoreFailureKind.Unexpected, error.Message));
+                _notice.Report(new CommitResult.StoreFailed(new StoreFailure(StoreFailureKind.Unexpected, error.Message)));
             }
         }
         finally

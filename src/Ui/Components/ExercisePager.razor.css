@@ -1,0 +1,36 @@
+.pager {
+    display: flex;
+    gap: var(--space-1);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.pager__chip {
+    flex: 0 0 auto;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--r-control);
+    background: var(--surface-sunken);
+    box-shadow: var(--shadow-sunken);
+    color: var(--text-muted);
+    font-family: var(--font-label);
+    font-weight: var(--w-label);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+}
+
+.pager__chip[aria-current="step"] {
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-raised);
+    color: var(--text-heading);
+    outline: var(--border-thin) solid var(--focus);
+    outline-offset: calc(-1 * var(--outline-offset));
+}
+
+.pager__done {
+    color: var(--done-text);
+}

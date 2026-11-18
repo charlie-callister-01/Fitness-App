@@ -8,7 +8,7 @@
     <header class="bar">
         <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" OnClick="GoBack" />
     </header>
-    <main id="main-content" class="column" tabindex="-1" @ref="main">@Body</main>
+    <main id="main-content" class="column" tabindex="-1" @ref="main"><SaveFailureBanner />@Body</main>
 </div>
 
 @code {

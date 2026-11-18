@@ -1,0 +1,62 @@
+@* C-04 ExerciseHeader: the name, the planned Sets x reps and the Plan's cue, then Last and Best on one line and the Suggested target in a
+   sunken well. Last, Best and the target are shown only when given: a new Exercise shows no empty labels. *@
+<section class="fa-exercise" aria-label="Exercise">
+    <div class="fa-exercise__top">
+        <h2 class="fa-exercise__name">@Name</h2>
+    </div>
+    @if (Planned is not null)
+    {
+        <p class="fa-muted">@Planned</p>
+    }
+    @if (Cue is not null)
+    {
+        <p class="fa-muted">@Cue</p>
+    }
+    @if (Last is not null || Best is not null)
+    {
+        <p class="fa-exercise__lastbest">@LastAndBest</p>
+    }
+    @if (Target is not null)
+    {
+        <div class="fa-well fa-target">
+            <b>@Target</b>@if (Reason is not null)
+            {
+                <span> &mdash; @Reason</span>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    /// <summary>The planned Sets and reps as text, for example "3 × 8"; null when the plan has none.</summary>
+    [Parameter]
+    public string? Planned { get; set; }
+
+    [Parameter]
+    public string? Cue { get; set; }
+
+    /// <summary>What was done last time in the owner's units, for example "22 kg × 8"; null for a new Exercise.</summary>
+    [Parameter]
+    public string? Last { get; set; }
+
+    /// <summary>The Best result in the owner's units; null for a new Exercise.</summary>
+    [Parameter]
+    public string? Best { get; set; }
+
+    /// <summary>The Suggested target in the owner's units; null when there is none.</summary>
+    [Parameter]
+    public string? Target { get; set; }
+
+    /// <summary>The one-line reason for the Suggested target.</summary>
+    [Parameter]
+    public string? Reason { get; set; }
+
+    private string LastAndBest => string.Join(" · ", new[]
+    {
+        Last is null ? null : $"Last {Last}",
+        Best is null ? null : $"Best {Best}",
+    }.OfType<string>());
+}

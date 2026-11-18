@@ -1,7 +1,87 @@
 @page "/"
+@using Core.Ids
+@using Core.Model
+@using Core.Rules.Starting
+@using Core.Storage
+@using Core.Time
+@implements IDisposable
+@inject AppData Data
+@inject IClock Clock
+@inject IIdGenerator Ids
+@inject SaveFailureNotice Notice
+@inject NavigationManager Navigation
 
-@* Placeholder (B0): the real Home (S-01) arrives in a later stage. *@
+@* Placeholder (B0): the real Home (S-01) arrives in a later stage.
+   TEMPORARY (B1): the Start and Continue button below is the only way into the Workout log until B3 replaces this page with the
+   real Home (TodayCard, Do a different Session, Make up a Missed session). Keep it plain. *@
 <div class="fa-root">
     <h1 class="fa-title fa-title--l">Fitness App</h1>
-    <EmptyState Kind="EmptyStateKind.FirstRun" Title="Welcome" Message="Today's Session will live here." />
+    @if (WorkoutStart.InProgress(Data.Snapshot.Workouts) is { } inProgress)
+    {
+        <p class="fa-muted">A Workout is in progress.</p>
+        <Button Variant="ButtonVariant.Primary" Href="@($"log/{inProgress.Id}")">Continue</Button>
+    }
+    else if (ActivePlan is null)
+    {
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No active Plan" Message="Make a Plan active and today's Session will start from here." />
+    }
+    else if (ActivePlan.Sessions.Count == 0)
+    {
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="Your Plan has no Sessions" Message="Add a Session to the active Plan to start a Workout." />
+    }
+    else if (Next is { } next)
+    {
+        <p class="fa-muted">Next up: @next.Session.Name</p>
+        <Button Variant="ButtonVariant.Primary" Disabled="@(!Data.Health.CanWrite)" OnClick="() => StartAsync(next.Session)">Start</Button>
+    }
+    else
+    {
+        <EmptyState Kind="EmptyStateKind.FirstRun" Title="All done this week" Message="Every Session of this week has a Workout." />
+    }
 </div>
+
+@code {
+    private bool _starting;
+
+    private Plan? ActivePlan => Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
+
+    private Core.Rules.Schedule.ScheduledSession? Next =>
+        WorkoutStart.NextToStart(
+            ActivePlan, Data.Snapshot.WeekSchedules, Data.Snapshot.Breaks, Data.Snapshot.Workouts, Today);
+
+    private DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.ToLocalTime().DateTime);
+
+    protected override void OnInitialized() => Data.Changed += OnDataChanged;
+
+    public void Dispose() => Data.Changed -= OnDataChanged;
+
+    private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task StartAsync(Session session)
+    {
+        // A second tap while the first is saving must not start another Workout.
+        if (_starting || ActivePlan is not { } plan)
+        {
+            return;
+        }
+
+        _starting = true;
+        try
+        {
+            var outcome = await new WorkoutStarter(Data, Ids, Clock).StartAsync(plan, session, Today);
+            if (outcome.Commit is { } commit)
+            {
+                Notice.Report(commit);
+            }
+
+            if (outcome.Workout is { } workout)
+            {
+                Navigation.NavigateTo($"log/{workout.Id}");
+            }
+        }
+        finally
+        {
+            _starting = false;
+        }
+    }
+}

@@ -1,7 +1,9 @@
+using Core.Ids;
 using Core.Time;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Ui;
+using Ui.Saving;
 using Ui.Theming;
 using Web;
 using Web.Storage;
@@ -12,9 +14,11 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddSingleton<IIdGenerator, GuidIdGenerator>();
 builder.Services.AddSingleton<IBuildInfo, AssemblyBuildInfo>();
 builder.Services.AddStorage();
 builder.Services.AddSingleton<IThemeInterop, ThemeInterop>();
+builder.Services.AddSingleton<SaveFailureNotice>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<InAppHistory>();
 

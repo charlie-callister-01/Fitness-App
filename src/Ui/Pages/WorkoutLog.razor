@@ -1,0 +1,115 @@
+@page "/log/{WorkoutId}"
+@layout FullScreenLayout
+@using Core.Model
+@using Core.Rules.LogKinds
+@using Ui.Log
+@implements IDisposable
+
+@if (OpenWorkout is not { } workout)
+{
+    <div class="log">
+        @if (ReadOnlyMessage is { } unreadable && !Data.Health.CanWrite)
+        {
+            <p class="fa-well log__notice" role="status">@unreadable</p>
+        }
+        else
+        {
+            <h1 class="fa-title fa-title--l">Workout not found</h1>
+            <p class="fa-muted">This Workout is not in progress, so there is nothing to log here.</p>
+        }
+        <Button Variant="ButtonVariant.Primary" Href="./">Back to Home</Button>
+    </div>
+}
+else
+{
+    var view = ViewOf(workout);
+    var progress = view.Progress;
+    <div class="log">
+        <header class="log__bar">
+            <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" OnClick="GoBack" />
+            <div class="log__heading">
+                <h1 class="fa-title fa-title--m log__session">@view.SessionName</h1>
+                <p class="fa-muted log__progress" aria-live="polite">@progress.DoneCount of @progress.ExerciseCount done · @progress.PrCount @(progress.PrCount == 1 ? "PR" : "PRs")</p>
+            </div>
+        </header>
+
+        <div class="log__body">
+            <ExercisePager Chips="view.Chips" Current="State.Current" OnJump="State.Show" />
+            @if (State.Resumed)
+            {
+                <p class="fa-well log__notice" role="status">Resumed where you left off</p>
+            }
+            @if (ReadOnlyMessage is { } readOnly)
+            {
+                <p class="fa-well log__notice" role="status">@readOnly</p>
+            }
+
+            @if (view.Exercise is not { } shown)
+            {
+                <p class="fa-muted">This Workout has no Exercises.</p>
+            }
+            else
+            {
+                var id = shown.Info.ExerciseId;
+                <ExerciseHeader Name="@shown.Info.Name" Planned="@shown.Info.PlannedText" Cue="@shown.Info.Cue"
+                                Last="@shown.Header?.Last" Best="@shown.Header?.Best"
+                                Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" />
+
+                @if (shown.Unavailable is { } unavailable)
+                {
+                    <p class="fa-well log__notice">@unavailable</p>
+                }
+
+                @if (shown.Rows is { } rows)
+                {
+                    <div class="log__rows">
+                        @foreach (var row in rows.Items)
+                        {
+                            var key = new RowKey(id, row.Index);
+                            <SetRow @key="row.Index"
+                                    Number="row.Index + 1"
+                                    Spec="rows.Spec"
+                                    State="row.State"
+                                    First="@row.Face.First"
+                                    Second="@row.Face.Second"
+                                    Pending="row.Marks.Pending"
+                                    IsPr="row.Marks.IsPr"
+                                    IsMax="row.Marks.IsMax"
+                                    FirstHint="@row.Face.FirstHint"
+                                    SecondHint="@row.Face.SecondHint"
+                                    ErrorMessage="@(row.HasError ? State.Error?.Message : null)"
+                                    InvalidField="@(row.HasError ? State.Error?.Field : null)"
+                                    FocusField="@(State.Focus is { } focus && focus.Row == key ? focus.Field : (RowField?)null)"
+                                    FocusSequence="State.Focus?.Sequence ?? 0"
+                                    FirstChanged="text => State.Type(key, RowField.First, text, row.Face)"
+                                    SecondChanged="text => State.Type(key, RowField.Second, text, row.Face)"
+                                    OnConfirm="ConfirmAsync"
+                                    OnReopen="() => State.Reopen(key, row.Face)" />
+                        }
+                    </div>
+
+                    @if (State.Toast is { } toast)
+                    {
+                        <p class="fa-well fa-toast" role="status">@toast</p>
+                    }
+
+                    <div class="log__tools">
+                        <button type="button" class="log__link" @onclick="() => State.AddSet(id)">Add Set</button>
+                        @if (rows.Tools.RemovableRow is { } removable)
+                        {
+                            <button type="button" class="log__link" @onclick="() => State.RemoveSet(id, removable)">Remove Set @(removable + 1)</button>
+                        }
+                        @if (rows.Tools.MaxTarget is { } target)
+                        {
+                            <button type="button" class="log__link" @onclick="() => ToggleMaxAsync(shown)">@(rows.Items[target].Marks.IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
+                        }
+                    </div>
+                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => SetRpeAsync(id, rpe)" />
+                }
+            }
+        </div>
+
+        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
+                    StepAmount="@view.Exercise?.Rows?.Tools.StepAmount" StepUnit="@(view.Exercise?.Rows?.Tools.Step?.Unit ?? "")" OnStep="Step" />
+    </div>
+}

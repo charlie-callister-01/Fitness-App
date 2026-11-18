@@ -19,7 +19,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 
 /* Panels and wells */
 .fa-panel { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-panel); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
-.fa-well { background: var(--surface-sunken); border-radius: var(--r-control); box-shadow: var(--shadow-sunken); padding: 10px 12px; }
+.fa-well { background: var(--surface-sunken); border-radius: var(--r-control); box-shadow: var(--shadow-sunken); padding: var(--space-3); }
 
 /* Buttons (C-01) */
 .fa-btn { min-height: var(--tap-min); padding: 0 var(--space-4); border: 0; border-radius: var(--r-control); font-family: var(--font-label); font-size: calc(16px * var(--display-scale)); font-weight: var(--w-label); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
@@ -27,7 +27,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-btn--secondary { background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); }
 [data-theme="keep"] .fa-btn--secondary { color: var(--text-heading); }
 .fa-btn--icon { width: var(--tap-min); padding: 0; background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); }
-.fa-btn--stepper { min-height: var(--tap-primary); min-width: 60px; padding: 0; background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); font-size: 20px; }
+.fa-btn--stepper { min-height: var(--tap-primary); min-width: var(--tap-primary); padding: 0; background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); font-size: 20px; }
 .fa-btn:focus-visible, .fa-input:focus-visible, .fa-rpe button:focus-visible, .fa-tab:focus-visible, .fa-tile:focus-visible { outline: var(--border-thick) solid var(--focus); outline-offset: 2px; }
 .fa-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .fa-btn:active:not(:disabled) { transform: translateY(1px); }
@@ -46,6 +46,8 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-input--error { border: var(--border-thick) solid var(--pr); }
 .fa-setrow__state { height: var(--tap-log); display: flex; align-items: center; justify-content: center; border: 0; border-radius: var(--r-control); }
 .fa-setrow__state--done { background: var(--done); color: var(--on-done); box-shadow: var(--shadow-raised); }
+.fa-setrow__state--pr { background: transparent; color: var(--on-pr); padding: 0; cursor: pointer; }
+.fa-setrow__max { grid-column: 2 / -1; margin: 0; font-size: calc(12px * var(--display-scale)); font-family: var(--font-label); font-weight: var(--w-label); color: var(--pr-text); display: flex; gap: var(--space-1); align-items: center; }
 .fa-setrow__error { grid-column: 2 / -1; font-size: 13px; color: var(--text); display: flex; gap: var(--space-1); align-items: center; }
 .fa-colheads { display: grid; grid-template-columns: 24px 1fr 14px 1fr var(--tap-log); gap: var(--space-2); font-family: var(--font-label); font-size: calc(12px * var(--display-scale)); color: var(--text-muted); text-align: center; }
 
@@ -75,22 +77,22 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-rpe button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
 
 /* Confirm bar (C-06) */
-.fa-confirmbar { background: var(--surface); box-shadow: var(--shadow-sheet); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 10px var(--space-3) 18px; display: flex; flex-direction: column; gap: 10px; }
+.fa-confirmbar { background: var(--surface); box-shadow: var(--shadow-sheet); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: var(--space-3) var(--space-3) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
 .fa-confirmbar__info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
 .fa-confirmbar__info b { color: var(--text-label); font-weight: 700; }
 [data-theme="clean"] .fa-confirmbar__info b { color: var(--text); }
-.fa-confirmbar__row { display: grid; grid-template-columns: 60px 1fr 60px; gap: 10px; }
+.fa-confirmbar__row { display: grid; grid-template-columns: var(--tap-primary) 1fr var(--tap-primary); gap: var(--space-3); }
 
 /* State chips (C-07) */
 .fa-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.fa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: var(--border-thin) solid currentColor; border-radius: var(--r-control); font-family: var(--font-label); font-size: calc(13px * var(--display-scale)); font-weight: var(--w-label); background: var(--surface); }
+.fa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--space-8); padding: 0 var(--space-3); border: var(--border-thin) solid currentColor; border-radius: var(--r-control); font-family: var(--font-label); font-size: calc(13px * var(--display-scale)); font-weight: var(--w-label); background: var(--surface); }
 .fa-chip--pr { color: var(--pr-text); } .fa-chip--done { color: var(--done-text); } .fa-chip--partial { color: var(--state-partial); } .fa-chip--skipped { color: var(--state-skipped); } .fa-chip--swapped { color: var(--state-swapped); } .fa-chip--missed { color: var(--state-missed); border-style: dashed; } .fa-chip--pain { color: var(--state-pain); }
 
 /* Nudge (C-08) */
 .fa-nudge { background: var(--nudge-bg); color: var(--nudge-text); border-radius: var(--r-card); box-shadow: var(--shadow-panel); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; line-height: 20px; }
 .fa-nudge__lead { color: var(--nudge-label); font-weight: 700; }
 .fa-nudge__actions { display: flex; gap: var(--space-1); flex-shrink: 0; }
-.fa-nudge .fa-btn { min-height: 36px; padding: 0 10px; font-size: 13px; }
+.fa-nudge .fa-btn { min-height: var(--tap-min); padding: 0 var(--space-3); font-size: 13px; }
 .fa-nudge__dismiss { width: var(--tap-min); min-height: var(--tap-min); background: none; border: 0; color: var(--nudge-text); }
 
 /* Today's Workout card (C-09) */
@@ -129,3 +131,13 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 /* Keep the display face free of ligatures and contextual swaps so labels read letter by letter. */
 .fa-title, .fa-label, .fa-btn, .fa-exercise__name, .fa-tile, .fa-chip, .fa-tab { font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0, "calt" 0; }
 .fa-setrow__error[hidden] { display: none; }
+
+/* Set row, one wide input (seconds, reps, time, distance, measurements) or one tick button: spans the two input columns and the gap */
+.fa-setrow__wide { grid-column: 2 / 5; }
+.fa-setrow__tick { grid-column: 2 / 5; height: var(--tap-log); box-sizing: border-box; border: var(--border-thin) solid var(--input-border); border-radius: var(--r-control); background: var(--input-bg); color: var(--input-text); font-family: var(--font-system); font-size: 24px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.fa-setrow__tick--done { background: var(--done); color: var(--on-done); border-color: transparent; cursor: default; }
+.fa-setrow--current .fa-setrow__tick { border: var(--border-thick) solid var(--focus); }
+.fa-setrow__tick:focus-visible { outline: var(--border-thick) solid var(--focus); outline-offset: var(--outline-offset); }
+
+/* Toast: a short static line under the rows (used with fa-well); no motion, so nothing to switch off for reduced motion. */
+.fa-toast { margin: 0; font-size: calc(16px * var(--display-scale)); }

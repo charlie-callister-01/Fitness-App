@@ -6,6 +6,12 @@ namespace Ui.Tests.Shell;
 
 public sealed class ShellPagesTests : BunitContext
 {
+    public ShellPagesTests()
+    {
+        // Home reads the dataset (it offers Start), so it needs an opened, empty AppData.
+        Ui.Tests.Pages.LogFixture.Wire(this, Core.Storage.AppData.OpenAsync(new Core.Storage.InMemoryDataStore()).GetAwaiter().GetResult());
+    }
+
     [Theory]
     [InlineData(typeof(Home), "/")]
     [InlineData(typeof(Week), "/week")]

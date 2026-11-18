@@ -30,6 +30,7 @@ public sealed class LayoutTests : BunitContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddSingleton<InAppHistory>();
+        Services.AddSingleton<Ui.Saving.SaveFailureNotice>();
     }
 
     // Mirrors App.razor: the router's RouteView with the main layout as the default.

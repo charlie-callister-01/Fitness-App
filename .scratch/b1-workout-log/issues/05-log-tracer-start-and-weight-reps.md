@@ -1,0 +1,14 @@
+# 05: Tracer: Start on Home, then log weight × reps
+
+**What to build:** The first end-to-end slice. The Home placeholder gets a temporary Start button (next Session of the active Plan, from ticket 01) or Continue when a Workout is in progress, with a code note naming B3; no Plan or no Sessions says so plainly. Start creates the Workout, saves it and opens the full-screen log page at a route addressed by the Workout ID. The page has the top bar (Back, Session name, "x of n done"), a basic Exercise header (name, planned Sets × reps, cue), SetRow (C-02) for weight × reps with pre-fill (ticket 03), muted pending rows, select-all on focus, numeric `inputmode`, Enter moving between fields and confirming, validation on Confirm only (message under the row, `aria-invalid`, focus back, input kept), the green tick that reopens a Set, and the ConfirmBar with the primary "Confirm Set". An entry is created on the first confirmed Set; every change is saved at once, merging into the snapshot's latest Workout. Refresh or deep link restores the log with "Resumed where you left off", landing on the first incomplete Exercise. An unknown or finished Workout ID shows a plain message with a way Home. Read-only with a clear message when storage cannot be read or the writer lock is held; failed saves use ticket 04's banner and keep the typed entry. Reuse B0 components. Spec: `docs/specs/b1-workout-log-core-input.md`; design S-02, C-02, C-06, §8.2.
+
+**Blocked by:** 01, 03, 04.
+
+**Status:** done (see the note under the criteria)
+
+- [x] bUnit page tests over real `AppData` on the in-memory store: Start, type, Confirm, stored canonical Set; pending "same as last"; validation message and focus; reopen a done Set; reload restores and shows Resumed
+- [x] Home tests: Start, Continue, no Plan, in-progress guard (no second Workout)
+- [x] Failed save (fault-injecting store) keeps the entry and shows the banner; retry succeeds; writer-lock and unreadable states are read-only
+- [ ] Fields labelled ("Weight, set 2", "Reps, set 2"), visible focus, 44 px / 64 px targets, safe-area bottom bar, 360 px no sideways scroll
+
+**Note (ticket 05 implementation):** The fourth criterion is left unticked: labels are tested, but visible focus (global `:focus-visible`), the 44 px / 64 px targets (existing tokens and `fa-*` classes), the safe-area bottom bar and the 360 px no-sideways-scroll layout are CSS-only and not checked in a browser. They belong on the manual phone checks (ticket 07). Also built so a Workout cannot be stranded: Next (to the next Exercise) and the temporary Finish (stamps `EndedAt`, back to Home). Bodyweight x reps rides the same two-field row. Other kinds show a "cannot be logged here yet" note with Next (ticket 06). The "banner" for a failed save is the shared SaveFailureNotice banner; tests assert the notice message.

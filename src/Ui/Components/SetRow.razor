@@ -1,0 +1,186 @@
+@using Core.Rules.LogKinds
+@* C-02 SetRow: number, one or two inputs, state cell. Driven by parameters and callbacks only; the page owns saving and rules.
+   The layout (two inputs, one wide input, or a tick button) comes from the log kind's RowSpec. *@
+<div class="@RowClass">
+    <span class="fa-setrow__n">@Number</span>
+    @switch (Spec.Shape)
+    {
+        case RowShape.Tick:
+            @if (IsDone)
+            {
+                <span class="fa-setrow__tick fa-setrow__tick--done">Done</span>
+            }
+            else
+            {
+                <button type="button" class="fa-setrow__tick" aria-label="@($"Mark Set {Number} done")" @onclick="OnConfirm">Done</button>
+            }
+            break;
+        case RowShape.Wide:
+            <input @ref="_first" class="@InputClass(RowField.First) fa-setrow__wide" type="text" inputmode="@Spec.FirstMode" autocomplete="off" enterkeyhint="done"
+                   aria-label="@FirstLabel" aria-invalid="@Invalid(RowField.First)" readonly="@IsDone" placeholder="@FirstHint"
+                   value="@First" onfocus="this.select()"
+                   @oninput="e => FirstChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="e => OnKey(e, RowField.First)" />
+            break;
+        default:
+            @* Two inputs: the first decimal, the second usually whole. *@
+            <input @ref="_first" class="@InputClass(RowField.First)" type="text" inputmode="@Spec.FirstMode" autocomplete="off" enterkeyhint="next"
+                   aria-label="@FirstLabel" aria-invalid="@Invalid(RowField.First)" readonly="@IsDone" placeholder="@FirstHint"
+                   value="@First" onfocus="this.select()"
+                   @oninput="e => FirstChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="e => OnKey(e, RowField.First)" />
+            <span class="fa-setrow__x" aria-hidden="true">×</span>
+            <input @ref="_second" class="@InputClass(RowField.Second)" type="text" inputmode="@Spec.SecondMode" autocomplete="off" enterkeyhint="done"
+                   aria-label="@SecondLabel" aria-invalid="@Invalid(RowField.Second)" readonly="@IsDone" placeholder="@SecondHint"
+                   value="@Second" onfocus="this.select()"
+                   @oninput="e => SecondChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="e => OnKey(e, RowField.Second)" />
+            break;
+    }
+    @if (IsDone)
+    {
+        <button type="button" class="@StateClass" aria-label="@($"Edit Set {Number}{(IsPr ? ", PR" : "")}")" @onclick="OnReopen">@if (IsPr) { <PrMarker /> } else { <Icon Name="IconName.Check" /> }</button>
+    }
+    else
+    {
+        <span class="fa-setrow__state"></span>
+    }
+    @if (IsMax)
+    {
+        <p class="fa-setrow__max"><Icon Name="IconName.MaxSet" /> Max set</p>
+    }
+    @if (ErrorMessage is not null)
+    {
+        <p class="fa-setrow__error" id="@ErrorId">@ErrorMessage</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public int Number { get; set; }
+
+    /// <summary>The row's layout for its log kind: one, two or a tick. Only kinds that can be logged have one.</summary>
+    [Parameter, EditorRequired]
+    public RowSpec Spec { get; set; } = default!;
+
+    [Parameter]
+    public SetRowState State { get; set; } = SetRowState.Upcoming;
+
+    /// <summary>The first field's text (weight, or "bw"), in display units.</summary>
+    [Parameter]
+    public string First { get; set; } = "";
+
+    /// <summary>True when this confirmed Set carries the PR marker: the state cell shows it and the reps label gains ", PR".</summary>
+    [Parameter]
+    public bool IsPr { get; set; }
+
+    /// <summary>The second field's text (reps).</summary>
+    [Parameter]
+    public string Second { get; set; } = "";
+
+    /// <summary>True while the values are only the prefill: shown muted until confirmed or edited.</summary>
+    [Parameter]
+    public bool Pending { get; set; }
+
+    /// <summary>True when this Set is flagged as a Max set: the row says so in words.</summary>
+    [Parameter]
+    public bool IsMax { get; set; }
+
+    /// <summary>Plain-language message for this row, shown under it; null when the row is fine.</summary>
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>Which field is invalid when there is a message.</summary>
+    [Parameter]
+    public RowField? InvalidField { get; set; }
+
+    /// <summary>Which field to focus when <see cref="FocusSequence"/> changes; null for none.</summary>
+    [Parameter]
+    public RowField? FocusField { get; set; }
+
+    /// <summary>A counter: each new value asks this row to move focus to <see cref="FocusField"/>.</summary>
+    [Parameter]
+    public int FocusSequence { get; set; }
+
+    [Parameter]
+    public string? FirstHint { get; set; }
+
+    [Parameter]
+    public string? SecondHint { get; set; }
+
+    [Parameter]
+    public EventCallback<string> FirstChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SecondChanged { get; set; }
+
+    /// <summary>Enter in the last field.</summary>
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    /// <summary>The green tick was tapped: reopen this Set for editing.</summary>
+    [Parameter]
+    public EventCallback OnReopen { get; set; }
+
+    private ElementReference _first;
+    private ElementReference _second;
+    private int _handledFocus;
+
+    private bool IsDone => State == SetRowState.Done;
+
+    /// <summary>The PR suffix goes on the row's last input: the only one in a wide row, the second in a pair.</summary>
+    private string FirstLabel => $"{Spec.FirstLabel}, Set {Number}{(Spec.Shape == RowShape.Wide && IsPr ? ", PR" : "")}";
+
+    private string SecondLabel => $"{Spec.SecondLabel}, Set {Number}{(IsPr ? ", PR" : "")}";
+
+    private string StateClass => IsPr ? "fa-setrow__state fa-setrow__state--pr" : "fa-setrow__state fa-setrow__state--done";
+
+    private string ErrorId => $"set-{Number}-error";
+
+    private string RowClass => $"fa-setrow fa-setrow--{State.ToString().ToLowerInvariant()}";
+
+    private bool IsInvalid(RowField field) => ErrorMessage is not null && InvalidField == field;
+
+    private string InputClass(RowField field) => string.Join(' ', new[]
+    {
+        "fa-input",
+        Pending && !IsDone ? "fa-input--pending" : null,
+        State == SetRowState.Current ? "fa-input--current" : null,
+        IsInvalid(field) ? "fa-input--error" : null,
+    }.Where(c => c is not null));
+
+    private string? Invalid(RowField field) => IsInvalid(field) ? "true" : null;
+
+    private async Task OnKey(KeyboardEventArgs e, RowField field)
+    {
+        if (e.Key != "Enter" || IsDone)
+        {
+            return;
+        }
+
+        if (field == RowField.First && Spec.Shape == RowShape.Pair)
+        {
+            await _second.FocusAsync();
+        }
+        else
+        {
+            await OnConfirm.InvokeAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (FocusSequence != _handledFocus)
+        {
+            _handledFocus = FocusSequence;
+            if (FocusField == RowField.First)
+            {
+                await _first.FocusAsync();
+            }
+            else if (FocusField == RowField.Second)
+            {
+                await _second.FocusAsync();
+            }
+        }
+    }
+}
