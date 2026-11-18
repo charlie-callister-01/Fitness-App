@@ -4,12 +4,12 @@
 
 **Blocked by:** 01 (Theme and Mode as stored Settings), 02 (Design assets, offline cache and PWA identity)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Choosing a Theme or Mode sets `data-theme` and `data-mode` on `<html>` (System resolves to the actual dark or light) and commits the Settings change; the change event fires
-- [ ] bUnit tests with a fake interop and a real `AppData` over the in-memory store pin: default is Keep and System; a choice reaches interop and Settings; a failing store (existing fault-injecting store) leaves the choice applied and reports the failure; a restored Backup with a different value re-applies
-- [ ] The inline pre-paint script applies the mirrored choice before first paint; a Playwright check in `Web.BrowserTests` shows the attributes set before the app starts, System following a changed colour-scheme preference, and a blocked or cleared mirror falling back to the default without an error
-- [ ] `<meta name="theme-color">` follows Theme and Mode using the design's values
+- [x] Choosing a Theme or Mode sets `data-theme` and `data-mode` on `<html>` (System resolves to the actual dark or light) and commits the Settings change; the change event fires
+- [x] bUnit tests with a fake interop and a real `AppData` over the in-memory store pin: default is Keep and System; a choice reaches interop and Settings; a failing store (existing fault-injecting store) leaves the choice applied and reports the failure; a restored Backup with a different value re-applies
+- [x] The inline pre-paint script applies the mirrored choice before first paint; a Playwright check in `Web.BrowserTests` shows the attributes set before the app starts, System following a changed colour-scheme preference, and a blocked or cleared mirror falling back to the default without an error
+- [x] `<meta name="theme-color">` follows Theme and Mode using the design's values
 - [ ] The Appearance control works on a phone in all four combinations with no flash on reload, and the choice survives a reload and an airplane-mode launch
-- [ ] An unknown stored value behaves as the default; reduced motion respected; no raw hex colours in new component CSS
-- [ ] Manual-check notes added for the real WebAssembly interop on a phone (the browser tests do not run WASM); all existing tests pass
+- [x] An unknown stored value behaves as the default; reduced motion respected; no raw hex colours in new component CSS
+- [x] Manual-check notes added for the real WebAssembly interop on a phone (the browser tests do not run WASM); all existing tests pass

@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ui\Ui.csproj" />
+    <!-- Fault-injecting store for the failure-path tests. -->
+    <ProjectReference Include="..\Core.Tests\Core.Tests.csproj" />
   </ItemGroup>
 
 </Project>
