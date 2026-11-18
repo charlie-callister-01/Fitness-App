@@ -4,8 +4,8 @@
 
 **Blocked by:** 10.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Manual checks added and accurate against what was built
-- [ ] README and build plan status updated
-- [ ] Open design and data questions recorded for the owner
+- [x] Manual checks added and accurate against what was built
+- [x] README and build plan status updated
+- [x] Open design and data questions recorded for the owner (in `docs/build-plan.md`, "Open items for the owner (from B1)")
