@@ -31,6 +31,7 @@ else
         </header>
 
         <div class="log__body">
+            <ExercisePager Chips="view.Chips" Current="_current" OnJump="JumpTo" />
             @if (_resumed)
             {
                 <p class="fa-well log__notice" role="status">Resumed where you left off</p>
@@ -77,6 +78,6 @@ else
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.PrimaryLabel" Disabled="@(!CanWrite && view.PrimaryNeedsWrite)" OnPrimary="PrimaryAsync" />
+        <ConfirmBar PrimaryLabel="@view.PrimaryLabel" UpNext="@view.UpNext" LastDone="@view.AllDone" Disabled="@(!CanWrite && view.PrimaryNeedsWrite)" OnPrimary="PrimaryAsync" />
     </div>
 }
