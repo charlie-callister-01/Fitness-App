@@ -2,7 +2,7 @@
 
 @* No navigation: for the Workout log. *@
 <SkipLink Target="() => main" />
-<main id="main-content" class="fullscreen" tabindex="-1" @ref="main">@Body</main>
+<main id="main-content" class="fullscreen" tabindex="-1" @ref="main"><SaveFailureBanner />@Body</main>
 
 @code {
     private ElementReference main;

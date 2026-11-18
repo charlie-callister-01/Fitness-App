@@ -34,7 +34,7 @@ public sealed class MoreTests : BunitContext
         _data = await AppData.OpenAsync(new InMemoryDataStore());
         Services.AddSingleton<IBuildInfo>(new FixedBuildInfo("build-1234"));
         Services.AddSingleton(_data);
-        Services.AddSingleton(new ThemeService(_data, _interop));
+        Services.AddSingleton(new ThemeService(_data, _interop, new Ui.Saving.SaveFailureNotice()));
         return Render<More>();
     }
 

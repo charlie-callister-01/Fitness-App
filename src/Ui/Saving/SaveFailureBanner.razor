@@ -1,0 +1,16 @@
+@implements IDisposable
+@inject SaveFailureNotice Notice
+
+@* The shared save-failure banner: one per layout, so any screen can report a failed save. *@
+@if (Notice.Message is { } message)
+{
+    <p class="save-failure-banner" role="alert">@message</p>
+}
+
+@code {
+    protected override void OnInitialized() => Notice.Changed += OnChanged;
+
+    public void Dispose() => Notice.Changed -= OnChanged;
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+}
