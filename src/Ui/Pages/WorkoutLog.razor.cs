@@ -54,6 +54,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private int _focusField;
     private int _focusSequence;
     private bool _busy;
+    private string? _toast;
 
     private Workout? OpenWorkout =>
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: null } open ? open : null;
@@ -95,7 +96,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     // ---- What is on screen
 
-    private sealed record RowView(int Index, SetRowState State, string First, string Second, bool Pending, string? SecondHint, bool HasError);
+    private sealed record RowView(int Index, SetRowState State, string First, string Second, bool Pending, string? SecondHint, bool HasError, bool IsPr = false);
 
     private sealed record ExerciseView(
         string ExerciseId, string Name, LogKind Kind, string? PlannedText, string? Cue,
@@ -112,7 +113,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     }
 
     private sealed record LogView(
-        string SessionName, int ExerciseCount, int DoneCount, ExerciseView? Exercise, string PrimaryLabel, PrimaryAction Action,
+        string SessionName, int ExerciseCount, int DoneCount, int PrCount, ExerciseView? Exercise, string PrimaryLabel, PrimaryAction Action,
         IReadOnlyList<ExercisePager.Chip> Chips, string? UpNext)
     {
         public bool AllDone => ExerciseCount > 0 && DoneCount == ExerciseCount;
@@ -150,7 +151,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         var chips = rows.Select(p => new ExercisePager.Chip(NameOf(p), IsComplete(workout, p))).ToList();
         var upNext = _current < rows.Count - 1 ? NameOf(rows[_current + 1]) : null;
         return new LogView(
-            session?.Name ?? "Workout", rows.Count, rows.Count(p => IsComplete(workout, p)), exercise, label, action, chips, upNext);
+            session?.Name ?? "Workout", rows.Count, rows.Count(p => IsComplete(workout, p)), PrCount(workout), exercise, label, action, chips, upNext);
     }
 
     private string NameOf(SessionExercise planned) => ExerciseOf(planned.ExerciseId)?.Name ?? "Exercise";
@@ -187,6 +188,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         var rowCount = Math.Max(planned.Sets, confirmed);
         var current = _editingRow ?? confirmed;
         var snapshot = SnapshotOf(workout, exercise);
+        var pr = PrOf(workout, exercise, _editingRow);
         var rows = Enumerable.Range(0, rowCount).Select(i =>
         {
             var stored = workout.Entries.FirstOrDefault(e => e.ExerciseId == exercise.Id)?.Sets.ElementAtOrDefault(i);
@@ -198,7 +200,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             var state = isDone ? SetRowState.Done : i == current ? SetRowState.Current : SetRowState.Upcoming;
             return new RowView(
                 i, state, draft?.First ?? prefill.First, draft?.Second ?? prefill.Second,
-                !isDone && draft is null, prefill.RepsHint, _errorRow == (exercise.Id, i));
+                !isDone && draft is null, prefill.RepsHint, _errorRow == (exercise.Id, i), isDone && pr.Row == i);
         }).ToList();
 
         var complete = confirmed >= planned.Sets && _editingRow is null;
@@ -234,6 +236,42 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _ => null,
     };
 
+    // ---- PR feedback (C-03, 8.3): derived from the Sets as they are now, never stored.
+
+    /// <summary>
+    /// The rule's answer for one Exercise. The history is every other finished Workout (never the open one); the Set being reopened is
+    /// not confirmed any more, so it is left out until it is confirmed again.
+    /// </summary>
+    private (int? Row, SetPrFeedback Feedback) PrOf(Workout workout, Exercise exercise, int? reopenedRow)
+    {
+        var history = Data.Snapshot.Workouts.Where(w => w.Id != workout.Id && w.EndedAt is not null);
+        var sets = workout.Entries.FirstOrDefault(e => e.ExerciseId == exercise.Id && e.Status == EntryStatus.Done)?.Sets ?? [];
+        var confirmed = sets.Where((_, i) => i != reopenedRow).ToList();
+        var feedback = SetPrFeedbackRule.For(exercise, history, confirmed);
+        var row = feedback.IsPr && feedback.WorkoutBest is { } best ? sets.ToList().FindIndex(s => s.Id == best.Id) : -1;
+        return (row < 0 ? null : row, feedback);
+    }
+
+    private int PrCount(Workout workout) =>
+        workout.Planned.Select(p => p.ExerciseId).Distinct()
+            .Select(ExerciseOf).OfType<Exercise>()
+            .Count(e => IsLoggable(e.LogKind) && PrOf(workout, e, e.Id == ShownExerciseId(workout) ? _editingRow : null).Feedback.IsPr);
+
+    private string? ShownExerciseId(Workout workout) => workout.Planned.ElementAtOrDefault(_current)?.ExerciseId;
+
+    /// <summary>The toast for the Set just confirmed, or null when it is not a PR.</summary>
+    private string? ToastFor(Workout workout, Exercise exercise, int row)
+    {
+        var (prRow, feedback) = PrOf(workout, exercise, null);
+        if (prRow != row || feedback.WorkoutBest is not { } best || feedback.PreviousBest is not { } previous)
+        {
+            return null;
+        }
+
+        var unit = Data.Snapshot.Settings.DisplayWeightUnit;
+        return $"PR! {SetText.Result(exercise.LogKind, best, Units, unit)} beats {SetText.Short(exercise.LogKind, previous.Set, Units)}";
+    }
+
     // ---- Typing
 
     private void EditFirst(ExerciseView exercise, int row, string text)
@@ -254,6 +292,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     {
         var shown = exercise.Rows[row];
         _editingRow = row;
+        _toast = null;
         _drafts[(exercise.ExerciseId, row)] = new Draft(shown.First, shown.Second);
         _errorRow = null;
         RequestFocus(row, 1);
@@ -281,6 +320,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private Task JumpTo(int index)
     {
         _current = index;
+        _toast = null;
         _editingRow = null;
         _errorRow = null;
         return Task.CompletedTask;
@@ -321,6 +361,9 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
                 _drafts.Remove((exercise.ExerciseId, row.Index));
                 _editingRow = null;
                 _errorRow = null;
+                _toast = OpenWorkout is { } saved && ExerciseOf(exercise.ExerciseId) is { } shown
+                    ? ToastFor(saved, shown, row.Index)
+                    : null;
             }
         }
         finally

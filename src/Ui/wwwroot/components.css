@@ -46,6 +46,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-input--error { border: var(--border-thick) solid var(--pr); }
 .fa-setrow__state { height: var(--tap-log); display: flex; align-items: center; justify-content: center; border: 0; border-radius: var(--r-control); }
 .fa-setrow__state--done { background: var(--done); color: var(--on-done); box-shadow: var(--shadow-raised); }
+.fa-setrow__state--pr { background: transparent; color: var(--on-pr); padding: 0; cursor: pointer; }
 .fa-setrow__error { grid-column: 2 / -1; font-size: 13px; color: var(--text); display: flex; gap: var(--space-1); align-items: center; }
 .fa-colheads { display: grid; grid-template-columns: 24px 1fr 14px 1fr var(--tap-log); gap: var(--space-2); font-family: var(--font-label); font-size: calc(12px * var(--display-scale)); color: var(--text-muted); text-align: center; }
 
@@ -129,3 +130,6 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 /* Keep the display face free of ligatures and contextual swaps so labels read letter by letter. */
 .fa-title, .fa-label, .fa-btn, .fa-exercise__name, .fa-tile, .fa-chip, .fa-tab { font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0, "calt" 0; }
 .fa-setrow__error[hidden] { display: none; }
+
+/* Toast: a short static line under the rows (used with fa-well); no motion, so nothing to switch off for reduced motion. */
+.fa-toast { margin: 0; font-size: calc(16px * var(--display-scale)); }
