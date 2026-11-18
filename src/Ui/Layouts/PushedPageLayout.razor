@@ -1,0 +1,13 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+
+<div class="pushed">
+    <header class="bar">
+        <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" OnClick="GoBack" />
+    </header>
+    <main id="main-content" class="column">@Body</main>
+</div>
+
+@code {
+    private async Task GoBack() => await JS.InvokeVoidAsync("history.back");
+}

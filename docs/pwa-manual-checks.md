@@ -78,3 +78,15 @@ CI covers `wwwroot/js/theme.js` in headless Chromium (`ThemeScriptBrowserTests`:
 4. System follows the phone. Choose Mode System, then switch the phone between dark and light (Quick Settings) with the app open. Expect the app to follow without a reload.
 5. Source of truth. In DevTools (remote debugging) change `data-theme` on `<html>` by hand, then reload: the stored choice comes back. After restoring a Backup that has a different Theme or Mode, expect the app to show the restored look.
 6. Blocked storage. In a private tab, the look still switches for the session and may reset on reload; nothing errors.
+
+## App shell manual checks (B0 ticket 05)
+
+bUnit covers tab marking, layout choice and routing. It cannot check CSS breakpoints, the real router under the sub-path, or a phone, so these are manual.
+
+1. Deep link and refresh. On the deployed build open `/Fitness-App/week`, `/Fitness-App/progress`, `/Fitness-App/trophies`, `/Fitness-App/more` directly, then refresh each. Expect the right page and the right tab marked (the 404 redirect brings the deep link back); the tab bar links stay under `/Fitness-App/`.
+2. Not found. Open `/Fitness-App/nowhere`. Expect the friendly page inside the shell and "Go to Home" landing on `/Fitness-App/`.
+3. Widths. In DevTools device mode check 360 px (no sideways scroll, nothing clipped, bottom bar with five tabs), 600 px (a centred column of at most 560 px, bottom bar), 900 px and wider (a 220 px left rail, content to its right, no bottom bar).
+4. Safe areas. On a notched phone installed to the Home Screen, the bar clears the home indicator and content clears the notch.
+5. Skip link. Press Tab once on a desktop: "Skip to content" appears with a visible outline; Enter moves focus into the content and the address does not change.
+6. Heading focus. Navigate between tabs with a screen reader or by watching `document.activeElement`: the page heading takes focus.
+7. Layouts. The Component gallery and Appearance pages (temporary) show a back arrow and no tab bar; the back arrow returns to the previous page. The build identifier is still on Home.
