@@ -112,8 +112,11 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     }
 
     private sealed record LogView(
-        string SessionName, int ExerciseCount, int DoneCount, ExerciseView? Exercise, string PrimaryLabel, PrimaryAction Action)
+        string SessionName, int ExerciseCount, int DoneCount, ExerciseView? Exercise, string PrimaryLabel, PrimaryAction Action,
+        IReadOnlyList<ExercisePager.Chip> Chips, string? UpNext)
     {
+        public bool AllDone => ExerciseCount > 0 && DoneCount == ExerciseCount;
+
         public bool PrimaryNeedsWrite => Action != PrimaryAction.Next;
     }
 
@@ -144,9 +147,13 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         var exercise = rows.Count == 0 ? null : ExerciseViewOf(workout, rows[_current]);
         var (label, action) = Primary(rows, exercise);
         var session = Data.Snapshot.Plans.SelectMany(p => p.Sessions).FirstOrDefault(s => s.Id == workout.SessionId);
+        var chips = rows.Select(p => new ExercisePager.Chip(NameOf(p), IsComplete(workout, p))).ToList();
+        var upNext = _current < rows.Count - 1 ? NameOf(rows[_current + 1]) : null;
         return new LogView(
-            session?.Name ?? "Workout", rows.Count, rows.Count(p => IsComplete(workout, p)), exercise, label, action);
+            session?.Name ?? "Workout", rows.Count, rows.Count(p => IsComplete(workout, p)), exercise, label, action, chips, upNext);
     }
+
+    private string NameOf(SessionExercise planned) => ExerciseOf(planned.ExerciseId)?.Name ?? "Exercise";
 
     private (string Label, PrimaryAction Action) Primary(IReadOnlyList<SessionExercise> rows, ExerciseView? exercise)
     {
@@ -156,7 +163,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
 
         return _current < rows.Count - 1
-            ? ($"Next: {ExerciseOf(rows[_current + 1].ExerciseId)?.Name ?? "Exercise"}", PrimaryAction.Next)
+            ? ($"Next: {NameOf(rows[_current + 1])}", PrimaryAction.Next)
             : ("Finish", PrimaryAction.Finish);
     }
 
@@ -268,9 +275,12 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _ => FinishAsync(),
     } : Task.CompletedTask;
 
-    private Task GoNext()
+    private Task GoNext() => JumpTo(_current + 1);
+
+    /// <summary>Shows another Exercise. Nothing is lost: confirmed Sets are saved and typed-but-unconfirmed text stays in the drafts.</summary>
+    private Task JumpTo(int index)
     {
-        _current++;
+        _current = index;
         _editingRow = null;
         _errorRow = null;
         return Task.CompletedTask;
@@ -354,6 +364,9 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         return workout with { Entries = entries };
     }
 
+    // TEMPORARY (B1): Finish only stamps EndedAt and returns Home, so a Workout is never stranded in progress. B2 replaces this wholesale
+    // with the full finish flow (Partial prompt, Pain check, summary). Once committed the Workout is no longer open, so a second tap is a
+    // no-op; _busy covers a second tap while the first save is still in flight. Either way EndedAt is stamped once.
     private async Task FinishAsync()
     {
         if (_busy || !CanWrite)

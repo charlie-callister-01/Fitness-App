@@ -4,10 +4,10 @@
 
 **Blocked by:** 05.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Chips, ticks, jump and return preserve entered Sets; resume lands on first incomplete Exercise
-- [ ] Label changes Confirm Set, then Next: X, then Finish
-- [ ] Finish stamps end time once (double tap does not stamp twice), returns Home; Home no longer offers Continue
-- [ ] Code note naming B2 as the replacement
-- [ ] bUnit tests
+- [x] Chips, ticks, jump and return preserve entered Sets; resume lands on first incomplete Exercise
+- [x] Label changes Confirm Set, then Next: X, then Finish
+- [x] Finish stamps end time once (double tap does not stamp twice), returns Home; Home no longer offers Continue
+- [x] Code note naming B2 as the replacement
+- [x] bUnit tests
