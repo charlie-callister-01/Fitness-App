@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Join works for every kind, accepts commas, `m:ss`, suffixes, `bw`; failure messages are exactly the parser's
-- [ ] Pre-fill follows the order above, including no history, a Last Workout with fewer Sets than planned, and a null Plan
-- [ ] Pre-filled values are not stored anywhere; the rule is pure
-- [ ] Core unit tests in the style of `InputParserTests` and `SuggestedTargetTests`
+- [x] Join works for every kind, accepts commas, `m:ss`, suffixes, `bw`; failure messages are exactly the parser's
+- [x] Pre-fill follows the order above, including no history, a Last Workout with fewer Sets than planned, and a null Plan
+- [x] Pre-filled values are not stored anywhere; the rule is pure
+- [x] Core unit tests in the style of `InputParserTests` and `SuggestedTargetTests`
