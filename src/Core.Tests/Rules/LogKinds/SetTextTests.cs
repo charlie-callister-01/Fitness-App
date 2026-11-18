@@ -1,9 +1,9 @@
 using Core.Model;
 using Core.Rules.Performance;
 using Core.Rules.Units;
-using Ui.Components;
+using Core.Rules.LogKinds;
 
-namespace Ui.Tests.Components;
+namespace Core.Tests.Rules.LogKinds;
 
 public sealed class SetTextTests
 {
@@ -25,29 +25,29 @@ public sealed class SetTextTests
     {
         var set = kind == LogKind.Reps ? Of(reps: value) : Of(seconds: value);
 
-        Assert.Equal(expected, SetText.Result(kind, set, Metric, WeightUnit.Kg));
+        Assert.Equal(expected, SetText.Result(kind, set, Metric));
     }
 
     [Fact]
     public void Distances_read_in_metres_or_the_owners_distance_unit()
     {
-        Assert.Equal("500 m", SetText.Result(LogKind.DistanceM, Of(m: 500), Metric, WeightUnit.Kg));
-        Assert.Equal("5 km", SetText.Result(LogKind.DistanceKm, Of(km: 5), Metric, WeightUnit.Kg));
-        Assert.Equal("3.11 mi", SetText.Result(LogKind.DistanceKm, Of(km: 5), Imperial, WeightUnit.Lb, DistanceUnit.Mi));
+        Assert.Equal("500 m", SetText.Result(LogKind.DistanceM, Of(m: 500), Metric));
+        Assert.Equal("5 km", SetText.Result(LogKind.DistanceKm, Of(km: 5), Metric));
+        Assert.Equal("3.11 mi", SetText.Result(LogKind.DistanceKm, Of(km: 5), Imperial));
     }
 
     [Fact]
     public void A_carry_reads_weight_by_metres()
     {
-        Assert.Equal("24 kg × 40 m", SetText.Result(LogKind.Carry, Of(kg: 24, m: 40), Metric, WeightUnit.Kg));
+        Assert.Equal("24 kg × 40 m", SetText.Result(LogKind.Carry, Of(kg: 24, m: 40), Metric));
     }
 
     [Fact]
     public void Body_measurements_and_ticks_read_plainly()
     {
-        Assert.Equal("82.5 kg", SetText.Result(LogKind.BodyMeasurementKg, Of(kg: 82.5), Metric, WeightUnit.Kg));
-        Assert.Equal("92 cm", SetText.Result(LogKind.BodyMeasurementCm, Of(cm: 92), Metric, WeightUnit.Kg));
-        Assert.Equal("Done", SetText.Result(LogKind.TickOnly, Of(), Metric, WeightUnit.Kg));
+        Assert.Equal("82.5 kg", SetText.Result(LogKind.BodyMeasurementKg, Of(kg: 82.5), Metric));
+        Assert.Equal("92 cm", SetText.Result(LogKind.BodyMeasurementCm, Of(cm: 92), Metric));
+        Assert.Equal("Done", SetText.Result(LogKind.TickOnly, Of(), Metric));
     }
 
     [Fact]
@@ -55,6 +55,6 @@ public sealed class SetTextTests
     {
         var target = new SuggestedTarget(null, null, null, 50, null, "reason");
 
-        Assert.Equal("50 s", SetText.Target(LogKind.Seconds, target, Metric, WeightUnit.Kg));
+        Assert.Equal("50 s", SetText.Target(LogKind.Seconds, target, Metric));
     }
 }

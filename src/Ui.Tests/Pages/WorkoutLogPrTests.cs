@@ -23,8 +23,8 @@ public sealed class WorkoutLogPrTests : BunitContext
 
     private static void Log(IRenderedComponent<WorkoutLog> cut, int set, string kg, string reps)
     {
-        cut.Find($"input[aria-label^='Weight, set {set}']").Input(kg);
-        cut.Find($"input[aria-label^='Reps, set {set}']").Input(reps);
+        cut.Find($"input[aria-label^='Weight, Set {set}']").Input(kg);
+        cut.Find($"input[aria-label^='Reps, Set {set}']").Input(reps);
         cut.Find(".fa-confirmbar .fa-btn--primary").Click();
     }
 
@@ -39,7 +39,7 @@ public sealed class WorkoutLogPrTests : BunitContext
 
         Assert.Empty(cut.FindAll(".fa-pr"));
         Assert.Empty(cut.FindAll(".fa-toast"));
-        Assert.Equal("Reps, set 1", cut.Find("input[aria-label^='Reps, set 1']").GetAttribute("aria-label"));
+        Assert.Equal("Reps, Set 1", cut.Find("input[aria-label^='Reps, Set 1']").GetAttribute("aria-label"));
         Assert.Contains("0 PR", Progress(cut));
     }
 
@@ -53,7 +53,7 @@ public sealed class WorkoutLogPrTests : BunitContext
         var marker = cut.Find(".fa-setrow:nth-child(1) .fa-pr");
         Assert.Equal("PR", marker.GetAttribute("aria-label"));
         Assert.Contains("PR", marker.TextContent);
-        Assert.Equal("Reps, set 1, PR", cut.Find("input[aria-label^='Reps, set 1']").GetAttribute("aria-label"));
+        Assert.Equal("Reps, Set 1, PR", cut.Find("input[aria-label^='Reps, Set 1']").GetAttribute("aria-label"));
         var toast = cut.Find(".fa-toast");
         Assert.Equal("PR! 22 kg × 9 beats 22 × 8", toast.TextContent.Trim());
         Assert.Equal("status", toast.GetAttribute("role"));
@@ -92,7 +92,7 @@ public sealed class WorkoutLogPrTests : BunitContext
         var (_, cut) = await OpenAsync(Previous(Set("o1", 22, 8)));
         Log(cut, 1, "22", "9");
 
-        cut.Find("button[aria-label^='Edit set 1']").Click();
+        cut.Find("button[aria-label^='Edit Set 1']").Click();
         Assert.Empty(cut.FindAll(".fa-pr"));
         Assert.Contains("0 PR", Progress(cut));
 

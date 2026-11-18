@@ -46,8 +46,8 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Bodyweight_reps_default_to_the_bw_tag_and_store_no_added_weight()
     {
         var (cut, data) = await OpenAsync(LogKind.BodyweightLoad);
-        Type(cut, "Added weight, set 1", "bw");
-        Type(cut, "Reps, set 1", "12");
+        Type(cut, "Added weight, Set 1", "bw");
+        Type(cut, "Reps, Set 1", "12");
         Confirm(cut);
 
         Assert.Equal(new WorkoutSet("id-1", null, 12, null, null, null, false), OnlySet(data) with { Id = "id-1" });
@@ -57,8 +57,8 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Bodyweight_reps_with_added_weight_store_the_weight_in_kg()
     {
         var (cut, data) = await OpenAsync(LogKind.BodyweightLoad);
-        Type(cut, "Added weight, set 1", "10");
-        Type(cut, "Reps, set 1", "8");
+        Type(cut, "Added weight, Set 1", "10");
+        Type(cut, "Reps, Set 1", "8");
         Confirm(cut);
 
         var set = OnlySet(data);
@@ -70,10 +70,10 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Carry_takes_weight_per_hand_and_metres()
     {
         var (cut, data) = await OpenAsync(LogKind.Carry);
-        Assert.Equal("decimal", Field(cut, "Weight per hand, set 1").GetAttribute("inputmode"));
-        Assert.Equal("numeric", Field(cut, "Metres, set 1").GetAttribute("inputmode"));
-        Type(cut, "Weight per hand, set 1", "24");
-        Type(cut, "Metres, set 1", "40");
+        Assert.Equal("decimal", Field(cut, "Weight per hand, Set 1").GetAttribute("inputmode"));
+        Assert.Equal("numeric", Field(cut, "Metres, Set 1").GetAttribute("inputmode"));
+        Type(cut, "Weight per hand, Set 1", "24");
+        Type(cut, "Metres, Set 1", "40");
         Confirm(cut);
 
         var set = OnlySet(data);
@@ -85,10 +85,10 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Seconds_is_one_wide_numeric_input_with_steppers()
     {
         var (cut, data) = await OpenAsync(LogKind.Seconds);
-        Assert.Equal("numeric", Field(cut, "Seconds, set 1").GetAttribute("inputmode"));
-        Assert.Empty(cut.FindAll("input[aria-label='Reps, set 1']"));
+        Assert.Equal("numeric", Field(cut, "Seconds, Set 1").GetAttribute("inputmode"));
+        Assert.Empty(cut.FindAll("input[aria-label='Reps, Set 1']"));
         Assert.Equal("Increase by 5 s", cut.Find(".fa-confirmbar button[aria-label^='Increase']").GetAttribute("aria-label"));
-        Type(cut, "Seconds, set 1", "45");
+        Type(cut, "Seconds, Set 1", "45");
         Confirm(cut);
 
         Assert.Equal(45, OnlySet(data).DurationSeconds);
@@ -99,7 +99,7 @@ public sealed class WorkoutLogKindsTests : BunitContext
     {
         var (cut, data) = await OpenAsync(LogKind.Minutes);
         Assert.Empty(cut.FindAll(".fa-confirmbar button[aria-label^='Increase']"));
-        Type(cut, "Minutes, set 1", "12.5");
+        Type(cut, "Minutes, Set 1", "12.5");
         Confirm(cut);
 
         Assert.Equal(750, OnlySet(data).DurationSeconds);
@@ -109,8 +109,8 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Reps_only_is_one_wide_numeric_input()
     {
         var (cut, data) = await OpenAsync(LogKind.Reps);
-        Assert.Equal("numeric", Field(cut, "Reps, set 1").GetAttribute("inputmode"));
-        Type(cut, "Reps, set 1", "15");
+        Assert.Equal("numeric", Field(cut, "Reps, Set 1").GetAttribute("inputmode"));
+        Type(cut, "Reps, Set 1", "15");
         Confirm(cut);
 
         Assert.Equal(15, OnlySet(data).Reps);
@@ -123,9 +123,9 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Time_accepts_clock_text_or_plain_seconds_and_has_no_steppers(string typed, int seconds)
     {
         var (cut, data) = await OpenAsync(LogKind.Time);
-        Assert.Equal("text", Field(cut, "Time, set 1").GetAttribute("inputmode"));
+        Assert.Equal("text", Field(cut, "Time, Set 1").GetAttribute("inputmode"));
         Assert.Empty(cut.FindAll(".fa-confirmbar button[aria-label^='Increase']"));
-        Type(cut, "Time, set 1", typed);
+        Type(cut, "Time, Set 1", typed);
         Confirm(cut);
 
         Assert.Equal(seconds, OnlySet(data).DurationSeconds);
@@ -135,8 +135,8 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Distance_in_km_is_a_decimal_input_stored_in_km()
     {
         var (cut, data) = await OpenAsync(LogKind.DistanceKm);
-        Assert.Equal("decimal", Field(cut, "Distance, set 1").GetAttribute("inputmode"));
-        Type(cut, "Distance, set 1", "5,5");
+        Assert.Equal("decimal", Field(cut, "Distance, Set 1").GetAttribute("inputmode"));
+        Type(cut, "Distance, Set 1", "5,5");
         Confirm(cut);
 
         Assert.Equal(5.5, OnlySet(data).DistanceKm);
@@ -146,7 +146,7 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Distance_in_metres_is_stored_in_metres()
     {
         var (cut, data) = await OpenAsync(LogKind.DistanceM);
-        Type(cut, "Distance, set 1", "500");
+        Type(cut, "Distance, Set 1", "500");
         Confirm(cut);
 
         Assert.Equal(500, OnlySet(data).DistanceM);
@@ -157,7 +157,7 @@ public sealed class WorkoutLogKindsTests : BunitContext
     {
         var (cut, data) = await OpenAsync(LogKind.TickOnly);
         Assert.Empty(cut.FindAll(".fa-setrow input"));
-        cut.Find(".fa-setrow button[aria-label='Mark set 1 done']").Click();
+        cut.Find(".fa-setrow button[aria-label='Mark Set 1 done']").Click();
 
         Assert.Equal(new WorkoutSet("", null, null, null, null, null, false), OnlySet(data) with { Id = "" });
         Assert.Single(cut.FindAll(".fa-setrow__state--done"));
@@ -167,8 +167,8 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task Body_weight_is_one_wide_decimal_input_stored_in_kg()
     {
         var (cut, data) = await OpenAsync(LogKind.BodyMeasurementKg);
-        Assert.Equal("decimal", Field(cut, "Body weight, set 1").GetAttribute("inputmode"));
-        Type(cut, "Body weight, set 1", "82.5");
+        Assert.Equal("decimal", Field(cut, "Body weight, Set 1").GetAttribute("inputmode"));
+        Type(cut, "Body weight, Set 1", "82.5");
         Confirm(cut);
 
         Assert.Equal(82.5, OnlySet(data).WeightKg);
@@ -178,7 +178,7 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task A_body_measurement_in_cm_is_stored_in_cm()
     {
         var (cut, data) = await OpenAsync(LogKind.BodyMeasurementCm);
-        Type(cut, "Measurement, set 1", "92");
+        Type(cut, "Measurement, Set 1", "92");
         Confirm(cut);
 
         Assert.Equal(92, OnlySet(data).MeasurementCm);
@@ -188,10 +188,10 @@ public sealed class WorkoutLogKindsTests : BunitContext
     public async Task A_bad_value_in_a_wide_row_says_what_was_expected_and_marks_the_field()
     {
         var (cut, data) = await OpenAsync(LogKind.Seconds);
-        Type(cut, "Seconds, set 1", "abc");
+        Type(cut, "Seconds, Set 1", "abc");
         Confirm(cut);
 
-        Assert.Equal("true", Field(cut, "Seconds, set 1").GetAttribute("aria-invalid"));
+        Assert.Equal("true", Field(cut, "Seconds, Set 1").GetAttribute("aria-invalid"));
         Assert.NotEmpty(cut.Find(".fa-setrow__error").TextContent);
         Assert.Empty(data.Snapshot.Workouts.Single(w => w.Id == Id).Entries);
     }

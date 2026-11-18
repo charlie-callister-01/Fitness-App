@@ -59,8 +59,8 @@
 
     private async Task StartAsync(Session session)
     {
-        // A second tap, or a Workout begun in the meantime, continues the one in progress instead of starting another.
-        if (_starting)
+        // A second tap while the first is saving must not start another Workout.
+        if (_starting || ActivePlan is not { } plan)
         {
             return;
         }
@@ -68,21 +68,13 @@
         _starting = true;
         try
         {
-            if (WorkoutStart.InProgress(Data.Snapshot.Workouts) is { } existing)
+            var outcome = await new WorkoutStarter(Data, Ids, Clock).StartAsync(plan, session, Today);
+            if (outcome.Commit is { } commit)
             {
-                Navigation.NavigateTo($"log/{existing.Id}");
-                return;
+                Notice.Report(commit);
             }
 
-            if (ActivePlan is not { } plan)
-            {
-                return;
-            }
-
-            var workout = WorkoutStart.Create(plan, session, Today, Ids, Clock);
-            var result = await Data.CommitAsync(Change.Put(workout));
-            Notice.Report(result);
-            if (result is CommitResult.Committed)
+            if (outcome.Workout is { } workout)
             {
                 Navigation.NavigateTo($"log/{workout.Id}");
             }

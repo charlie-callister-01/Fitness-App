@@ -17,9 +17,11 @@ public sealed class SaveFailureNotice
     public event Action? Changed;
 
     /// <summary>Records the outcome of a commit: a failure sets the message, a success clears it.</summary>
-    public void Report(CommitResult result)
+    public void Report(CommitResult result) => ReportMessage(MessageFor(result));
+
+    /// <summary>Records a failure that never reached storage, in plain words; null clears the notice.</summary>
+    public void ReportMessage(string? message)
     {
-        var message = MessageFor(result);
         if (message == Message)
         {
             return;

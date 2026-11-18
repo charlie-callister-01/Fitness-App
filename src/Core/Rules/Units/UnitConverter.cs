@@ -39,6 +39,12 @@ public sealed class UnitConverter
     /// <summary>The weight step for targets. Always kg, whatever the display unit.</summary>
     public double WeightIncrementKg { get; }
 
+    /// <summary>The display weight unit as a word: "kg" or "lb".</summary>
+    public string WeightLabel => _weightUnit == WeightUnit.Kg ? "kg" : "lb";
+
+    /// <summary>The display distance unit as a word: "km" or "mi".</summary>
+    public string DistanceLabel => _distanceUnit == DistanceUnit.Km ? "km" : "mi";
+
     /// <summary>A canonical weight (kg) in the display unit, rounded for display.</summary>
     public double DisplayWeight(double kg) =>
         _weightUnit == WeightUnit.Kg ? RoundWeightKg(kg) : RoundWeightLb(kg / KgPerLb);

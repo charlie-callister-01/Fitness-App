@@ -1,5 +1,4 @@
-using Core.Model;
-using Core.Rules.Units;
+using System.Globalization;
 
 namespace Core.Rules.LogKinds;
 
@@ -10,23 +9,20 @@ public enum StepField
     Second,
 }
 
-/// <summary>A stepper's step in display units, with the unit word used in its accessible name ("Increase by 2 kg").</summary>
-public readonly record struct StepSize(StepField Field, double Amount, string Unit);
-
-/// <summary>How far the ConfirmBar steppers move a Set, by log kind (design 8.2). Pure.</summary>
-public static class StepRules
+/// <summary>
+/// A stepper's step in display units, with the unit word used in its accessible name ("Increase by 2 kg"). Which kinds have
+/// one, and how big it is, is in <see cref="RowSpec"/>.
+/// </summary>
+public readonly record struct StepSize(StepField Field, double Amount, string Unit)
 {
-    private const int SecondsStep = 5;
-    private const int RepStep = 1;
-
-    /// <summary>The step for the kind, or null when the kind has no steppers (time, distance and the rest).</summary>
-    /// <param name="planIncrementKg">The Plan's weight increment, always kg.</param>
-    public static StepSize? For(LogKind kind, UnitConverter units, double planIncrementKg, WeightUnit displayUnit) => kind switch
+    /// <summary>
+    /// The field's text after one press: the typed number (a comma counts as a decimal point; anything unreadable counts as 0)
+    /// plus or minus the step, never below zero, as a short number such as "22.5".
+    /// </summary>
+    /// <param name="direction">-1 for minus, 1 for plus.</param>
+    public string Apply(string typed, int direction)
     {
-        LogKind.Load or LogKind.Carry => new(
-            StepField.First, units.DisplayWeight(planIncrementKg), displayUnit == WeightUnit.Kg ? "kg" : "lb"),
-        LogKind.BodyweightLoad => new(StepField.Second, RepStep, "rep"),
-        LogKind.Seconds => new(StepField.First, SecondsStep, "s"),
-        _ => null,
-    };
+        var start = double.TryParse(typed.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ? number : 0;
+        return Math.Max(0, Math.Round(start + direction * Amount, 2)).ToString("0.##", CultureInfo.InvariantCulture);
+    }
 }

@@ -7,8 +7,8 @@
 
 .pager__chip {
     flex: 0 0 auto;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
     padding: 0 var(--space-2);
     border: 0;
     border-radius: var(--r-control);
@@ -27,8 +27,8 @@
     background: var(--surface-raised);
     box-shadow: var(--shadow-raised);
     color: var(--text-heading);
-    outline: 2px solid var(--focus);
-    outline-offset: -2px;
+    outline: var(--border-thin) solid var(--focus);
+    outline-offset: calc(-1 * var(--outline-offset));
 }
 
 .pager__done {

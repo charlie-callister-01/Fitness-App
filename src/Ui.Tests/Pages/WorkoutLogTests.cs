@@ -23,9 +23,9 @@ public sealed class WorkoutLogTests : BunitContext
         return Render<WorkoutLog>(p => p.Add(l => l.WorkoutId, id));
     }
 
-    private static IElement Weight(IRenderedComponent<WorkoutLog> cut, int set) => cut.Find($"input[aria-label='Weight, set {set}']");
+    private static IElement Weight(IRenderedComponent<WorkoutLog> cut, int set) => cut.Find($"input[aria-label='Weight, Set {set}']");
 
-    private static IElement Reps(IRenderedComponent<WorkoutLog> cut, int set) => cut.Find($"input[aria-label='Reps, set {set}']");
+    private static IElement Reps(IRenderedComponent<WorkoutLog> cut, int set) => cut.Find($"input[aria-label='Reps, Set {set}']");
 
     private static void Confirm(IRenderedComponent<WorkoutLog> cut) => cut.Find(".fa-confirmbar .fa-btn--primary").Click();
 
@@ -124,7 +124,7 @@ public sealed class WorkoutLogTests : BunitContext
         Assert.Equal(8, saved.Reps);
         Assert.False(saved.IsMax);
         Assert.Single(cut.FindAll(".fa-setrow--done"));
-        Assert.NotNull(cut.Find("button[aria-label='Edit set 1']"));
+        Assert.NotNull(cut.Find("button[aria-label='Edit Set 1']"));
         Assert.Contains("fa-setrow--current", cut.FindAll(".fa-setrow")[1].ClassName);
         Assert.Null(_notice.Message);
     }
@@ -239,7 +239,7 @@ public sealed class WorkoutLogTests : BunitContext
         Confirm(cut);
         var originalId = SquatSets(data).Single().Id;
 
-        cut.Find("button[aria-label='Edit set 1']").Click();
+        cut.Find("button[aria-label='Edit Set 1']").Click();
         Assert.False(Weight(cut, 1).HasAttribute("readonly"));
         Reps(cut, 1).Input("9");
         Confirm(cut);
@@ -248,7 +248,7 @@ public sealed class WorkoutLogTests : BunitContext
         Assert.Equal(originalId, saved.Id);
         Assert.Equal(9, saved.Reps);
         Assert.Equal(20, saved.WeightKg);
-        Assert.NotNull(cut.Find("button[aria-label='Edit set 1']"));
+        Assert.NotNull(cut.Find("button[aria-label='Edit Set 1']"));
     }
 
     // ---- Next and Finish
@@ -695,7 +695,7 @@ public sealed class WorkoutLogTests : BunitContext
         Link(cut, "Mark Set 1 as Max set").Click();
         Confirm(cut);
 
-        cut.Find("button[aria-label='Edit set 1']").Click();
+        cut.Find("button[aria-label='Edit Set 1']").Click();
         Link(cut, "Unmark Set 1 as Max set").Click();
 
         Assert.False(SquatSets(data).Single().IsMax);
@@ -724,7 +724,7 @@ public sealed class WorkoutLogTests : BunitContext
         Link(cut, "Mark Set 1 as Max set").Click();
         Confirm(cut);
 
-        cut.Find("button[aria-label='Edit set 1']").Click();
+        cut.Find("button[aria-label='Edit Set 1']").Click();
         Weight(cut, 1).Input("25");
         Confirm(cut);
 
@@ -757,5 +757,92 @@ public sealed class WorkoutLogTests : BunitContext
         Confirm(cut);
 
         Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
+    }
+
+    // ---- Review fixes: abandoned edits, typed rows, Finish, bodyweight
+
+    [Fact]
+    public async Task Abandoning_a_reopened_set_by_jumping_away_shows_the_stored_set_again()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+        Confirm(cut);
+        cut.Find("button[aria-label='Edit Set 1']").Click();
+        Reps(cut, 1).Input("5");
+
+        cut.FindAll(".pager__chip")[1].Click();
+        cut.FindAll(".pager__chip")[0].Click();
+
+        Assert.Equal("8", Reps(cut, 1).GetAttribute("value"));
+        Assert.Single(cut.FindAll(".fa-setrow--done"));
+        Assert.Equal(8, SquatSets(data).Single().Reps);
+    }
+
+    [Fact]
+    public async Task Abandoning_a_reopened_set_by_reopening_another_shows_the_stored_set_again()
+    {
+        var (_, cut) = await OpenWithLastTimeAsync();
+        Confirm(cut);
+        Confirm(cut);
+        cut.Find("button[aria-label='Edit Set 1']").Click();
+        Reps(cut, 1).Input("5");
+
+        cut.Find("button[aria-label='Edit Set 2']").Click();
+
+        Assert.Equal("8", Reps(cut, 1).GetAttribute("value"));
+        Assert.Contains("fa-setrow--done", cut.FindAll(".fa-setrow")[0].ClassName);
+        Assert.Contains("fa-setrow--current", cut.FindAll(".fa-setrow")[1].ClassName);
+    }
+
+    [Fact]
+    public async Task A_stepper_carries_down_to_untouched_rows_but_not_to_a_row_the_owner_typed()
+    {
+        var (_, cut) = await OpenWithLastTimeAsync();
+        Weight(cut, 2).Input("25");
+
+        Stepper(cut, "Increase by 2 kg").Click();
+
+        Assert.Equal("22", Weight(cut, 1).GetAttribute("value"));
+        Assert.Equal("25", Weight(cut, 2).GetAttribute("value"));
+        Assert.Equal("22", Weight(cut, 3).GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task On_the_last_exercise_with_an_earlier_one_unlogged_the_primary_leads_back_instead_of_finishing()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+        cut.FindAll(".pager__chip")[1].Click();
+        ConfirmSets(cut, 2, "10", "10");
+
+        Assert.Equal("Next: Goblet squat", PrimaryLabel(cut));
+        Confirm(cut);
+
+        Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
+        Assert.Null(Stored(data).EndedAt);
+    }
+
+    [Fact]
+    public async Task An_exercise_that_cannot_be_logged_never_holds_Finish_back()
+    {
+        var plan = Plan([new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+            [new SessionExercise("journal", 1, null, null, null), new SessionExercise(Squat, 1, 8, null, null)])]);
+        var workout = Core.Rules.Starting.WorkoutStart.Create(plan, plan.Sessions[0], Today, new CountingIds(), new FixedClock(Now)) with { Id = "w-now" };
+        var cut = await OpenLogAsync(await OpenSeededAsync(plan: plan, workouts: workout));
+        Confirm(cut);
+
+        ConfirmSets(cut, 1, "20", "8");
+
+        Assert.Equal("Finish", PrimaryLabel(cut));
+    }
+
+    [Fact]
+    public async Task A_bodyweight_row_hints_that_bw_or_an_added_weight_goes_in_the_first_field()
+    {
+        var plan = Plan([new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("pullup", 2, 8, null, null)])]);
+        var workout = Core.Rules.Starting.WorkoutStart.Create(plan, plan.Sessions[0], Today, new CountingIds(), new FixedClock(Now)) with { Id = "w-now" };
+        var data = await OpenSeededAsync(plan: plan, workouts: workout);
+        var cut = await OpenLogAsync(data);
+
+        Assert.Equal("bw or kg", cut.Find("input[aria-label='Added weight, Set 1']").GetAttribute("placeholder"));
     }
 }

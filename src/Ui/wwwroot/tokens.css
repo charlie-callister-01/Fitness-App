@@ -20,8 +20,10 @@
   --bar-tab: 72px;
   --phone-base: 390px;
   --phone-min: 360px;
+  --column-log: 430px;
   --border-thin: 2px;
   --border-thick: 3px;
+  --outline-offset: 2px;
   --opacity-upcoming: 0.55;
   --opacity-locked: 0.45;
   --font-pixel: "Jersey 15", ui-monospace, monospace;
