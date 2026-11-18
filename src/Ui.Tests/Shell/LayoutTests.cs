@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Ui.Layouts;
-using Ui.Pages;
 
 namespace Ui.Tests.Shell;
 
@@ -86,13 +85,4 @@ public sealed class LayoutTests : BunitContext
         Assert.Contains(JSInterop.Invocations, i => i.Identifier == "history.back");
     }
 
-    [Fact]
-    public void TheTemporaryDevPages_UseThePushedLayout()
-    {
-        Assert.Equal(typeof(PushedPageLayout), LayoutOf<ComponentGallery>());
-        Assert.Equal(typeof(PushedPageLayout), LayoutOf<AppearanceStub>());
-    }
-
-    private static Type? LayoutOf<T>() =>
-        ((LayoutAttribute?)Attribute.GetCustomAttribute(typeof(T), typeof(LayoutAttribute)))?.LayoutType;
 }

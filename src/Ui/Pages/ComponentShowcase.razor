@@ -1,9 +1,5 @@
-@page "/gallery"
-@layout PushedPageLayout
-
-@* Temporary (B0): shows the base components in whichever Theme and Mode is active. Ticket 06 folds it into More. *@
-<div class="fa-root">
-    <h1 class="fa-title fa-title--l">Component gallery</h1>
+@* Temporary (B0): shows the base components in whichever Theme and Mode is active. Lives in a collapsed section of More. *@
+<div class="showcase">
 
     <section class="panel-stack">
         <h2 class="fa-title fa-title--m">Buttons</h2>
@@ -11,7 +7,7 @@
             <Button Variant="ButtonVariant.Primary">Confirm Set</Button>
             <Button Variant="ButtonVariant.Secondary">Do a different Session</Button>
             <Button Variant="ButtonVariant.Secondary" Disabled="true">Disabled</Button>
-            <Button Variant="ButtonVariant.Secondary" Href="gallery">As a link</Button>
+            <Button Variant="ButtonVariant.Secondary" Href="more">As a link</Button>
             <div class="row">
                 <Button Variant="ButtonVariant.Stepper" AccessibleName="Decrease weight">−</Button>
                 <Button Variant="ButtonVariant.Stepper" AccessibleName="Increase weight">+</Button>
@@ -33,8 +29,8 @@
 
     <section class="panel-stack">
         <h2 class="fa-title fa-title--m">Empty states</h2>
-        <EmptyState Kind="EmptyStateKind.FirstRun" Title="Your first Workout fills the first slot." Message="Pick a Plan to begin." ActionLabel="Start" ActionHref="gallery" />
-        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No Guide yet" Message="Write one or import some." ActionLabel="Write a Guide" ActionHref="gallery" />
+        <EmptyState Kind="EmptyStateKind.FirstRun" Title="Your first Workout fills the first slot." Message="Pick a Plan to begin." ActionLabel="Start" ActionHref="more" />
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No Guide yet" Message="Write one or import some." ActionLabel="Write a Guide" ActionHref="more" />
         <EmptyState Kind="EmptyStateKind.NoHistory" Title="No history yet" Message="Log a Workout and it shows up here." />
         <EmptyState Kind="EmptyStateKind.Offline" Title="No signal." Message="Everything else works offline." />
     </section>

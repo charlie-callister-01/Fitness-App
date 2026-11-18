@@ -1,0 +1,19 @@
+.entries {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.entry {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.showcase-section summary {
+    cursor: pointer;
+    min-height: var(--tap-min);
+}

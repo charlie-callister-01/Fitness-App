@@ -70,7 +70,7 @@ What is **NOT covered by CI** and is on this list: quota-full, the real persiste
 
 ## Theme and Mode manual checks (B0 ticket 03)
 
-CI covers `wwwroot/js/theme.js` in headless Chromium (`ThemeScriptBrowserTests`: pre-paint attributes, System following the colour scheme, chrome colour, blocked mirror). It does **not** run WebAssembly, so the real Blazor interop (`Web/Theming/ThemeInterop.cs` calling `FitnessTheme.apply`) and a real phone need these checks. Use the temporary page `/appearance-stub` (link on Home).
+CI covers `wwwroot/js/theme.js` in headless Chromium (`ThemeScriptBrowserTests`: pre-paint attributes, System following the colour scheme, chrome colour, blocked mirror). It does **not** run WebAssembly, so the real Blazor interop (`Web/Theming/ThemeInterop.cs` calling `FitnessTheme.apply`) and a real phone need these checks. Use the Appearance section on the More page.
 
 1. All four looks. Pick each of Keep and Clean with each of Dark and Light. Expect the whole app to restyle instantly, and the browser bar (Android Chrome) to change colour: Keep dark `#4A4237`, Keep light `#E8DFC8`, Clean dark `#111315`, Clean light `#F4F5F7`.
 2. No flash. With a non-default choice (for example Clean, Light), reload and cold-start the installed app several times. Expect the first painted frame to already be the chosen look, never Keep dark first.
@@ -89,4 +89,17 @@ bUnit covers tab marking, layout choice and routing. It cannot check CSS breakpo
 4. Safe areas. On a notched phone installed to the Home Screen, the bar clears the home indicator and content clears the notch.
 5. Skip link. Press Tab once on a desktop: "Skip to content" appears with a visible outline; Enter moves focus into the content and the address does not change.
 6. Heading focus. Navigate between tabs with a screen reader or by watching `document.activeElement`: the page heading takes focus.
-7. Layouts. The Component gallery and Appearance pages (temporary) show a back arrow and no tab bar; the back arrow returns to the previous page. The build identifier is still on Home.
+7. Layouts. A pushed-layout page shows a back arrow and no tab bar; the back arrow returns to the previous page. (The temporary gallery and Appearance pages are gone; both live on More.)
+
+## More menu and B0 finish line (B0 ticket 06)
+
+bUnit covers the More links, the placeholder routes, Appearance changing the Theme, and the build identifier. Needs a phone (tick off here when done):
+
+1. More page. Open More: six entries (Plans, Exercise library, Weight, Weekly review, Export and Import, Settings), each opens a placeholder page and the More tab stays marked. The Appearance pickers work; the collapsed "Components (temporary)" section opens and shows buttons, orbs, empty states and icons in the chosen look.
+2. Build identifier. The "Build ..." line is at the bottom of More (no longer on Home); update pickup (above) is checked against it.
+3. Install with the new icon, and all four looks (Keep and Clean, Dark and Light) on every tab and on More.
+4. Airplane-mode launch: the app opens, fonts and illustrations show, the Theme survives.
+5. Status bar colour matches the chosen look.
+6. Deep link on each tab: `/Fitness-App/week`, `/progress`, `/trophies`, `/more`, and one More entry such as `/settings`, then refresh.
+7. 360 px width: no sideways scroll, nothing clipped, More entries comfortable to tap.
+8. Increased system text size: the tab bar, More entries and Appearance chips still fit and read.

@@ -43,8 +43,12 @@ public sealed class TabBarTests : BunitContext
     [InlineData("trophies", "Trophies")]
     [InlineData("more", "More")]
     [InlineData("more/library/guide-1", "More")]
-    [InlineData("gallery", "More")]
-    [InlineData("appearance-stub", "More")]
+    [InlineData("plans", "More")]
+    [InlineData("exercises", "More")]
+    [InlineData("weight", "More")]
+    [InlineData("weekly-review", "More")]
+    [InlineData("backup", "More")]
+    [InlineData("settings", "More")]
     public void TabBar_MarksTheTabOwningTheCurrentRoute(string path, string expected)
     {
         Assert.Equal(expected, CurrentLabel(RenderAt(path)));
