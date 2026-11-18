@@ -1,0 +1,50 @@
+@page "/gallery"
+
+@* Temporary (B0): shows the base components in whichever Theme and Mode is active. Ticket 06 folds it into More. *@
+<main class="fa-root">
+    <h1 class="fa-title fa-title--l">Component gallery</h1>
+
+    <section class="panel-stack">
+        <h2 class="fa-title fa-title--m">Buttons</h2>
+        <div class="fa-panel">
+            <Button Variant="ButtonVariant.Primary">Confirm Set</Button>
+            <Button Variant="ButtonVariant.Secondary">Do a different Session</Button>
+            <Button Variant="ButtonVariant.Secondary" Disabled="true">Disabled</Button>
+            <Button Variant="ButtonVariant.Secondary" Href="gallery">As a link</Button>
+            <div class="row">
+                <Button Variant="ButtonVariant.Stepper" AccessibleName="Decrease weight">−</Button>
+                <Button Variant="ButtonVariant.Stepper" AccessibleName="Increase weight">+</Button>
+                <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" />
+                <Button Variant="ButtonVariant.Icon" Glyph="IconName.Timer" AccessibleName="Rest timer" />
+            </div>
+        </div>
+    </section>
+
+    <section class="panel-stack">
+        <h2 class="fa-title fa-title--m">Status orbs</h2>
+        <div class="fa-panel row">
+            <StatusOrb Value="4" Fraction="0.67" Caption="weeks" Tone="OrbTone.Green" AccessibleName="Streak, 4 weeks, 2 of 3 this week" />
+            <StatusOrb Value="4" Fraction="0.67" Caption="weeks" Greyed="true" AccessibleName="Streak, 4 weeks, on a Break" />
+            <StatusOrb Value="12" Fraction="0.3" Caption="Phase" Tone="OrbTone.Ochre" AccessibleName="Phase, week 12" />
+            <StatusOrb Value="87" Fraction="0.2" Caption="days to race" Tone="OrbTone.Red" AccessibleName="87 days to race" />
+        </div>
+    </section>
+
+    <section class="panel-stack">
+        <h2 class="fa-title fa-title--m">Empty states</h2>
+        <EmptyState Kind="EmptyStateKind.FirstRun" Title="Your first Workout fills the first slot." Message="Pick a Plan to begin." ActionLabel="Start" ActionHref="gallery" />
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No Guide yet" Message="Write one or import some." ActionLabel="Write a Guide" ActionHref="gallery" />
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No history yet" Message="Log a Workout and it shows up here." />
+        <EmptyState Kind="EmptyStateKind.Offline" Title="No signal." Message="Everything else works offline." />
+    </section>
+
+    <section class="panel-stack">
+        <h2 class="fa-title fa-title--m">Icons</h2>
+        <div class="fa-panel icons">
+            @foreach (var name in Enum.GetValues<IconName>())
+            {
+                <span class="icon-cell"><Icon Name="name" /><span class="fa-muted">@name</span></span>
+            }
+        </div>
+    </section>
+</main>

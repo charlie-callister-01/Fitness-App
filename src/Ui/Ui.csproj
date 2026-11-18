@@ -9,6 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The design's icons are also embedded so the Icon component can inline them. -->
+    <EmbeddedResource Include="wwwroot\icons\*.svg" LogicalName="icons/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 

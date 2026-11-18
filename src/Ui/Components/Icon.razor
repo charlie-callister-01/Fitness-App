@@ -1,0 +1,7 @@
+@* One named icon from the design's set, inlined so it takes the surrounding text colour. Decorative: the files carry aria-hidden. *@
+@((MarkupString)IconCatalogue.SvgOf(Name))
+
+@code {
+    [Parameter, EditorRequired]
+    public IconName Name { get; set; }
+}

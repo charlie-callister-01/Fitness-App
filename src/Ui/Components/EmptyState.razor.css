@@ -1,0 +1,19 @@
+/* Layout only; skin comes from fa-well, fa-title and fa-muted. */
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+}
+
+.art {
+    max-width: 100%;
+    height: auto;
+}
+
+/* The Clean Theme shows the same art, quieter. */
+[data-theme="clean"] .art {
+    opacity: 0.6;
+}

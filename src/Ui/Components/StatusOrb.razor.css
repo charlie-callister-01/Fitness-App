@@ -1,0 +1,10 @@
+/* Layout only; colours come from the global fa-orb classes and tokens. */
+.fa-orb__arc {
+    fill: none;
+    transform: rotate(-90deg);
+    transform-origin: 48px 48px;
+}
+
+.fa-orb__arc--greyed {
+    stroke: var(--orb-track);
+}

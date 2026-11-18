@@ -1,0 +1,40 @@
+@* C-21 EmptyState: encouraging, never blank. Sunken card, illustration, bold line, muted line, optional primary action. *@
+<div class="fa-well empty">
+    <img class="art" src="@ArtPath" alt="" width="240" height="160" />
+    <p class="fa-title fa-title--m">@Title</p>
+    <p class="fa-muted">@Message</p>
+    @if (ActionLabel is not null)
+    {
+        <Button Variant="ButtonVariant.Primary" Href="@ActionHref" OnClick="OnAction">@ActionLabel</Button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public EmptyStateKind Kind { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Message { get; set; } = "";
+
+    /// <summary>Label of the one optional action; with no label there is no button.</summary>
+    [Parameter]
+    public string? ActionLabel { get; set; }
+
+    [Parameter]
+    public string? ActionHref { get; set; }
+
+    [Parameter]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnAction { get; set; }
+
+    private string ArtPath => "_content/Ui/illustrations/" + Kind switch
+    {
+        EmptyStateKind.FirstRun => "empty-first-run.svg",
+        EmptyStateKind.NoPlan => "empty-no-plan.svg",
+        EmptyStateKind.NoHistory => "empty-no-history.svg",
+        EmptyStateKind.Offline => "empty-offline.svg",
+        _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, null),
+    };
+}
