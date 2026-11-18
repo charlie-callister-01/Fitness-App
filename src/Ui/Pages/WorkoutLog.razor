@@ -31,6 +31,7 @@ else
         </header>
 
         <div class="log__body">
+            <ExercisePager Chips="view.Chips" Current="_current" OnJump="JumpTo" />
             @if (_resumed)
             {
                 <p class="fa-well log__notice" role="status">Resumed where you left off</p>
@@ -46,7 +47,9 @@ else
             }
             else
             {
-                <ExerciseHeader Name="@shown.Name" Planned="@shown.PlannedText" Cue="@shown.Cue" />
+                <ExerciseHeader Name="@shown.Name" Planned="@shown.PlannedText" Cue="@shown.Cue"
+                                Last="@shown.Header?.Last" Best="@shown.Header?.Best"
+                                Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" />
 
                 @if (shown.Rows.Count == 0)
                 {
@@ -89,11 +92,12 @@ else
                             <button type="button" class="log__link" @onclick="() => ToggleMaxAsync(shown)">@(shown.Rows[target].IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
                         }
                     </div>
+                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => SetRpeAsync(shown.ExerciseId, rpe)" />
                 }
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.PrimaryLabel" Disabled="@(!CanWrite && view.PrimaryNeedsWrite)" OnPrimary="PrimaryAsync"
+        <ConfirmBar PrimaryLabel="@view.PrimaryLabel" UpNext="@view.UpNext" LastDone="@view.AllDone" Disabled="@(!CanWrite && view.PrimaryNeedsWrite)" OnPrimary="PrimaryAsync"
                     StepAmount="@view.Exercise?.StepAmount" StepUnit="@(view.Exercise?.Step?.Unit ?? "")" OnStep="Step" />
     </div>
 }

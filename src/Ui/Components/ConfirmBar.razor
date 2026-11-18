@@ -1,6 +1,13 @@
-@* C-06 ConfirmBar: fixed to the bottom of the log with the one primary action and, when the Exercise has them, a stepper either side.
-   The Up next strip slots in above it later. *@
+@* C-06 ConfirmBar: fixed to the bottom of the log with the Up next strip, the one primary action and, when the Exercise has them, a stepper either side. *@
 <div class="fa-confirmbar">
+    @if (UpNext is not null)
+    {
+        <div class="fa-confirmbar__info"><span>Up next: <b>@UpNext</b></span></div>
+    }
+    else if (LastDone)
+    {
+        <div class="fa-confirmbar__info"><span>Last Exercise done</span></div>
+    }
     <div class="@RowClass">
         @if (ShowSteppers)
         {
@@ -18,6 +25,14 @@
     /// <summary>"Confirm Set", "Next: Lunge" or "Finish".</summary>
     [Parameter, EditorRequired]
     public string PrimaryLabel { get; set; } = "";
+
+    /// <summary>The name of the Exercise after the one showing, for the "Up next" strip; null when there is none.</summary>
+    [Parameter]
+    public string? UpNext { get; set; }
+
+    /// <summary>Every Exercise is complete, so the strip says so in place of an Up next.</summary>
+    [Parameter]
+    public bool LastDone { get; set; }
 
     [Parameter]
     public bool Disabled { get; set; }

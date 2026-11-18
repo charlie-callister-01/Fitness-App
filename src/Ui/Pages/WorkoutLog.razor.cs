@@ -113,10 +113,13 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private sealed record ExerciseView(
         string ExerciseId, string Name, LogKind Kind, string? PlannedText, string? Cue,
         IReadOnlyList<RowView> Rows, string UnavailableMessage, bool Complete,
-        StepSize? Step = null, int? MaxTarget = null, int? RemovableRow = null)
+        StepSize? Step = null, int? MaxTarget = null, int? RemovableRow = null, HeaderText? Header = null, int? Rpe = null)
     {
         public string? StepAmount => Step?.Amount.ToString("0.##", CultureInfo.InvariantCulture);
     }
+
+    /// <summary>Last, Best and the Suggested target as text in the owner's units; a part is null when there is none.</summary>
+    private sealed record HeaderText(string? Last, string? Best, string? Target, string? Reason);
 
     private enum PrimaryAction
     {
@@ -126,8 +129,11 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     }
 
     private sealed record LogView(
-        string SessionName, int ExerciseCount, int DoneCount, ExerciseView? Exercise, string PrimaryLabel, PrimaryAction Action)
+        string SessionName, int ExerciseCount, int DoneCount, ExerciseView? Exercise, string PrimaryLabel, PrimaryAction Action,
+        IReadOnlyList<ExercisePager.Chip> Chips, string? UpNext)
     {
+        public bool AllDone => ExerciseCount > 0 && DoneCount == ExerciseCount;
+
         public bool PrimaryNeedsWrite => Action != PrimaryAction.Next;
     }
 
@@ -158,9 +164,13 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         var exercise = rows.Count == 0 ? null : ExerciseViewOf(workout, rows[_current]);
         var (label, action) = Primary(rows, exercise);
         var session = Data.Snapshot.Plans.SelectMany(p => p.Sessions).FirstOrDefault(s => s.Id == workout.SessionId);
+        var chips = rows.Select(p => new ExercisePager.Chip(NameOf(p), IsComplete(workout, p))).ToList();
+        var upNext = _current < rows.Count - 1 ? NameOf(rows[_current + 1]) : null;
         return new LogView(
-            session?.Name ?? "Workout", rows.Count, rows.Count(p => IsComplete(workout, p)), exercise, label, action);
+            session?.Name ?? "Workout", rows.Count, rows.Count(p => IsComplete(workout, p)), exercise, label, action, chips, upNext);
     }
+
+    private string NameOf(SessionExercise planned) => ExerciseOf(planned.ExerciseId)?.Name ?? "Exercise";
 
     private (string Label, PrimaryAction Action) Primary(IReadOnlyList<SessionExercise> rows, ExerciseView? exercise)
     {
@@ -170,7 +180,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
 
         return _current < rows.Count - 1
-            ? ($"Next: {ExerciseOf(rows[_current + 1].ExerciseId)?.Name ?? "Exercise"}", PrimaryAction.Next)
+            ? ($"Next: {NameOf(rows[_current + 1])}", PrimaryAction.Next)
             : ("Finish", PrimaryAction.Finish);
     }
 
@@ -224,7 +234,9 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             : null;
         int? maxTarget = _editingRow ?? (confirmed < rowCount ? confirmed : confirmed > 0 ? confirmed - 1 : null);
         int? removable = extra > 0 && _editingRow is null && rowCount > confirmed && rowCount > 1 ? rowCount - 1 : null;
-        return new(exercise.Id, exercise.Name, exercise.LogKind, plannedText, planned.Cue, rows, "", complete, step, maxTarget, removable);
+        var rpe = workout.Entries.FirstOrDefault(e => e.ExerciseId == exercise.Id && e.Status == EntryStatus.Done)?.Rpe;
+        return new(exercise.Id, exercise.Name, exercise.LogKind, plannedText, planned.Cue, rows, "", complete,
+            step, maxTarget, removable, HeaderOf(exercise.LogKind, snapshot), rpe);
     }
 
     private Plan? PlanOf(Workout workout) =>
@@ -237,6 +249,17 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         var plan = PlanOf(workout);
         var history = Data.Snapshot.Workouts.Where(w => w.Id != workout.Id && w.EndedAt is not null);
         return ExercisePerformance.Snapshot(exercise, history, plan);
+    }
+
+    private HeaderText HeaderOf(LogKind kind, ExerciseSnapshot snapshot)
+    {
+        var unit = Data.Snapshot.Settings.DisplayWeightUnit;
+        var last = snapshot.Last is { } l && (l.BestSet ?? l.Sets.LastOrDefault()) is { } lastSet
+            ? SetText.Result(kind, lastSet, Units, unit)
+            : null;
+        var best = snapshot.Best is { } b ? SetText.Result(kind, b.Set, Units, unit) : null;
+        var target = snapshot.Target is { } t ? SetText.Target(kind, t, Units, unit) : null;
+        return new HeaderText(last, best, target, target is null ? null : snapshot.Target?.Reason);
     }
 
     private static string? PlannedText(SessionExercise planned) => planned switch
@@ -386,9 +409,12 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _ => FinishAsync(),
     } : Task.CompletedTask;
 
-    private Task GoNext()
+    private Task GoNext() => JumpTo(_current + 1);
+
+    /// <summary>Shows another Exercise. Nothing is lost: confirmed Sets are saved and typed-but-unconfirmed text stays in the drafts.</summary>
+    private Task JumpTo(int index)
     {
-        _current++;
+        _current = index;
         _editingRow = null;
         _errorRow = null;
         return Task.CompletedTask;
@@ -438,6 +464,44 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
     }
 
+    /// <summary>Sets or clears the Exercise's RPE on its entry, creating the entry when no Set has been confirmed yet. Never blocks Confirm.</summary>
+    private async Task SetRpeAsync(string exerciseId, int? rpe)
+    {
+        if (_busy || !CanWrite)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await CommitAsync(latest => WithRpe(latest, exerciseId, rpe));
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static Workout WithRpe(Workout workout, string exerciseId, int? rpe)
+    {
+        var entries = workout.Entries.ToList();
+        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done);
+        if (index < 0)
+        {
+            entries.Add(new WorkoutEntry(exerciseId, EntryStatus.Done, null, null, rpe, []));
+        }
+        else
+        {
+            entries[index] = entries[index] with { Rpe = rpe };
+        }
+
+        return workout with { Entries = entries };
+    }
+
+    // TEMPORARY (B1): Finish only stamps EndedAt and returns Home, so a Workout is never stranded in progress. B2 replaces this wholesale
+    // with the full finish flow (Partial prompt, Pain check, summary). Once committed the Workout is no longer open, so a second tap is a
+    // no-op; _busy covers a second tap while the first save is still in flight. Either way EndedAt is stamped once.
     private async Task FinishAsync()
     {
         if (_busy || !CanWrite)
