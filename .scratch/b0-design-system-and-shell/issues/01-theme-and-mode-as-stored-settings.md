@@ -4,12 +4,12 @@
 
 **Blocked by:** None (can start immediately). Rebase on A4 if it has merged first.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Settings has a Theme and a Mode with the documented defaults; `Settings.Default` uses them
-- [ ] The writer writes both optional fields; the reader accepts them and applies the defaults when absent
-- [ ] An unknown or malformed Theme or Mode falls back to the default for that field and reports a format issue, using the existing reader conventions; the rest of the document still reads
-- [ ] A document written before this change (no `theme`, `mode`) reads unchanged and round-trips
-- [ ] `docs/data-spec.md` is updated: Settings table, first-run defaults and the example; the data-spec conformance test is extended so document and reader agree
-- [ ] The whole-dataset write, snapshot and storage paths carry the fields (a Settings commit changing only Theme persists and reloads)
-- [ ] Existing Core tests still pass untouched apart from additions; no `formatVersion` change
+- [x] Settings has a Theme and a Mode with the documented defaults; `Settings.Default` uses them
+- [x] The writer writes both optional fields; the reader accepts them and applies the defaults when absent
+- [x] An unknown or malformed Theme or Mode falls back to the default for that field and reports a format issue, using the existing reader conventions; the rest of the document still reads
+- [x] A document written before this change (no `theme`, `mode`) reads unchanged and round-trips
+- [x] `docs/data-spec.md` is updated: Settings table, first-run defaults and the example; the data-spec conformance test is extended so document and reader agree
+- [x] The whole-dataset write, snapshot and storage paths carry the fields (a Settings commit changing only Theme persists and reloads)
+- [x] Existing Core tests still pass untouched apart from additions; no `formatVersion` change
