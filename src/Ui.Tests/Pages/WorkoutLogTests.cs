@@ -1,0 +1,436 @@
+using AngleSharp.Dom;
+using Bunit;
+using Core.Model;
+using Core.Serialisation;
+using Core.Storage;
+using Core.Tests.Storage;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Ui.Pages;
+using Ui.Saving;
+using static Ui.Tests.Pages.LogFixture;
+
+namespace Ui.Tests.Pages;
+
+public sealed class WorkoutLogTests : BunitContext
+{
+    private readonly SaveFailureNotice _notice = new();
+
+    private async Task<IRenderedComponent<WorkoutLog>> OpenLogAsync(AppData? data = null, string id = "w-now", Workout? workout = null)
+    {
+        data ??= await OpenSeededAsync(plan: Plan(), workouts: workout ?? InProgress(id));
+        Wire(this, data, _notice);
+        return Render<WorkoutLog>(p => p.Add(l => l.WorkoutId, id));
+    }
+
+    private static IElement Weight(IRenderedComponent<WorkoutLog> cut, int set) => cut.Find($"input[aria-label='Weight, set {set}']");
+
+    private static IElement Reps(IRenderedComponent<WorkoutLog> cut, int set) => cut.Find($"input[aria-label='Reps, set {set}']");
+
+    private static void Confirm(IRenderedComponent<WorkoutLog> cut) => cut.Find(".fa-confirmbar .fa-btn--primary").Click();
+
+    private static Workout Stored(AppData data, string id = "w-now") => data.Snapshot.Workouts.Single(w => w.Id == id);
+
+    private static IReadOnlyList<WorkoutSet> SquatSets(AppData data) =>
+        Stored(data).Entries.Single(e => e.ExerciseId == Squat).Sets;
+
+    // ---- Opening
+
+    [Fact]
+    public async Task Opens_with_the_session_name_progress_and_the_first_exercise_header()
+    {
+        var cut = await OpenLogAsync();
+
+        Assert.Equal("Lower", cut.Find("h1").TextContent);
+        Assert.Contains("0 of 2 done", cut.Find(".log__progress").TextContent);
+        Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
+        Assert.Contains("3 × 8", cut.Markup);
+        Assert.Contains("Chest up", cut.Markup);
+        Assert.Equal("Confirm Set", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".log__notice")); // nothing logged yet: not resumed
+    }
+
+    [Fact]
+    public async Task Rows_are_numbered_labelled_and_set_up_for_the_phone_keypad()
+    {
+        var cut = await OpenLogAsync();
+
+        Assert.Equal(3, cut.FindAll(".fa-setrow").Count);
+        Assert.Equal("decimal", Weight(cut, 2).GetAttribute("inputmode"));
+        Assert.Equal("numeric", Reps(cut, 2).GetAttribute("inputmode"));
+        Assert.Equal("this.select()", Weight(cut, 2).GetAttribute("onfocus"));
+        Assert.Equal("this.select()", Reps(cut, 2).GetAttribute("onfocus"));
+    }
+
+    [Fact]
+    public async Task With_no_history_the_fields_are_empty_and_the_planned_reps_are_the_hint()
+    {
+        var cut = await OpenLogAsync();
+
+        Assert.Equal("", Weight(cut, 1).GetAttribute("value") ?? "");
+        Assert.Equal("8", Reps(cut, 1).GetAttribute("placeholder"));
+    }
+
+    [Fact]
+    public async Task Fields_are_prefilled_from_last_time_and_muted_until_confirmed_or_edited()
+    {
+        var data = await OpenSeededAsync(
+            plan: Plan(),
+            workouts:
+            [
+                Finished("w-old", Today.AddDays(-7), Set("o1", 20, 10), Set("o2", 22.5, 8)),
+                InProgress(),
+            ]);
+        var cut = await OpenLogAsync(data);
+
+        Assert.Equal("20", Weight(cut, 1).GetAttribute("value"));
+        Assert.Equal("10", Reps(cut, 1).GetAttribute("value"));
+        Assert.Equal("22.5", Weight(cut, 2).GetAttribute("value"));
+        Assert.Contains("fa-input--pending", Weight(cut, 1).ClassName);
+
+        Weight(cut, 1).Input("21");
+
+        Assert.DoesNotContain("fa-input--pending", Weight(cut, 1).ClassName);
+    }
+
+    [Fact]
+    public async Task Confirming_an_untouched_prefilled_row_saves_same_as_last()
+    {
+        var data = await OpenSeededAsync(
+            plan: Plan(), workouts: [Finished("w-old", Today.AddDays(-7), Set("o1", 20, 10)), InProgress()]);
+        var cut = await OpenLogAsync(data);
+
+        Confirm(cut);
+
+        var saved = Assert.Single(SquatSets(data));
+        Assert.Equal(20, saved.WeightKg);
+        Assert.Equal(10, saved.Reps);
+    }
+
+    // ---- Confirming
+
+    [Fact]
+    public async Task Typing_and_confirming_saves_the_set_in_canonical_units_and_shows_the_green_tick()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+
+        Weight(cut, 1).Input("22,5");
+        Reps(cut, 1).Input("8");
+        Confirm(cut);
+
+        var saved = Assert.Single(SquatSets(data));
+        Assert.Equal(22.5, saved.WeightKg);
+        Assert.Equal(8, saved.Reps);
+        Assert.False(saved.IsMax);
+        Assert.Single(cut.FindAll(".fa-setrow--done"));
+        Assert.NotNull(cut.Find("button[aria-label='Edit set 1']"));
+        Assert.Contains("fa-setrow--current", cut.FindAll(".fa-setrow")[1].ClassName);
+        Assert.Null(_notice.Message);
+    }
+
+    [Fact]
+    public async Task Lb_users_type_pounds_and_the_stored_set_is_kilograms()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        await data.CommitAsync(Change.Put(data.Snapshot.Settings with { DisplayWeightUnit = WeightUnit.Lb }));
+        var cut = await OpenLogAsync(data);
+
+        Weight(cut, 1).Input("100");
+        Reps(cut, 1).Input("5");
+        Confirm(cut);
+
+        Assert.Equal(45.36, SquatSets(data).Single().WeightKg!.Value, 2);
+    }
+
+    [Fact]
+    public async Task Enter_in_the_first_field_moves_to_the_second_and_Enter_in_the_second_confirms()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+        Weight(cut, 1).Input("20");
+        Reps(cut, 1).Input("10");
+
+        Weight(cut, 1).KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        Assert.Empty(data.Snapshot.Workouts.Single().Entries);
+        JSInterop.VerifyFocusAsyncInvoke();
+
+        Reps(cut, 1).KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Single(SquatSets(data));
+    }
+
+    // ---- Validation
+
+    [Fact]
+    public async Task A_bad_value_shows_the_message_under_the_row_keeps_the_text_and_returns_focus_and_saves_nothing()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+
+        Weight(cut, 1).Input("abc");
+        Reps(cut, 1).Input("8");
+        Confirm(cut);
+
+        Assert.NotEmpty(cut.Find(".fa-setrow__error").TextContent);
+        Assert.Equal("true", Weight(cut, 1).GetAttribute("aria-invalid"));
+        Assert.Null(Reps(cut, 1).GetAttribute("aria-invalid"));
+        Assert.Equal("abc", Weight(cut, 1).GetAttribute("value"));
+        Assert.Contains("fa-input--error", Weight(cut, 1).ClassName);
+        Assert.Empty(data.Snapshot.Workouts.Single().Entries);
+        JSInterop.VerifyFocusAsyncInvoke();
+    }
+
+    [Fact]
+    public async Task A_bad_reps_value_marks_the_reps_field()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+
+        Weight(cut, 1).Input("20");
+        Reps(cut, 1).Input("many");
+        Confirm(cut);
+
+        Assert.Equal("true", Reps(cut, 1).GetAttribute("aria-invalid"));
+        Assert.Null(Weight(cut, 1).GetAttribute("aria-invalid"));
+    }
+
+    [Fact]
+    public async Task A_blank_row_with_no_history_is_refused_and_nothing_is_checked_while_typing()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+
+        Weight(cut, 1).Input("abc");
+        Assert.Empty(cut.FindAll(".fa-setrow__error"));
+
+        Weight(cut, 1).Input("");
+        Confirm(cut);
+
+        Assert.Single(cut.FindAll(".fa-setrow__error"));
+        Assert.Empty(data.Snapshot.Workouts.Single().Entries);
+    }
+
+    [Fact]
+    public async Task Fixing_the_value_after_a_failed_confirm_saves_it_and_clears_the_message()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+        Weight(cut, 1).Input("abc");
+        Reps(cut, 1).Input("8");
+        Confirm(cut);
+
+        Weight(cut, 1).Input("20");
+        Confirm(cut);
+
+        Assert.Empty(cut.FindAll(".fa-setrow__error"));
+        Assert.Equal(20, SquatSets(data).Single().WeightKg);
+    }
+
+    // ---- Reopening
+
+    [Fact]
+    public async Task Tapping_the_green_tick_reopens_the_set_and_confirming_replaces_it_in_place()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+        Weight(cut, 1).Input("20");
+        Reps(cut, 1).Input("10");
+        Confirm(cut);
+        var originalId = SquatSets(data).Single().Id;
+
+        cut.Find("button[aria-label='Edit set 1']").Click();
+        Assert.False(Weight(cut, 1).HasAttribute("readonly"));
+        Reps(cut, 1).Input("9");
+        Confirm(cut);
+
+        var saved = Assert.Single(SquatSets(data));
+        Assert.Equal(originalId, saved.Id);
+        Assert.Equal(9, saved.Reps);
+        Assert.Equal(20, saved.WeightKg);
+        Assert.NotNull(cut.Find("button[aria-label='Edit set 1']"));
+    }
+
+    // ---- Next and Finish
+
+    [Fact]
+    public async Task When_the_exercise_is_complete_the_primary_says_Next_with_the_next_exercise_then_Finish_ends_the_workout()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+        for (var set = 1; set <= 3; set++)
+        {
+            Weight(cut, set).Input("20");
+            Reps(cut, set).Input("8");
+            Confirm(cut);
+        }
+
+        Assert.Equal("Next: Walking lunge", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+        Assert.Contains("1 of 2 done", cut.Find(".log__progress").TextContent);
+
+        Confirm(cut);
+        Assert.Contains("Walking lunge", cut.Find(".fa-exercise__name").TextContent);
+        for (var set = 1; set <= 2; set++)
+        {
+            Weight(cut, set).Input("10");
+            Reps(cut, set).Input("10");
+            Confirm(cut);
+        }
+
+        Assert.Equal("Finish", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+        Confirm(cut);
+
+        Assert.Equal(Now, Stored(data).EndedAt);
+        Assert.Equal(Services.GetRequiredService<NavigationManager>().BaseUri, Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    // ---- Resuming
+
+    [Fact]
+    public async Task Reloading_restores_the_log_lands_on_the_first_incomplete_exercise_and_says_Resumed()
+    {
+        var squats = Enumerable.Range(1, 3).Select(i => Set($"s{i}", 20, 8)).ToArray();
+        var started = InProgress("w-now", new WorkoutEntry(Squat, EntryStatus.Done, null, null, null, squats));
+        var cut = await OpenLogAsync(workout: started);
+
+        Assert.Contains("Walking lunge", cut.Find(".fa-exercise__name").TextContent);
+        Assert.Contains("Resumed where you left off", cut.Find(".log__notice").TextContent);
+        Assert.Contains("1 of 2 done", cut.Find(".log__progress").TextContent);
+    }
+
+    [Fact]
+    public async Task A_reopened_workout_shows_its_confirmed_sets_as_done_and_continues_at_the_next_row()
+    {
+        var started = InProgress("w-now", new WorkoutEntry(Squat, EntryStatus.Done, null, null, null, [Set("s1", 22.5, 8)]));
+        var cut = await OpenLogAsync(workout: started);
+
+        Assert.Equal("22.5", Weight(cut, 1).GetAttribute("value"));
+        Assert.Single(cut.FindAll(".fa-setrow--done"));
+        Assert.Contains("fa-setrow--current", cut.FindAll(".fa-setrow")[1].ClassName);
+        Assert.Contains("Resumed", cut.Markup);
+    }
+
+    // ---- Unknown, finished
+
+    [Fact]
+    public async Task An_unknown_workout_id_says_so_with_a_way_home()
+    {
+        var cut = await OpenLogAsync(id: "nope", workout: InProgress("w-other"));
+
+        Assert.Contains("Workout not found", cut.Find("h1").TextContent);
+        Assert.Equal("./", cut.Find("a.fa-btn").GetAttribute("href"));
+        Assert.Empty(cut.FindAll(".fa-setrow"));
+    }
+
+    [Fact]
+    public async Task A_finished_workout_is_not_opened_for_logging()
+    {
+        var finished = InProgress("w-done") with { EndedAt = Now.AddHours(1) };
+        var cut = await OpenLogAsync(id: "w-done", workout: finished);
+
+        Assert.Contains("Workout not found", cut.Find("h1").TextContent);
+        Assert.Empty(cut.FindAll(".fa-setrow"));
+    }
+
+    // ---- Merging into the latest Workout
+
+    [Fact]
+    public async Task A_change_is_merged_into_the_latest_workout_not_the_one_the_page_first_saw()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+        var lungeEntry = new WorkoutEntry(Lunge, EntryStatus.Done, null, null, 8, [Set("other", 10, 10)]);
+        await data.CommitAsync(Change.Put(Stored(data) with { Entries = [lungeEntry] }));
+
+        Weight(cut, 1).Input("20");
+        Reps(cut, 1).Input("8");
+        Confirm(cut);
+
+        var entries = Stored(data).Entries;
+        Assert.Equal(2, entries.Count);
+        Assert.Contains(entries, e => e.ExerciseId == Lunge && e.Rpe == 8);
+        Assert.Contains(entries, e => e.ExerciseId == Squat);
+    }
+
+    // ---- Failure and read-only
+
+    [Fact]
+    public async Task A_failed_save_keeps_the_typed_entry_reports_the_failure_and_a_retry_succeeds()
+    {
+        var store = new FaultInjectingDataStore(new InMemoryDataStore());
+        var data = await OpenSeededAsync(store, Plan(), InProgress());
+        var cut = await OpenLogAsync(data);
+        Weight(cut, 1).Input("22");
+        Reps(cut, 1).Input("9");
+        store.FailAllWrites(StoreFailureKind.StorageFull);
+
+        Confirm(cut);
+
+        Assert.Contains("out of storage", _notice.Message);
+        Assert.Empty(Stored(data).Entries);
+        Assert.Equal("22", Weight(cut, 1).GetAttribute("value"));
+        Assert.Equal("9", Reps(cut, 1).GetAttribute("value"));
+        Assert.Empty(cut.FindAll(".fa-setrow--done"));
+
+        store.Recover();
+        Confirm(cut);
+
+        Assert.Equal(22, SquatSets(data).Single().WeightKg);
+        Assert.Null(_notice.Message);
+        Assert.Single(cut.FindAll(".fa-setrow--done"));
+    }
+
+    [Fact]
+    public async Task When_another_window_holds_the_writer_lock_the_log_is_read_only_with_a_plain_message()
+    {
+        var store = new InMemoryDataStore();
+        await OpenSeededAsync(store, Plan(), InProgress());
+        var locked = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
+        var cut = await OpenLogAsync(locked);
+
+        Assert.Contains("Another window", cut.Find(".log__notice").TextContent);
+        Assert.True(cut.Find(".fa-confirmbar .fa-btn").HasAttribute("disabled"));
+        Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
+    }
+
+    [Fact]
+    public async Task When_storage_cannot_be_read_the_page_says_so_and_offers_a_way_home()
+    {
+        var store = new FaultInjectingDataStore(new InMemoryDataStore());
+        await OpenSeededAsync(store, Plan(), InProgress());
+        store.FailEverything(StoreFailureKind.Unexpected);
+        var unreadable = await AppData.OpenAsync(store);
+        var cut = await OpenLogAsync(unreadable);
+
+        Assert.Contains("could not be read", cut.Find(".log__notice").TextContent);
+        Assert.Equal("./", cut.Find("a.fa-btn").GetAttribute("href"));
+        Assert.Empty(cut.FindAll(".fa-setrow"));
+    }
+
+    // ---- Exercises the page cannot log yet
+
+    [Fact]
+    public async Task An_exercise_kind_not_supported_yet_shows_a_note_and_can_be_passed_with_Next()
+    {
+        var plan = Plan(
+        [
+            new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+            [
+                new SessionExercise("plank", 2, null, null, null),
+                new SessionExercise(Squat, 3, 8, null, null),
+            ]),
+        ]);
+        var workout = Core.Rules.Starting.WorkoutStart.Create(
+            plan, plan.Sessions[0], Today, new CountingIds(), new FixedClock(Now)) with { Id = "w-now" };
+        var data = await OpenSeededAsync(plan: plan, workouts: workout);
+        var cut = await OpenLogAsync(data);
+
+        Assert.Contains("cannot be logged here yet", cut.Find(".log__notice").TextContent);
+        Assert.Empty(cut.FindAll(".fa-setrow"));
+        Assert.Equal("Next: Goblet squat", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+
+        Confirm(cut);
+
+        Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
+    }
+}

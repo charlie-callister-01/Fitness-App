@@ -1,0 +1,151 @@
+@using Core.Model
+@* C-02 SetRow: number, one or two inputs, state cell. Driven by parameters and callbacks only; the page owns saving and rules.
+   Layouts are picked from the log kind in one place (the switch below); later tickets add the one-wide-input and tick layouts. *@
+@switch (Kind)
+{
+    default:
+        @* Weight x reps and bodyweight x reps: two inputs, the first decimal, the second whole. *@
+        <div class="@RowClass">
+            <span class="fa-setrow__n">@Number</span>
+            <input @ref="_first" class="@InputClass(1)" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next"
+                   aria-label="@FirstLabel" aria-invalid="@Invalid(1)" readonly="@IsDone" placeholder="@FirstHint"
+                   value="@First" onfocus="this.select()"
+                   @oninput="e => FirstChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="e => OnKey(e, 1)" />
+            <span class="fa-setrow__x" aria-hidden="true">×</span>
+            <input @ref="_second" class="@InputClass(2)" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done"
+                   aria-label="@SecondLabel" aria-invalid="@Invalid(2)" readonly="@IsDone" placeholder="@SecondHint"
+                   value="@Second" onfocus="this.select()"
+                   @oninput="e => SecondChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="e => OnKey(e, 2)" />
+            @if (IsDone)
+            {
+                <button type="button" class="fa-setrow__state fa-setrow__state--done" aria-label="@($"Edit set {Number}")" @onclick="OnReopen"><Icon Name="IconName.Check" /></button>
+            }
+            else
+            {
+                <span class="fa-setrow__state"></span>
+            }
+            @if (ErrorMessage is not null)
+            {
+                <p class="fa-setrow__error" id="@ErrorId">@ErrorMessage</p>
+            }
+        </div>
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public int Number { get; set; }
+
+    [Parameter]
+    public LogKind Kind { get; set; } = LogKind.Load;
+
+    [Parameter]
+    public SetRowState State { get; set; } = SetRowState.Upcoming;
+
+    /// <summary>The first field's text (weight, or "bw"), in display units.</summary>
+    [Parameter]
+    public string First { get; set; } = "";
+
+    /// <summary>The second field's text (reps).</summary>
+    [Parameter]
+    public string Second { get; set; } = "";
+
+    /// <summary>True while the values are only the prefill: shown muted until confirmed or edited.</summary>
+    [Parameter]
+    public bool Pending { get; set; }
+
+    /// <summary>Plain-language message for this row, shown under it; null when the row is fine.</summary>
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>Which field is invalid when there is a message: 1 or 2, 0 for none.</summary>
+    [Parameter]
+    public int InvalidField { get; set; }
+
+    /// <summary>Which field to focus when <see cref="FocusSequence"/> changes: 1 or 2, 0 for none.</summary>
+    [Parameter]
+    public int FocusField { get; set; }
+
+    /// <summary>A counter: each new value asks this row to move focus to <see cref="FocusField"/>.</summary>
+    [Parameter]
+    public int FocusSequence { get; set; }
+
+    [Parameter]
+    public string? FirstHint { get; set; }
+
+    [Parameter]
+    public string? SecondHint { get; set; }
+
+    [Parameter]
+    public EventCallback<string> FirstChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SecondChanged { get; set; }
+
+    /// <summary>Enter in the last field.</summary>
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    /// <summary>The green tick was tapped: reopen this Set for editing.</summary>
+    [Parameter]
+    public EventCallback OnReopen { get; set; }
+
+    private ElementReference _first;
+    private ElementReference _second;
+    private int _handledFocus;
+
+    private bool IsDone => State == SetRowState.Done;
+
+    private string FirstLabel => $"Weight, set {Number}";
+
+    private string SecondLabel => $"Reps, set {Number}";
+
+    private string ErrorId => $"set-{Number}-error";
+
+    private string RowClass => $"fa-setrow fa-setrow--{State.ToString().ToLowerInvariant()}";
+
+    private string InputClass(int field) => string.Join(' ', new[]
+    {
+        "fa-input",
+        Pending && !IsDone ? "fa-input--pending" : null,
+        State == SetRowState.Current ? "fa-input--current" : null,
+        ErrorMessage is not null && InvalidField == field ? "fa-input--error" : null,
+    }.Where(c => c is not null));
+
+    private string? Invalid(int field) => ErrorMessage is not null && InvalidField == field ? "true" : null;
+
+    private async Task OnKey(KeyboardEventArgs e, int field)
+    {
+        if (e.Key != "Enter" || IsDone)
+        {
+            return;
+        }
+
+        if (field == 1)
+        {
+            await _second.FocusAsync();
+        }
+        else
+        {
+            await OnConfirm.InvokeAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (FocusSequence != _handledFocus)
+        {
+            _handledFocus = FocusSequence;
+            if (FocusField == 1)
+            {
+                await _first.FocusAsync();
+            }
+            else if (FocusField == 2)
+            {
+                await _second.FocusAsync();
+            }
+        }
+    }
+}

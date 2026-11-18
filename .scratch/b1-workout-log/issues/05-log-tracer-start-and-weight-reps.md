@@ -4,9 +4,11 @@
 
 **Blocked by:** 01, 03, 04.
 
-**Status:** ready-for-agent
+**Status:** done (see the note under the criteria)
 
-- [ ] bUnit page tests over real `AppData` on the in-memory store: Start, type, Confirm, stored canonical Set; pending "same as last"; validation message and focus; reopen a done Set; reload restores and shows Resumed
-- [ ] Home tests: Start, Continue, no Plan, in-progress guard (no second Workout)
-- [ ] Failed save (fault-injecting store) keeps the entry and shows the banner; retry succeeds; writer-lock and unreadable states are read-only
+- [x] bUnit page tests over real `AppData` on the in-memory store: Start, type, Confirm, stored canonical Set; pending "same as last"; validation message and focus; reopen a done Set; reload restores and shows Resumed
+- [x] Home tests: Start, Continue, no Plan, in-progress guard (no second Workout)
+- [x] Failed save (fault-injecting store) keeps the entry and shows the banner; retry succeeds; writer-lock and unreadable states are read-only
 - [ ] Fields labelled ("Weight, set 2", "Reps, set 2"), visible focus, 44 px / 64 px targets, safe-area bottom bar, 360 px no sideways scroll
+
+**Note (ticket 05 implementation):** The fourth criterion is left unticked: labels are tested, but visible focus (global `:focus-visible`), the 44 px / 64 px targets (existing tokens and `fa-*` classes), the safe-area bottom bar and the 360 px no-sideways-scroll layout are CSS-only and not checked in a browser. They belong on the manual phone checks (ticket 07). Also built so a Workout cannot be stranded: Next (to the next Exercise) and the temporary Finish (stamps `EndedAt`, back to Home). Bodyweight x reps rides the same two-field row. Other kinds show a "cannot be logged here yet" note with Next (ticket 06). The "banner" for a failed save is the shared SaveFailureNotice banner; tests assert the notice message.

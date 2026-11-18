@@ -171,5 +171,15 @@ public class RowPrefillTests
         Assert.Equal(PrefillSource.SuggestedTarget, row.Source);
     }
 
+    [Fact]
+    public void FromStored_shows_a_saved_set_in_display_units()
+    {
+        var stored = Set(kg: 45.3592, reps: 8);
+
+        Assert.Equal(("100", "8"), Pair(RowPrefill.FromStored(LogKind.Load, stored, Imperial)!));
+        Assert.Equal(("bw", "8"), Pair(RowPrefill.FromStored(LogKind.BodyweightLoad, Set(reps: 8), Metric)!));
+        Assert.Null(RowPrefill.FromStored(LogKind.Load, Set(reps: 8), Metric));
+    }
+
     private static (string, string) Pair(RowPrefillValues v) => (v.First, v.Second);
 }

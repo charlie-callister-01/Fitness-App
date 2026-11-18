@@ -64,6 +64,13 @@ public static class RowPrefill
         return RowPrefillValues.Empty(Hint(kind, planned));
     }
 
+    /// <summary>
+    /// The fields of a stored Set in display units, in the same form as a prefill, so a confirmed row shows (and a reopened row
+    /// starts from) what was saved. Null when the Set lacks what the kind needs.
+    /// </summary>
+    public static RowPrefillValues? FromStored(LogKind kind, WorkoutSet set, UnitConverter units) =>
+        Fields(kind, FromSet(set), units);
+
     private static ParsedSet FromSet(WorkoutSet s) =>
         new(s.WeightKg, s.Reps, s.DistanceKm, s.DurationSeconds, s.DistanceM, s.MeasurementCm, null);
 

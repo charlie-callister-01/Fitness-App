@@ -1,0 +1,82 @@
+@page "/log/{WorkoutId}"
+@layout FullScreenLayout
+@using Core.Model
+@implements IDisposable
+
+@if (OpenWorkout is not { } workout)
+{
+    <div class="log">
+        @if (ReadOnlyMessage is { } unreadable && !Data.Health.CanWrite)
+        {
+            <p class="fa-well log__notice" role="status">@unreadable</p>
+        }
+        else
+        {
+            <h1 class="fa-title fa-title--l">Workout not found</h1>
+            <p class="fa-muted">This Workout is not in progress, so there is nothing to log here.</p>
+        }
+        <Button Variant="ButtonVariant.Primary" Href="./">Back to Home</Button>
+    </div>
+}
+else
+{
+    var view = ViewOf(workout);
+    <div class="log">
+        <header class="log__bar">
+            <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" OnClick="GoBack" />
+            <div class="log__heading">
+                <h1 class="fa-title fa-title--m log__session">@view.SessionName</h1>
+                <p class="fa-muted log__progress" aria-live="polite">@view.DoneCount of @view.ExerciseCount done</p>
+            </div>
+        </header>
+
+        <div class="log__body">
+            @if (_resumed)
+            {
+                <p class="fa-well log__notice" role="status">Resumed where you left off</p>
+            }
+            @if (ReadOnlyMessage is { } readOnly)
+            {
+                <p class="fa-well log__notice" role="status">@readOnly</p>
+            }
+
+            @if (view.Exercise is not { } shown)
+            {
+                <p class="fa-muted">This Workout has no Exercises.</p>
+            }
+            else
+            {
+                <ExerciseHeader Name="@shown.Name" Planned="@shown.PlannedText" Cue="@shown.Cue" />
+
+                @if (shown.Rows.Count == 0)
+                {
+                    <p class="fa-well log__notice">@shown.UnavailableMessage</p>
+                }
+
+                <div class="log__rows">
+                    @foreach (var row in shown.Rows)
+                    {
+                        <SetRow @key="row.Index"
+                                Number="row.Index + 1"
+                                Kind="shown.Kind"
+                                State="row.State"
+                                First="@row.First"
+                                Second="@row.Second"
+                                Pending="row.Pending"
+                                SecondHint="@row.SecondHint"
+                                ErrorMessage="@(row.HasError ? _errorMessage : null)"
+                                InvalidField="@(row.HasError ? _invalidField : 0)"
+                                FocusField="@(row.Index == _focusRow ? _focusField : 0)"
+                                FocusSequence="_focusSequence"
+                                FirstChanged="text => EditFirst(shown, row.Index, text)"
+                                SecondChanged="text => EditSecond(shown, row.Index, text)"
+                                OnConfirm="ConfirmAsync"
+                                OnReopen="() => Reopen(shown, row.Index)" />
+                    }
+                </div>
+            }
+        </div>
+
+        <ConfirmBar PrimaryLabel="@view.PrimaryLabel" Disabled="@(!CanWrite && view.PrimaryNeedsWrite)" OnPrimary="PrimaryAsync" />
+    </div>
+}
