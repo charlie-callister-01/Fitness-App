@@ -46,7 +46,9 @@ else
             }
             else
             {
-                <ExerciseHeader Name="@shown.Name" Planned="@shown.PlannedText" Cue="@shown.Cue" />
+                <ExerciseHeader Name="@shown.Name" Planned="@shown.PlannedText" Cue="@shown.Cue"
+                                Last="@shown.Header?.Last" Best="@shown.Header?.Best"
+                                Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" />
 
                 @if (shown.Rows.Count == 0)
                 {
@@ -74,6 +76,11 @@ else
                                 OnReopen="() => Reopen(shown, row.Index)" />
                     }
                 </div>
+
+                @if (shown.Rows.Count > 0)
+                {
+                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => SetRpeAsync(shown.ExerciseId, rpe)" />
+                }
             }
         </div>
 
