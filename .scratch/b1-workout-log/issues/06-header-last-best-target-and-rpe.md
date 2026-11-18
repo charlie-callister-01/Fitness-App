@@ -4,9 +4,9 @@
 
 **Blocked by:** 05.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Last, Best and target render for an Exercise with history, and are absent for a new Exercise
-- [ ] kg and lb display
-- [ ] RPE set and clear stored on the entry; the next Suggested target reflects it (A2 rules)
-- [ ] Tests: header contents, `aria-pressed`, toggle-off, RPE never blocks Confirm
+- [x] Last, Best and target render for an Exercise with history, and are absent for a new Exercise
+- [x] kg and lb display
+- [x] RPE set and clear stored on the entry; the next Suggested target reflects it (A2 rules)
+- [x] Tests: header contents, `aria-pressed`, toggle-off, RPE never blocks Confirm

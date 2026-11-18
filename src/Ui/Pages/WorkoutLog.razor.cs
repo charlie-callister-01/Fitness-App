@@ -99,7 +99,10 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     private sealed record ExerciseView(
         string ExerciseId, string Name, LogKind Kind, string? PlannedText, string? Cue,
-        IReadOnlyList<RowView> Rows, string UnavailableMessage, bool Complete);
+        IReadOnlyList<RowView> Rows, string UnavailableMessage, bool Complete, HeaderText? Header = null, int? Rpe = null);
+
+    /// <summary>Last, Best and the Suggested target as text in the owner's units; a part is null when there is none.</summary>
+    private sealed record HeaderText(string? Last, string? Best, string? Target, string? Reason);
 
     private enum PrimaryAction
     {
@@ -199,7 +202,9 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }).ToList();
 
         var complete = confirmed >= planned.Sets && _editingRow is null;
-        return new(exercise.Id, exercise.Name, exercise.LogKind, plannedText, planned.Cue, rows, "", complete);
+        var rpe = workout.Entries.FirstOrDefault(e => e.ExerciseId == exercise.Id && e.Status == EntryStatus.Done)?.Rpe;
+        return new(exercise.Id, exercise.Name, exercise.LogKind, plannedText, planned.Cue, rows, "", complete,
+            HeaderOf(exercise.LogKind, snapshot), rpe);
     }
 
     /// <summary>Last and the Suggested target come from finished history only, never from this Workout.</summary>
@@ -209,6 +214,17 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             ?? Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
         var history = Data.Snapshot.Workouts.Where(w => w.Id != workout.Id && w.EndedAt is not null);
         return ExercisePerformance.Snapshot(exercise, history, plan);
+    }
+
+    private HeaderText HeaderOf(LogKind kind, ExerciseSnapshot snapshot)
+    {
+        var unit = Data.Snapshot.Settings.DisplayWeightUnit;
+        var last = snapshot.Last is { } l && (l.BestSet ?? l.Sets.LastOrDefault()) is { } lastSet
+            ? SetText.Result(kind, lastSet, Units, unit)
+            : null;
+        var best = snapshot.Best is { } b ? SetText.Result(kind, b.Set, Units, unit) : null;
+        var target = snapshot.Target is { } t ? SetText.Target(kind, t, Units, unit) : null;
+        return new HeaderText(last, best, target, target is null ? null : snapshot.Target?.Reason);
     }
 
     private static string? PlannedText(SessionExercise planned) => planned switch
@@ -311,6 +327,41 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         {
             _busy = false;
         }
+    }
+
+    /// <summary>Sets or clears the Exercise's RPE on its entry, creating the entry when no Set has been confirmed yet. Never blocks Confirm.</summary>
+    private async Task SetRpeAsync(string exerciseId, int? rpe)
+    {
+        if (_busy || !CanWrite)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await CommitAsync(latest => WithRpe(latest, exerciseId, rpe));
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static Workout WithRpe(Workout workout, string exerciseId, int? rpe)
+    {
+        var entries = workout.Entries.ToList();
+        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done);
+        if (index < 0)
+        {
+            entries.Add(new WorkoutEntry(exerciseId, EntryStatus.Done, null, null, rpe, []));
+        }
+        else
+        {
+            entries[index] = entries[index] with { Rpe = rpe };
+        }
+
+        return workout with { Entries = entries };
     }
 
     // TEMPORARY (B1): Finish only stamps EndedAt and returns Home, so a Workout is never stranded in progress. B2 replaces this wholesale

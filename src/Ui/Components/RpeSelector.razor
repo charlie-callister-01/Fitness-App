@@ -1,0 +1,30 @@
+@* C-05 RpeSelector: optional effort for the Exercise, five toggles 6 to 10. Tapping the selected value clears it. It never blocks Confirm. *@
+<div class="fa-rpe">
+    <span class="fa-label" id="@_labelId">Effort (RPE)</span>
+    <div class="fa-rpe__opts" role="group" aria-labelledby="@_labelId">
+        @foreach (var value in Values)
+        {
+            var selected = Value == value;
+            <button type="button" aria-pressed="@(selected ? "true" : "false")" aria-label="RPE @value" disabled="@Disabled"
+                    @onclick="() => Toggle(value)">@value</button>
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly int[] Values = [6, 7, 8, 9, 10];
+
+    private readonly string _labelId = $"rpe-{Guid.NewGuid():N}";
+
+    [Parameter]
+    public int? Value { get; set; }
+
+    /// <summary>The new value, or null when the selected one was tapped again.</summary>
+    [Parameter]
+    public EventCallback<int?> ValueChanged { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private Task Toggle(int value) => ValueChanged.InvokeAsync(Value == value ? null : value);
+}
