@@ -1,11 +1,12 @@
 @* C-01 Button. Skin comes from the global fa-btn classes; one set of classes for both Themes. *@
-@if (Href is not null && !Disabled)
+@if (Href is not null)
 {
-    <a class="@CssClass" href="@Href" aria-label="@AccessibleName">@Content</a>
+    @* A disabled link keeps its element and look but loses its href, so it cannot be followed or focused. *@
+    <a class="@CssClass" href="@(Disabled ? null : Href)" aria-disabled="@(Disabled ? "true" : null)" tabindex="@(Disabled ? "-1" : null)" aria-label="@AccessibleName">@Content</a>
 }
 else
 {
-    <button type="button" class="@CssClass" disabled="@Disabled" aria-label="@AccessibleName" @onclick="HandleClick">@Content</button>
+    <button type="button" class="@CssClass" disabled="@Disabled" aria-label="@AccessibleName" aria-pressed="@(Pressed is { } on ? (on ? "true" : "false") : null)" @onclick="HandleClick">@Content</button>
 }
 
 @code {
@@ -19,8 +20,12 @@ else
     [Parameter]
     public bool Disabled { get; set; }
 
+    /// <summary>For a button that is one of a set of choices: whether it is the chosen one (aria-pressed). Null for an ordinary button.</summary>
     [Parameter]
-    public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnClick { get; set; }
+    public bool? Pressed { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
 
     /// <summary>The icon shown in the Icon variant.</summary>
     [Parameter]
@@ -33,7 +38,7 @@ else
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    private Task HandleClick(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) => Disabled ? Task.CompletedTask : OnClick.InvokeAsync(e);
+    private Task HandleClick(MouseEventArgs e) => Disabled ? Task.CompletedTask : OnClick.InvokeAsync(e);
 
     private string CssClass => $"fa-btn fa-btn--{Variant.ToString().ToLowerInvariant()}";
 

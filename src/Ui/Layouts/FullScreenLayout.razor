@@ -1,4 +1,9 @@
 @inherits LayoutComponentBase
 
 @* No navigation: for the Workout log. *@
-<main id="main-content" class="fullscreen">@Body</main>
+<SkipLink Target="() => main" />
+<main id="main-content" class="fullscreen" tabindex="-1" @ref="main">@Body</main>
+
+@code {
+    private ElementReference main;
+}

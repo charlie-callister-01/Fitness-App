@@ -105,6 +105,87 @@ public sealed class ThemeServiceTests
         Assert.Equal(Mode.Dark, service.Mode);
     }
 
+    // Holds the first write until released, so a second choice can arrive while the first is still saving.
+    private sealed class HoldingStore(IDataStore inner) : IDataStore
+    {
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private bool _held;
+
+        public bool HoldNextWrite { get; set; }
+
+        public void Release() => _release.TrySetResult();
+
+        public Task<StoreResult<StoredData>> LoadAllAsync() => inner.LoadAllAsync();
+
+        public async Task<StoreResult<Unit>> ApplyAsync(IReadOnlyList<StoreChange> changes, StoreMetadata? metadata = null)
+        {
+            if (HoldNextWrite && !_held)
+            {
+                _held = true;
+                await _release.Task;
+            }
+
+            return await inner.ApplyAsync(changes, metadata);
+        }
+
+        public Task<StoreResult<Unit>> ReplaceAllAsync(IReadOnlyList<StoredRecord> records, StoreMetadata? metadata = null) =>
+            inner.ReplaceAllAsync(records, metadata);
+
+        public Task<StoreResult<Unit>> WriteMetadataAsync(StoreMetadata metadata) => inner.WriteMetadataAsync(metadata);
+    }
+
+    [Fact]
+    public async Task Two_quick_choices_both_survive_and_the_newer_one_is_saved_last()
+    {
+        var store = new HoldingStore(new InMemoryDataStore());
+        var data = await AppData.OpenAsync(store);
+        var service = new ThemeService(data, new FakeThemeInterop());
+        await service.InitialiseAsync();
+        store.HoldNextWrite = true;
+
+        var first = service.SetThemeAsync(Theme.Clean);
+        var second = service.SetModeAsync(Mode.Light);
+        store.Release();
+        await Task.WhenAll(first, second);
+
+        Assert.Equal((Theme.Clean, Mode.Light), (service.Theme, service.Mode));
+        Assert.Equal((Theme.Clean, Mode.Light), (data.Snapshot.Settings.Theme, data.Snapshot.Settings.Mode));
+    }
+
+    [Fact]
+    public async Task A_choice_made_while_an_earlier_one_is_saving_is_not_reverted_by_the_earlier_commit()
+    {
+        var store = new HoldingStore(new InMemoryDataStore());
+        var data = await AppData.OpenAsync(store);
+        var interop = new FakeThemeInterop();
+        var service = new ThemeService(data, interop);
+        await service.InitialiseAsync();
+        store.HoldNextWrite = true;
+
+        var first = service.SetThemeAsync(Theme.Clean);
+        var second = service.SetModeAsync(Mode.Dark);
+        store.Release();
+        await Task.WhenAll(first, second);
+
+        Assert.Equal((Theme.Clean, Mode.Dark), interop.Applied[^1]);
+        Assert.All(interop.Applied.SkipWhile(a => a != (Theme.Clean, Mode.Dark)), a => Assert.Equal((Theme.Clean, Mode.Dark), a));
+    }
+
+    [Fact]
+    public async Task After_a_failed_save_a_later_choice_and_an_unrelated_commit_both_leave_the_session_choice_alone()
+    {
+        var (service, data, _, store) = await StartAsync();
+        store.FailAllWrites(StoreFailureKind.StorageFull);
+        await service.SetThemeAsync(Theme.Clean);
+        await service.SetModeAsync(Mode.Dark);
+        store.Recover();
+
+        await data.CommitAsync(Change.Put(data.Snapshot.Settings with { RestTimerSeconds = 90 }));
+
+        Assert.Equal((Theme.Clean, Mode.Dark), (service.Theme, service.Mode));
+        Assert.Equal((Theme.Keep, Mode.System), (data.Snapshot.Settings.Theme, data.Snapshot.Settings.Mode));
+    }
+
     [Fact]
     public async Task A_failing_interop_never_throws_into_the_caller()
     {

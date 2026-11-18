@@ -79,6 +79,7 @@ public sealed class MoreTests : BunitContext
         Assert.Equal(Theme.Clean, _data.Snapshot.Settings.Theme);
     }
 
+#if DEBUG
     [Fact]
     public async Task TheGalleryIsFoldedInAsACollapsedTemporarySection_WithNoSecondSetOfPickers()
     {
@@ -90,4 +91,14 @@ public sealed class MoreTests : BunitContext
         Assert.Equal(1, cut.FindAll("button").Count(b => b.TextContent == "Clean"));
         Assert.Contains("On a Break", cut.Markup);
     }
+#else
+    [Fact]
+    public async Task TheGalleryIsNotInAReleaseBuild()
+    {
+        var cut = await RenderMoreAsync();
+
+        Assert.Empty(cut.FindAll("details"));
+        Assert.DoesNotContain("On a Break", cut.Markup);
+    }
+#endif
 }

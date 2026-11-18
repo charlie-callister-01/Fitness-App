@@ -13,25 +13,25 @@
 </nav>
 
 @code {
-    private sealed record Tab(string Label, IconName Icon, string Href, string[] Segments);
+    private sealed record Tab(string Label, IconName Icon, string Href);
 
-    // Hrefs are relative to the document base, so they work under the /Fitness-App/ sub-path.
-    // A tab owns every route whose first path segment is listed, which is how nested routes keep their parent active.
+    // Hrefs are relative to the document base, so they work under the /Fitness-App/ sub-path. A tab owns every route whose first path
+    // segment is its own href, which is how nested routes keep their parent active. More also owns the screens it lists (MoreDestinations).
     private static readonly Tab[] Tabs =
     [
-        new("Home", IconName.Home, "", [""]),
-        new("Week", IconName.Week, "week", ["week"]),
-        new("Progress", IconName.Progress, "progress", ["progress"]),
-        new("Trophies", IconName.Trophies, "trophies", ["trophies"]),
-        new("More", IconName.More, "more",
-            ["more", "plans", "exercises", "weight", "weekly-review", "backup", "settings"]),
+        new("Home", IconName.Home, ""),
+        new("Week", IconName.Week, "week"),
+        new("Progress", IconName.Progress, "progress"),
+        new("Trophies", IconName.Trophies, "trophies"),
+        new("More", IconName.More, MoreDestinations.MoreHref),
     ];
 
     protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
 
-    private bool IsActive(Tab tab) => tab.Segments.Contains(CurrentSegment());
+    private bool IsActive(Tab tab) =>
+        tab.Href == MoreDestinations.MoreHref ? MoreDestinations.Owns(CurrentSegment()) : tab.Href == CurrentSegment();
 
     private string CurrentSegment()
     {

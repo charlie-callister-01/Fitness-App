@@ -33,8 +33,10 @@
     }
 
     function resolveMode(mode) {
-        if (mode === 'system') return schemeQuery && !schemeQuery.matches ? 'light' : 'dark';
-        return mode;
+        if (mode !== 'system') return mode;
+        // Light only when the phone says it does not prefer dark; with no way to ask, dark.
+        const phoneIsLight = schemeQuery !== null && !schemeQuery.matches;
+        return phoneIsLight ? 'light' : 'dark';
     }
 
     function render() {
@@ -43,12 +45,8 @@
         root.setAttribute(THEME_ATTRIBUTE, current.theme);
         root.setAttribute(MODE_ATTRIBUTE, resolved);
 
-        let meta = document.querySelector('meta[name="theme-color"]');
-        if (!meta && document.head) {
-            meta = document.createElement('meta');
-            meta.name = 'theme-color';
-            document.head.appendChild(meta);
-        }
+        // index.html ships the tag (before this script runs), so it is only updated here.
+        const meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', CHROME_COLOURS[current.theme + '-' + resolved]);
     }
 

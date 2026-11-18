@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -37,7 +38,12 @@ public static partial class IconCatalogue
     }
 
     /// <summary>The icon's inline SVG markup, ready to render.</summary>
-    public static string SvgOf(IconName name)
+    public static string SvgOf(IconName name) => Stripped.GetOrAdd(name, ReadStripped);
+
+    // Each icon is read and stripped once, however often it renders.
+    private static readonly ConcurrentDictionary<IconName, string> Stripped = new();
+
+    private static string ReadStripped(IconName name)
     {
         var fileName = FileNameOf(name);
         using var stream = Source.GetManifestResourceStream(ResourcePrefix + fileName)

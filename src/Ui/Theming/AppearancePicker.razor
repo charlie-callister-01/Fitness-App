@@ -5,25 +5,8 @@
 <section class="fa-root" aria-labelledby="appearance-heading">
     <h2 id="appearance-heading" class="fa-title fa-title--m">Appearance</h2>
 
-    <div role="group" aria-labelledby="theme-label" class="fa-panel">
-        <p id="theme-label" class="fa-label">Theme</p>
-        <div class="fa-chips">
-            @foreach (var theme in Enum.GetValues<Theme>())
-            {
-                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Theme == theme ? "true" : "false")" @onclick="() => Themes.SetThemeAsync(theme)">@theme</button>
-            }
-        </div>
-    </div>
-
-    <div role="group" aria-labelledby="mode-label" class="fa-panel">
-        <p id="mode-label" class="fa-label">Mode</p>
-        <div class="fa-chips">
-            @foreach (var mode in Enum.GetValues<Mode>())
-            {
-                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Mode == mode ? "true" : "false")" @onclick="() => Themes.SetModeAsync(mode)">@mode</button>
-            }
-        </div>
-    </div>
+    @ChoiceGroup("Theme", "theme-label", Themes.Theme, ThemeLabels, Themes.SetThemeAsync)
+    @ChoiceGroup("Mode", "mode-label", Themes.Mode, ModeLabels, Themes.SetModeAsync)
 
     @if (Themes.LastSaveFailure is not null)
     {
@@ -32,6 +15,31 @@
 </section>
 
 @code {
+    private static readonly IReadOnlyDictionary<Theme, string> ThemeLabels = new Dictionary<Theme, string>
+    {
+        [Theme.Keep] = "Keep",
+        [Theme.Clean] = "Clean",
+    };
+
+    private static readonly IReadOnlyDictionary<Mode, string> ModeLabels = new Dictionary<Mode, string>
+    {
+        [Mode.System] = "Match phone",
+        [Mode.Dark] = "Dark",
+        [Mode.Light] = "Light",
+    };
+
+    // One labelled group of choices, one Button each, the current one pressed.
+    private RenderFragment ChoiceGroup<T>(string title, string labelId, T current, IReadOnlyDictionary<T, string> labels, Func<T, Task> choose)
+        where T : struct, Enum => @<div role="group" aria-labelledby="@labelId" class="fa-panel">
+            <p id="@labelId" class="fa-label">@title</p>
+            <div class="fa-chips">
+                @foreach (var (value, label) in labels)
+                {
+                    <Button Variant="ButtonVariant.Secondary" Pressed="EqualityComparer<T>.Default.Equals(value, current)" OnClick="() => choose(value)">@label</Button>
+                }
+            </div>
+        </div>;
+
     protected override void OnInitialized() => Themes.Changed += OnThemeChanged;
 
     public void Dispose() => Themes.Changed -= OnThemeChanged;

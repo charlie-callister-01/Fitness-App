@@ -69,6 +69,34 @@ public sealed class ButtonTests : BunitContext
     }
 
     [Fact]
+    public void DisabledButtonGivenADestination_StaysALinkThatCannotBeFollowed()
+    {
+        var cut = RenderButton(ButtonVariant.Primary, p =>
+        {
+            p.Add(b => b.Href, "plans");
+            p.Add(b => b.Disabled, true);
+        });
+
+        var link = cut.Find("a");
+        Assert.Equal("true", link.GetAttribute("aria-disabled"));
+        Assert.Equal("-1", link.GetAttribute("tabindex"));
+        Assert.Null(link.GetAttribute("href"));
+        Assert.Contains("fa-btn--primary", link.ClassList);
+        Assert.Empty(cut.FindAll("button"));
+    }
+
+    [Theory]
+    [InlineData(true, "true")]
+    [InlineData(false, "false")]
+    [InlineData(null, null)]
+    public void Button_ExposesWhetherItIsTheChosenOneOfASet(bool? pressed, string? expected)
+    {
+        var cut = RenderButton(ButtonVariant.Secondary, p => p.Add(b => b.Pressed, pressed));
+
+        Assert.Equal(expected, cut.Find("button").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
     public void IconButton_ShowsTheIconAndExposesItsAccessibleName()
     {
         var cut = Render<Button>(p =>

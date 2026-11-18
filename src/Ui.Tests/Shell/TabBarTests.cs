@@ -55,6 +55,15 @@ public sealed class TabBarTests : BunitContext
     }
 
     [Fact]
+    public void TabBar_KeepsMoreActiveOnEveryScreenTheMorePageLists()
+    {
+        foreach (var entry in MoreDestinations.Entries)
+        {
+            Assert.Equal("More", CurrentLabel(RenderAt(entry.Href + "/nested")));
+        }
+    }
+
+    [Fact]
     public void TabBar_MarksNoTabOnAnUnknownRoute()
     {
         Assert.Empty(RenderAt("nowhere").FindAll("a[aria-current='page']"));
