@@ -10,7 +10,7 @@
         <div class="fa-chips">
             @foreach (var theme in Enum.GetValues<Theme>())
             {
-                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Theme == theme)" @onclick="() => Themes.SetThemeAsync(theme)">@theme</button>
+                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Theme == theme ? "true" : "false")" @onclick="() => Themes.SetThemeAsync(theme)">@theme</button>
             }
         </div>
     </div>
@@ -20,7 +20,7 @@
         <div class="fa-chips">
             @foreach (var mode in Enum.GetValues<Mode>())
             {
-                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Mode == mode)" @onclick="() => Themes.SetModeAsync(mode)">@mode</button>
+                <button type="button" class="fa-btn fa-btn--secondary" aria-pressed="@(Themes.Mode == mode ? "true" : "false")" @onclick="() => Themes.SetModeAsync(mode)">@mode</button>
             }
         </div>
     </div>
