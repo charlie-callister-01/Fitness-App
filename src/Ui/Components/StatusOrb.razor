@@ -1,0 +1,45 @@
+@* C-11 StatusOrb: a ringed gauge for one number. Pure SVG, no animation. *@
+<div class="fa-orb">
+    <svg viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="@AccessibleName">
+        <circle class="fa-orb__ring" cx="48" cy="48" r="44" stroke-width="3" />
+        <circle class="fa-orb__track" cx="48" cy="48" r="36" stroke-width="8" />
+        @if (ArcLength > 0)
+        {
+            <circle class="fa-orb__arc @ArcClass" cx="48" cy="48" r="36" stroke-width="8"
+                    stroke-dasharray="@Dash(ArcLength) @Dash(Circumference - ArcLength)" />
+        }
+        <text class="fa-orb__value" x="48" y="48" text-anchor="middle" dominant-baseline="central" font-size="30">@Value</text>
+    </svg>
+    <span class="fa-orb__cap">@(Greyed ? "On a Break" : Caption)</span>
+</div>
+
+@code {
+    private const double Radius = 36;
+    private static readonly double Circumference = 2 * Math.PI * Radius;
+
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = "";
+
+    /// <summary>Share of the ring to fill, 0 to 1. Out-of-range values are clamped; a non-finite value shows the empty ring.</summary>
+    [Parameter]
+    public double Fraction { get; set; }
+
+    [Parameter]
+    public string? Caption { get; set; }
+
+    [Parameter, EditorRequired]
+    public string AccessibleName { get; set; } = "";
+
+    [Parameter]
+    public OrbTone Tone { get; set; } = OrbTone.Green;
+
+    /// <summary>A Break: keeps the number, greys the arc, captions "On a Break".</summary>
+    [Parameter]
+    public bool Greyed { get; set; }
+
+    private double ArcLength => double.IsFinite(Fraction) ? Math.Clamp(Fraction, 0, 1) * Circumference : 0;
+
+    private string ArcClass => Greyed ? "fa-orb__arc--greyed" : $"fa-orb__fill--{Tone.ToString().ToLowerInvariant()}";
+
+    private static string Dash(double length) => length.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+}
