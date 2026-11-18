@@ -1,0 +1,9 @@
+/* One action for now: the row's three-column grid (stepper, primary, stepper) collapses to the primary alone. */
+.confirm-row {
+    grid-template-columns: 1fr;
+}
+
+/* The bar sits above the phone's gesture area. */
+.fa-confirmbar {
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+}

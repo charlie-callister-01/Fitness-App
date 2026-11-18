@@ -1,0 +1,20 @@
+@* C-06 ConfirmBar: fixed to the bottom of the log with the one primary action. Steppers and the Up next strip slot in beside it later. *@
+<div class="fa-confirmbar">
+    <div class="fa-confirmbar__row confirm-row">
+        <Button Variant="ButtonVariant.Primary" Disabled="Disabled" OnClick="HandlePrimary">@PrimaryLabel</Button>
+    </div>
+</div>
+
+@code {
+    /// <summary>"Confirm Set", "Next: Lunge" or "Finish".</summary>
+    [Parameter, EditorRequired]
+    public string PrimaryLabel { get; set; } = "";
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback OnPrimary { get; set; }
+
+    private Task HandlePrimary() => OnPrimary.InvokeAsync();
+}

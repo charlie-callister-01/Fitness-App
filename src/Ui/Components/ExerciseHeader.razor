@@ -1,0 +1,26 @@
+@* C-04 ExerciseHeader, basic: the name, the planned Sets x reps and the Plan's cue. Last, Best and the Suggested target arrive later. *@
+<section class="fa-exercise" aria-label="Exercise">
+    <div class="fa-exercise__top">
+        <h2 class="fa-exercise__name">@Name</h2>
+    </div>
+    @if (Planned is not null)
+    {
+        <p class="fa-exercise__lastbest">@Planned</p>
+    }
+    @if (Cue is not null)
+    {
+        <p class="fa-muted">@Cue</p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    /// <summary>The planned Sets and reps as text, for example "3 × 8"; null when the plan has none.</summary>
+    [Parameter]
+    public string? Planned { get; set; }
+
+    [Parameter]
+    public string? Cue { get; set; }
+}
