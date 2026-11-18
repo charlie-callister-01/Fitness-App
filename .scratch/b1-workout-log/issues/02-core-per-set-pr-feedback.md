@@ -4,11 +4,11 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Correct for every log kind that ranks (load, bodyweight load, carry, reps, seconds, minutes, km, m, time)
-- [ ] Baseline is not a PR; equal is not a PR; strictly better is
-- [ ] Max set precedence both ways (a Max set in history; a Max set in the current Workout)
-- [ ] Marker moves to a later better Set; removing or editing the Set changes the answer
-- [ ] Agrees with `ExercisePerformance.Prs` once the Workout is finished (test)
-- [ ] Core unit tests in the style of `ExercisePerformanceTests`
+- [x] Correct for every log kind that ranks (load, bodyweight load, carry, reps, seconds, minutes, km, m, time)
+- [x] Baseline is not a PR; equal is not a PR; strictly better is
+- [x] Max set precedence both ways (a Max set in history; a Max set in the current Workout)
+- [x] Marker moves to a later better Set; removing or editing the Set changes the answer
+- [x] Agrees with `ExercisePerformance.Prs` once the Workout is finished (test)
+- [x] Core unit tests in the style of `ExercisePerformanceTests`
