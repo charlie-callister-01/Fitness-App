@@ -105,7 +105,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     private sealed record RowView(
         int Index, SetRowState State, string First, string Second, bool Pending, string? SecondHint, bool HasError,
-        bool IsMax = false, bool Stored = false);
+        bool IsMax = false, bool Stored = false, string? FirstHint = null);
 
     /// <param name="Step">The steppers' step while a row is waiting to be confirmed; null hides them.</param>
     /// <param name="MaxTarget">The row the Max set link acts on: the current row, else the last confirmed one.</param>
@@ -137,8 +137,8 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         public bool PrimaryNeedsWrite => Action != PrimaryAction.Next;
     }
 
-    /// <summary>The kinds this page can log so far; others show a note and can be passed with Next.</summary>
-    private static bool IsLoggable(LogKind kind) => kind is LogKind.Load or LogKind.BodyweightLoad;
+    /// <summary>Every kind with a row layout can be logged; the rest (free text) show a note and can be passed with Next.</summary>
+    private static bool IsLoggable(LogKind kind) => RowLayout.For(kind) is not null;
 
     private UnitConverter Units => new(Data.Snapshot.Settings);
 
@@ -197,7 +197,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         if (!IsLoggable(exercise.LogKind))
         {
             return new(exercise.Id, exercise.Name, exercise.LogKind, plannedText, planned.Cue, [],
-                "This kind of Exercise cannot be logged here yet. Use Next to move on.", false);
+                "A text Exercise cannot be logged here yet, because a Set cannot hold text. Use Next to move on.", false);
         }
 
         var confirmed = Confirmed(workout, exercise.Id);
@@ -223,7 +223,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             rows.Add(new RowView(
                 i, state, draft?.First ?? first, draft?.Second ?? second,
                 !isDone && (draft is null || draft.Carried), prefill.RepsHint, _errorRow == (exercise.Id, i),
-                stored?.IsMax ?? draft?.Max ?? false, stored is not null));
+                stored?.IsMax ?? draft?.Max ?? false, stored is not null, FirstHintOf(exercise.LogKind, prefill)));
         }
 
         var complete = confirmed >= planned.Sets && _editingRow is null;
@@ -254,12 +254,29 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private HeaderText HeaderOf(LogKind kind, ExerciseSnapshot snapshot)
     {
         var unit = Data.Snapshot.Settings.DisplayWeightUnit;
+        var distanceUnit = Data.Snapshot.Settings.DisplayDistanceUnit;
         var last = snapshot.Last is { } l && (l.BestSet ?? l.Sets.LastOrDefault()) is { } lastSet
-            ? SetText.Result(kind, lastSet, Units, unit)
+            ? SetText.Result(kind, lastSet, Units, unit, distanceUnit)
             : null;
-        var best = snapshot.Best is { } b ? SetText.Result(kind, b.Set, Units, unit) : null;
-        var target = snapshot.Target is { } t ? SetText.Target(kind, t, Units, unit) : null;
+        var best = snapshot.Best is { } b ? SetText.Result(kind, b.Set, Units, unit, distanceUnit) : null;
+        var target = snapshot.Target is { } t ? SetText.Target(kind, t, Units, unit, distanceUnit) : null;
         return new HeaderText(last, best, target, target is null ? null : snapshot.Target?.Reason);
+    }
+
+    /// <summary>What an empty first field hints at: its unit, or the planned reps in a reps-only row. Pair rows hint on the second field.</summary>
+    private string? FirstHintOf(LogKind kind, RowPrefillValues prefill)
+    {
+        var settings = Data.Snapshot.Settings;
+        return RowLayout.For(kind) switch
+        {
+            { Shape: RowShape.Wide, FirstUnit: RowUnit.Clock } => "m:ss",
+            { Shape: RowShape.Wide, FirstUnit: RowUnit.Distance } => settings.DisplayDistanceUnit == DistanceUnit.Km ? "km" : "mi",
+            { Shape: RowShape.Wide, FirstUnit: RowUnit.Metres } => "m",
+            { Shape: RowShape.Wide, FirstUnit: RowUnit.Weight } => settings.DisplayWeightUnit == WeightUnit.Kg ? "kg" : "lb",
+            { Shape: RowShape.Wide, FirstUnit: RowUnit.Centimetres } => "cm",
+            { Shape: RowShape.Wide } => prefill.RepsHint,
+            _ => null,
+        };
     }
 
     private static string? PlannedText(SessionExercise planned) => planned switch

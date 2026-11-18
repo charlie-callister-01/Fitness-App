@@ -1,42 +1,59 @@
 @using Core.Model
 @* C-02 SetRow: number, one or two inputs, state cell. Driven by parameters and callbacks only; the page owns saving and rules.
-   Layouts are picked from the log kind in one place (the switch below); later tickets add the one-wide-input and tick layouts. *@
-@switch (Kind)
-{
-    default:
-        @* Weight x reps and bodyweight x reps: two inputs, the first decimal, the second whole. *@
-        <div class="@RowClass">
-            <span class="fa-setrow__n">@Number</span>
-            <input @ref="_first" class="@InputClass(1)" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next"
+   The layout (two inputs, one wide input, or a tick button) comes from the log kind through RowLayout. *@
+<div class="@RowClass">
+    <span class="fa-setrow__n">@Number</span>
+    @switch (Layout.Shape)
+    {
+        case RowShape.Tick:
+            @if (IsDone)
+            {
+                <span class="fa-setrow__tick fa-setrow__tick--done">Done</span>
+            }
+            else
+            {
+                <button type="button" class="fa-setrow__tick" aria-label="@($"Mark set {Number} done")" @onclick="OnConfirm">Done</button>
+            }
+            break;
+        case RowShape.Wide:
+            <input @ref="_first" class="@InputClass(1) fa-setrow__wide" type="text" inputmode="@Layout.FirstMode" autocomplete="off" enterkeyhint="done"
+                   aria-label="@FirstLabel" aria-invalid="@Invalid(1)" readonly="@IsDone" placeholder="@FirstHint"
+                   value="@First" onfocus="this.select()"
+                   @oninput="e => FirstChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="e => OnKey(e, 1)" />
+            break;
+        default:
+            @* Two inputs: the first decimal, the second usually whole. *@
+            <input @ref="_first" class="@InputClass(1)" type="text" inputmode="@Layout.FirstMode" autocomplete="off" enterkeyhint="next"
                    aria-label="@FirstLabel" aria-invalid="@Invalid(1)" readonly="@IsDone" placeholder="@FirstHint"
                    value="@First" onfocus="this.select()"
                    @oninput="e => FirstChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
                    @onkeydown="e => OnKey(e, 1)" />
             <span class="fa-setrow__x" aria-hidden="true">×</span>
-            <input @ref="_second" class="@InputClass(2)" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done"
+            <input @ref="_second" class="@InputClass(2)" type="text" inputmode="@Layout.SecondMode" autocomplete="off" enterkeyhint="done"
                    aria-label="@SecondLabel" aria-invalid="@Invalid(2)" readonly="@IsDone" placeholder="@SecondHint"
                    value="@Second" onfocus="this.select()"
                    @oninput="e => SecondChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
                    @onkeydown="e => OnKey(e, 2)" />
-            @if (IsDone)
-            {
-                <button type="button" class="fa-setrow__state fa-setrow__state--done" aria-label="@($"Edit set {Number}")" @onclick="OnReopen"><Icon Name="IconName.Check" /></button>
-            }
-            else
-            {
-                <span class="fa-setrow__state"></span>
-            }
-            @if (IsMax)
-            {
-                <p class="fa-setrow__max"><Icon Name="IconName.MaxSet" /> Max set</p>
-            }
-            @if (ErrorMessage is not null)
-            {
-                <p class="fa-setrow__error" id="@ErrorId">@ErrorMessage</p>
-            }
-        </div>
-        break;
-}
+            break;
+    }
+    @if (IsDone)
+    {
+        <button type="button" class="fa-setrow__state fa-setrow__state--done" aria-label="@($"Edit set {Number}")" @onclick="OnReopen"><Icon Name="IconName.Check" /></button>
+    }
+    else
+    {
+        <span class="fa-setrow__state"></span>
+    }
+    @if (IsMax)
+    {
+        <p class="fa-setrow__max"><Icon Name="IconName.MaxSet" /> Max set</p>
+    }
+    @if (ErrorMessage is not null)
+    {
+        <p class="fa-setrow__error" id="@ErrorId">@ErrorMessage</p>
+    }
+</div>
 
 @code {
     [Parameter, EditorRequired]
@@ -106,9 +123,12 @@
 
     private bool IsDone => State == SetRowState.Done;
 
-    private string FirstLabel => $"Weight, set {Number}";
+    /// <summary>A kind with no layout never reaches a row (the page shows a note instead); Load is only a safe default.</summary>
+    private RowLayout Layout => RowLayout.For(Kind) ?? RowLayout.For(LogKind.Load)!;
 
-    private string SecondLabel => $"Reps, set {Number}";
+    private string FirstLabel => $"{Layout.FirstLabel}, set {Number}";
+
+    private string SecondLabel => $"{Layout.SecondLabel}, set {Number}";
 
     private string ErrorId => $"set-{Number}-error";
 
@@ -131,7 +151,7 @@
             return;
         }
 
-        if (field == 1)
+        if (field == 1 && Layout.Shape == RowShape.Pair)
         {
             await _second.FocusAsync();
         }

@@ -4,9 +4,10 @@
 
 **Blocked by:** 07, 09.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] One bUnit scenario per kind: type in the right fields, Confirm, assert the stored Set in canonical units
-- [ ] Correct `inputmode`, labels, stepper visibility and step size per kind
-- [ ] Text note and unsupported or deleted Exercise handled without a crash
+- [x] One bUnit scenario per kind: type in the right fields, Confirm, assert the stored Set in canonical units
+- [x] Correct `inputmode`, labels, stepper visibility and step size per kind
+- [x] Text note and unsupported or deleted Exercise handled without a crash
 - [ ] Layout checked at 360 px for the two-input and wide-input rows
+  (Not browser-checked: the wide and tick rows span columns 2-4 of the existing 360 px grid. Left for ticket 11.)

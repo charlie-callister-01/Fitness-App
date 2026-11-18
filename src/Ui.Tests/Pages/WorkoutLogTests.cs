@@ -741,7 +741,7 @@ public sealed class WorkoutLogTests : BunitContext
         [
             new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
             [
-                new SessionExercise("plank", 2, null, null, null),
+                new SessionExercise("journal", 2, null, null, null),
                 new SessionExercise(Squat, 3, 8, null, null),
             ]),
         ]);

@@ -130,3 +130,10 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 /* Keep the display face free of ligatures and contextual swaps so labels read letter by letter. */
 .fa-title, .fa-label, .fa-btn, .fa-exercise__name, .fa-tile, .fa-chip, .fa-tab { font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0, "calt" 0; }
 .fa-setrow__error[hidden] { display: none; }
+
+/* Set row, one wide input (seconds, reps, time, distance, measurements) or one tick button: spans the two input columns and the gap */
+.fa-setrow__wide { grid-column: 2 / 5; }
+.fa-setrow__tick { grid-column: 2 / 5; height: var(--tap-log); box-sizing: border-box; border: var(--border-thin) solid var(--input-border); border-radius: var(--r-control); background: var(--input-bg); color: var(--input-text); font-family: var(--font-system); font-size: 24px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.fa-setrow__tick--done { background: var(--done); color: var(--on-done); border-color: transparent; cursor: default; }
+.fa-setrow--current .fa-setrow__tick { border: var(--border-thick) solid var(--focus); }
+.fa-setrow__tick:focus-visible { outline: var(--border-thick) solid var(--focus); outline-offset: 2px; }

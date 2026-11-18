@@ -37,6 +37,7 @@ internal static class LogFixture
         new(Squat, "Goblet squat", LogKind.Load, null, false),
         new(Lunge, "Walking lunge", LogKind.Load, null, false),
         new("plank", "Plank", LogKind.Seconds, null, false),
+        new("journal", "Journal", LogKind.Text, null, false),
     ];
 
     /// <summary>The active Plan: "Lower" on Mondays with Goblet squat 3 x 8 and Walking lunge 2 x 10.</summary>
