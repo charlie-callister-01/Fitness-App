@@ -131,7 +131,7 @@ internal static class TargetRules
     private static string Describe(ScalarProgression p, double stored) =>
         $"{Num(stored / p.PerDisplayUnit)} {p.Unit}{(p.Pluralise ? "s" : "")}";
 
-    private static string Clock(int seconds) =>
+    internal static string Clock(int seconds) =>
         seconds >= 3600
             ? $"{seconds / 3600}:{seconds % 3600 / 60:00}:{seconds % 60:00}"
             : $"{seconds / 60}:{seconds % 60:00}";
@@ -142,5 +142,5 @@ internal static class TargetRules
 
     private static string Plural(double n, string word) => $"{Num(n)} {word}{(n == 1 ? "" : "s")}";
 
-    private static string Num(double n) => n.ToString("0.##", CultureInfo.InvariantCulture);
+    internal static string Num(double n) => n.ToString("0.##", CultureInfo.InvariantCulture);
 }

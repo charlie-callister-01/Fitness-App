@@ -48,6 +48,7 @@ Not chosen: browser-SQLite libraries such as SqliteWasmBlazor and Bit.Bsqlite (y
 - Every record has a **permanent ID**; names are labels. Imports match Exercises by ID, then exact name, then suggest near-matches for confirmation.
 - One **versioned JSON** format is the Backup, the LLM analysis Export, and the Plan/Guide/changes Import. A Markdown rendering is produced for pasting into chats. Serialisation with `System.Text.Json`.
 - The importer must keep reading old format versions.
+- Delivered in stage A4 (spec: [`specs/a4-export-import.md`](specs/a4-export-import.md)), all in `Core.Exchange`: `Exporter` (slice by date range and kind; JSON and Markdown; a Backup is the "everything" request), and Import as three steps: `ImportInput.Inspect` (cut the JSON from a pasted reply, versioned read, suggest a kind), `ImportPreviewer.Preview` (Exercise matching, the Change list validated on a copy of the snapshot, plain-language lines, open choices in `ImportDecisions`) and `ImportApplier.ApplyAsync` (stale and not-ready checks, automatic Backup through the host's `IBackupSink`, then one atomic commit or `ReplaceAllAsync`). `PromptPack` builds the three prompts. Delivery (download, copy, share) is the host's job.
 - One canonical unit stored (kg, km, m); display units are a setting.
 - Imports: preview, automatic backup, field-level error messages, never silent merges.
 - The prompt pack embeds the format spec and the current Exercise library.
