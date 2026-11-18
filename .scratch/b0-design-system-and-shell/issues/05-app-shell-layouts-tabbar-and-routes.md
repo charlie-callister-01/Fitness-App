@@ -4,12 +4,12 @@
 
 **Blocked by:** 02 (Design assets, offline cache and PWA identity), 04 (Base components)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Five tabs with icon and 11 px label, `aria-current="page"` on the active tab, a labelled navigation landmark; a nested route keeps its parent tab active (pinned by tests)
+- [x] Five tabs with icon and 11 px label, `aria-current="page"` on the active tab, a labelled navigation landmark; a nested route keeps its parent tab active (pinned by tests)
 - [ ] At 360 px nothing scrolls sideways or clips; 431 to 899 px centres a 560 px column; 900 px and wider shows the left rail
-- [ ] A full-screen page shows no tab bar; a pushed page shows a back arrow and no tab bar
-- [ ] Placeholder routes and the not-found page render EmptyStates; the not-found page offers a way to Home
+- [x] A full-screen page shows no tab bar; a pushed page shows a back arrow and no tab bar
+- [x] Placeholder routes and the not-found page render EmptyStates; the not-found page offers a way to Home
 - [ ] Skip link works by keyboard; focus outline visible; the router still scans the Ui assembly and focuses the page heading on navigation
-- [ ] bUnit tests cover tab marking, layout selection and routing; existing Home and build-identifier behaviour is preserved until ticket 06 moves it
-- [ ] Deep link, refresh and base-path checks added to `docs/pwa-manual-checks.md`; app and tests green
+- [x] bUnit tests cover tab marking, layout selection and routing; existing Home and build-identifier behaviour is preserved until ticket 06 moves it
+- [x] Deep link, refresh and base-path checks added to `docs/pwa-manual-checks.md`; app and tests green

@@ -1,8 +1,11 @@
 @page "/"
 @inject IBuildInfo BuildInfo
 
-<main class="home">
-    <h1>Fitness App</h1>
+@* Placeholder (B0): the real Home (S-01) arrives in a later stage. The build identifier and the temporary links move to More in ticket 06. *@
+<div class="fa-root">
+    <h1 class="fa-title fa-title--l">Fitness App</h1>
+    <EmptyState Kind="EmptyStateKind.FirstRun" Title="Welcome" Message="Today's Session will live here." />
     <p class="build-id">Build @BuildInfo.Identifier</p>
+    <p><a href="gallery">Component gallery (temporary)</a></p>
     <p><a href="appearance-stub">Appearance (temporary)</a></p>
-</main>
+</div>
