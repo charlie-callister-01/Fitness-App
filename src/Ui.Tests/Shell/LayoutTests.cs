@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Ui;
 using Ui.Layouts;
 
 namespace Ui.Tests.Shell;
@@ -25,7 +26,11 @@ public sealed class LayoutTests : BunitContext
         protected override void BuildRenderTree(RenderTreeBuilder builder) => builder.AddContent(0, "page body");
     }
 
-    public LayoutTests() => JSInterop.Mode = JSRuntimeMode.Loose;
+    public LayoutTests()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddSingleton<InAppHistory>();
+    }
 
     // Mirrors App.razor: the router's RouteView with the main layout as the default.
     private IRenderedComponent<RouteView> RenderRoute(Type page) =>
@@ -75,14 +80,46 @@ public sealed class LayoutTests : BunitContext
         Assert.Contains("page body", cut.Find("main").TextContent);
     }
 
-    [Fact]
-    public void ThePushedBackArrow_GoesBackInBrowserHistory()
+    [Theory]
+    [InlineData(typeof(PlainPage))]
+    [InlineData(typeof(FullScreenPage))]
+    [InlineData(typeof(PushedPage))]
+    public void EveryLayout_OffersTheSkipLinkToAFocusableMainLandmark(Type page)
     {
+        var cut = RenderRoute(page);
+
+        Assert.Equal("Skip to content", cut.Find("a.skip-link").TextContent.Trim());
+        Assert.Equal("-1", cut.Find("main#main-content").GetAttribute("tabindex"));
+    }
+
+    [Fact]
+    public void ThePushedBackArrow_GoesBackInBrowserHistory_OnceTheAppHasNavigated()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        Services.GetRequiredService<InAppHistory>();
         var cut = RenderRoute(typeof(PushedPage));
+        navigation.NavigateTo("plans");
+        var before = navigation.Uri;
 
         cut.Find("button[aria-label='Back']").Click();
 
         Assert.Contains(JSInterop.Invocations, i => i.Identifier == "history.back");
+        Assert.Equal(before, navigation.Uri);
+    }
+
+    [Fact]
+    public void ThePushedBackArrow_GoesToTheAppRoot_WhenThereIsNothingInTheAppToGoBackTo()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        // The app starts on a pushed page (a deep link): nothing has been navigated to since the history service was created.
+        navigation.NavigateTo("plans");
+        Services.GetRequiredService<InAppHistory>();
+        var cut = RenderRoute(typeof(PushedPage));
+
+        cut.Find("button[aria-label='Back']").Click();
+
+        Assert.DoesNotContain(JSInterop.Invocations, i => i.Identifier == "history.back");
+        Assert.Equal(navigation.BaseUri, navigation.Uri);
     }
 
 }

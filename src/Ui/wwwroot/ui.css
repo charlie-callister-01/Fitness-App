@@ -17,3 +17,19 @@ button, a, input, select {
     min-height: 44px;
     min-width: 44px;
 }
+
+/* The content column's cap (560 px from 431 px, set by each layout) is the only width limit; components.css's .fa-root max-width
+   is a design-gallery width that would otherwise fight it. Phones up to 390 px see no change. */
+.fa-root { max-width: none; }
+
+/* A link Button that is disabled keeps its look but cannot be followed (it has no href). */
+a.fa-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+
+/* No animation or transition for people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

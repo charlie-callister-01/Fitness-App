@@ -1,0 +1,16 @@
+.skip-link {
+    position: absolute;
+    left: var(--space-2);
+    top: -100px;
+    z-index: 20;
+    padding: var(--space-3) var(--space-4);
+    background: var(--primary);
+    color: var(--on-primary);
+    border-radius: var(--r-control);
+}
+
+.skip-link:focus {
+    top: max(var(--space-2), env(safe-area-inset-top));
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: 2px;
+}

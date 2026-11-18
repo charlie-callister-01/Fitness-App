@@ -1,6 +1,6 @@
 @inherits LayoutComponentBase
 
-<a class="skip-link" href="#main-content" @onclick="FocusMain" @onclick:preventDefault>Skip to content</a>
+<SkipLink Target="() => main" />
 <TabBar />
 <div class="shell">
     <main id="main-content" class="column" tabindex="-1" @ref="main">@Body</main>
@@ -8,7 +8,4 @@
 
 @code {
     private ElementReference main;
-
-    // A plain "#main-content" href would resolve against the document base and leave the page, so focus it directly.
-    private Task FocusMain() => main.FocusAsync().AsTask();
 }
