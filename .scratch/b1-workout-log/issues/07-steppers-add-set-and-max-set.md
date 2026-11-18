@@ -4,10 +4,10 @@
 
 **Blocked by:** 05.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Stepper changes only the current row and carries down to unconfirmed later rows, not to confirmed ones
-- [ ] Increment comes from the Plan; lb display
-- [ ] Add and remove Set; Max set mark and unmark persisted on the Set
-- [ ] Stepper buttons have accessible names and 60 × 64 targets
-- [ ] bUnit page tests
+- [x] Stepper changes only the current row and carries down to unconfirmed later rows, not to confirmed ones
+- [x] Increment comes from the Plan; lb display
+- [x] Add and remove Set; Max set mark and unmark persisted on the Set
+- [x] Stepper buttons have accessible names and 60 × 64 targets
+- [x] bUnit page tests

@@ -1,6 +1,8 @@
-/* One action for now: the row's three-column grid (stepper, primary, stepper) collapses to the primary alone. */
-.confirm-row {
+/* Without steppers the row's three-column grid (stepper, primary, stepper) collapses to the primary alone. */
+.confirm-row--single {
+    display: grid;
     grid-template-columns: 1fr;
+    gap: 10px;
 }
 
 /* The bar sits above the phone's gesture area. */
