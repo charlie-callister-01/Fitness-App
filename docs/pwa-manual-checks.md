@@ -1,10 +1,10 @@
 # PWA: how it works and the manual phone checks
 
-Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (development: does nothing, no caching), `service-worker.published.js` (becomes `service-worker.js` on publish), icons (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon.png`).
+Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (development: does nothing, no caching), `service-worker.published.js` (becomes `service-worker.js` on publish), icons (`icon-192.png`, `icon-512.png`, `icon-maskable-192.png`, `icon-maskable-512.png`, `icon-monochrome-512.png`, `apple-touch-icon.png`, `favicon.svg`, `favicon-32.png`, `favicon-16.png`). The shared design assets (`tokens.css`, `components.css`, the Jersey 15 font, icons, graphics, illustrations, badges) are copies in `src/Ui/wwwroot`, served under `_content/Ui/`.
 
 ## How offline and updates work
 
-- On publish, .NET generates `service-worker-assets.js`: every published asset (runtime, assemblies, `_content/Ui/ui.css`, icons, `index.html`, manifest) with a hash, plus a `version` that is a hash of the whole set. It changes whenever any asset changes.
+- On publish, .NET generates `service-worker-assets.js`: every published asset (runtime, assemblies, `_content/Ui/*.css`, fonts, SVG artwork, icons, `index.html`, manifest) with a hash, plus a `version` that is a hash of the whole set. It changes whenever any asset changes.
 - The cache is named `offline-cache-<version>`. Install downloads the full list into the new cache. Activate deletes every other `offline-cache-*` cache.
 - A new build installs in the background but **waits** (no `skipWaiting`) until the old version's tabs/windows are closed, then activates. So a page never mixes old shell with new assemblies. Practically: after deploying, open the app once online (it fetches the update), close it fully, open it again: you now have the new build. The placeholder shows the build identifier so you can tell.
 - The worker derives its base path from its own URL, so hosting under a sub-path needs no edit to it. `index.html`'s `<base href>` is rewritten at publish time by `scripts/publish-pages.sh`, which also updates `index.html`'s hash in `service-worker-assets.js` (the worker checks it, so skipping that would break the offline install). See the README Deploy section.
@@ -13,7 +13,7 @@ Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (d
 ## Automated or inspectable checks (no phone)
 
 1. `dotnet publish src/Web -c Release -o <dir>`.
-2. `<dir>/wwwroot/service-worker-assets.js` lists `js/indexeddb-store.js`, `js/storage-environment.js`, `_content/Ui/ui.css`, all `_framework/*.wasm`, icons, `index.html` and `manifest.webmanifest`.
+2. `<dir>/wwwroot/service-worker-assets.js` lists `js/indexeddb-store.js`, `js/storage-environment.js`, `_content/Ui/tokens.css`, `_content/Ui/components.css`, `_content/Ui/fonts/jersey-15-latin-400-normal.woff2`, `_content/Ui/icons/*.svg`, `_content/Ui/badges/*.svg`, all `_framework/*.wasm`, icons, `index.html` and `manifest.webmanifest`.
 3. Changing any asset (for example `css/app.css`) and republishing changes `version`.
 4. Chrome DevTools, Application tab: Manifest shows no errors and "Installability" passes; Service workers shows activated; Cache storage shows one `offline-cache-*`.
 
@@ -26,6 +26,12 @@ Install:
 Offline:
 1. Open the installed app once while online and wait for it to load fully.
 2. Close it, switch on airplane mode, open it again. The placeholder (app name and build id) must appear.
+3. Design assets offline: the heading is in the pixel display font (Jersey 15, not a system fallback), and an icon or illustration on a page (for example the EmptyState artwork once a screen uses it) still shows. In DevTools, Network (offline) shows `_content/Ui/fonts/...woff2` and `_content/Ui/icons/...svg` served from the service worker.
+
+Installed icon:
+- Android: the home-screen icon is the designed icon, shown correctly in both a round mask and a squircle mask (nothing important clipped). With themed icons on (Android 13+), it appears as a single-colour silhouette.
+- iOS: the 180px icon shows without a black border.
+- The splash screen background is the Keep dark brown (`#2B2620`), not blue.
 
 Update pickup:
 1. Note the build id on the phone. Deploy a new build.

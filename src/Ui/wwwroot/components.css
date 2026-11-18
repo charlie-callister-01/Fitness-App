@@ -1,0 +1,131 @@
+/* Keep display face, self-hosted for offline use (Jersey 15, SIL OFL 1.1; see fonts/OFL-Jersey15.txt). */
+@font-face { font-family: "Jersey 15"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/jersey-15-latin-400-normal.woff2") format("woff2"); }
+
+/* Fitness App components: plain CSS on top of tokens.css.
+   Theme = data-theme="keep|clean", Mode = data-mode="dark|light" on <html>. */
+
+/* Per-Theme font and radius switches live in tokens.css. */
+
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
+.fa-root { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); max-width: 390px; }
+
+/* Display text */
+.fa-title { font-family: var(--font-display); font-weight: var(--w-display); color: var(--text-heading); text-shadow: var(--shadow-heading); margin: 0; }
+.fa-title--xl { font-size: calc(32px * var(--display-scale)); line-height: calc(36px * var(--display-scale)); }
+.fa-title--l { font-size: calc(26px * var(--display-scale)); line-height: calc(30px * var(--display-scale)); }
+.fa-title--m { font-size: calc(20px * var(--display-scale)); line-height: calc(24px * var(--display-scale)); }
+.fa-label { font-family: var(--font-label); font-size: calc(14px * var(--display-scale)); line-height: calc(18px * var(--display-scale)); font-weight: var(--w-label); color: var(--text-label); }
+.fa-muted { color: var(--text-muted); font-size: 14px; line-height: 20px; }
+
+/* Panels and wells */
+.fa-panel { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-panel); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+.fa-well { background: var(--surface-sunken); border-radius: var(--r-control); box-shadow: var(--shadow-sunken); padding: 10px 12px; }
+
+/* Buttons (C-01) */
+.fa-btn { min-height: var(--tap-min); padding: 0 var(--space-4); border: 0; border-radius: var(--r-control); font-family: var(--font-label); font-size: calc(16px * var(--display-scale)); font-weight: var(--w-label); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.fa-btn--primary { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-primary); min-height: var(--tap-primary); font-size: calc(19px * var(--display-scale)); }
+.fa-btn--secondary { background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); }
+[data-theme="keep"] .fa-btn--secondary { color: var(--text-heading); }
+.fa-btn--icon { width: var(--tap-min); padding: 0; background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); }
+.fa-btn--stepper { min-height: var(--tap-primary); min-width: 60px; padding: 0; background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); font-size: 20px; }
+.fa-btn:focus-visible, .fa-input:focus-visible, .fa-rpe button:focus-visible, .fa-tab:focus-visible, .fa-tile:focus-visible { outline: var(--border-thick) solid var(--focus); outline-offset: 2px; }
+.fa-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.fa-btn:active:not(:disabled) { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) { .fa-btn:active:not(:disabled) { transform: none; } }
+
+/* Set row (C-02) */
+.fa-setrow { display: grid; grid-template-columns: 24px 1fr 14px 1fr var(--tap-log); gap: var(--space-2); align-items: center; }
+.fa-setrow__n { font-family: var(--font-label); font-weight: var(--w-label); font-size: calc(16px * var(--display-scale)); color: var(--text-muted); }
+.fa-setrow--done .fa-setrow__n { color: var(--done-text); }
+.fa-setrow--current .fa-setrow__n { color: var(--focus); }
+.fa-setrow--upcoming { opacity: var(--opacity-upcoming); }
+.fa-setrow__x { text-align: center; color: var(--text-muted); }
+.fa-input { height: var(--tap-log); width: 100%; box-sizing: border-box; background: var(--input-bg); color: var(--input-text); border: var(--border-thin) solid var(--input-border); border-radius: var(--r-control); font-family: var(--font-system); font-size: 24px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.fa-input--pending { color: var(--input-pending); }
+.fa-input--current { border: var(--border-thick) solid var(--focus); }
+.fa-input--error { border: var(--border-thick) solid var(--pr); }
+.fa-setrow__state { height: var(--tap-log); display: flex; align-items: center; justify-content: center; border: 0; border-radius: var(--r-control); }
+.fa-setrow__state--done { background: var(--done); color: var(--on-done); box-shadow: var(--shadow-raised); }
+.fa-setrow__error { grid-column: 2 / -1; font-size: 13px; color: var(--text); display: flex; gap: var(--space-1); align-items: center; }
+.fa-colheads { display: grid; grid-template-columns: 24px 1fr 14px 1fr var(--tap-log); gap: var(--space-2); font-family: var(--font-label); font-size: calc(12px * var(--display-scale)); color: var(--text-muted); text-align: center; }
+
+/* PR marker (C-03) */
+.fa-pr { height: var(--tap-log); display: flex; align-items: center; justify-content: center; }
+.fa-pr__shield { fill: var(--pr); stroke: var(--outline); }
+.fa-pr__trim { fill: none; stroke: var(--art-ochre); }
+.fa-pr__text { fill: var(--on-pr); font-family: var(--font-pixel); font-weight: 400; }
+[data-theme="clean"] .fa-pr { background: var(--pr); color: var(--on-pr); border-radius: var(--r-control); font-weight: 800; font-size: 15px; }
+[data-theme="clean"] .fa-pr svg { display: none; }
+[data-theme="keep"] .fa-pr__clean { display: none; }
+
+/* Exercise header + Suggested target (C-04) */
+.fa-exercise__top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.fa-exercise__name { padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font-family: var(--font-display); font-weight: var(--w-display); font-size: calc(25px * var(--display-scale)); line-height: calc(30px * var(--display-scale)); color: var(--text-label); }
+[data-theme="clean"] .fa-exercise__name { color: var(--text); }
+.fa-exercise__lastbest { color: var(--done-text); font-family: var(--font-label); font-size: calc(14px * var(--display-scale)); }
+[data-theme="clean"] .fa-exercise__lastbest { color: var(--text-muted); }
+.fa-target { font-size: 14px; line-height: 20px; color: var(--text); }
+.fa-target b { color: var(--text-heading); }
+[data-theme="clean"] .fa-target b { color: var(--text); }
+
+/* RPE selector (C-05) */
+.fa-rpe { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.fa-rpe__opts { display: flex; gap: var(--space-1); }
+.fa-rpe button { width: var(--tap-min); height: var(--tap-min); border: 0; border-radius: var(--r-control); background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow-raised); font-family: var(--font-label); font-size: calc(15px * var(--display-scale)); font-weight: var(--w-label); }
+.fa-rpe button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
+
+/* Confirm bar (C-06) */
+.fa-confirmbar { background: var(--surface); box-shadow: var(--shadow-sheet); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 10px var(--space-3) 18px; display: flex; flex-direction: column; gap: 10px; }
+.fa-confirmbar__info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
+.fa-confirmbar__info b { color: var(--text-label); font-weight: 700; }
+[data-theme="clean"] .fa-confirmbar__info b { color: var(--text); }
+.fa-confirmbar__row { display: grid; grid-template-columns: 60px 1fr 60px; gap: 10px; }
+
+/* State chips (C-07) */
+.fa-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.fa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: var(--border-thin) solid currentColor; border-radius: var(--r-control); font-family: var(--font-label); font-size: calc(13px * var(--display-scale)); font-weight: var(--w-label); background: var(--surface); }
+.fa-chip--pr { color: var(--pr-text); } .fa-chip--done { color: var(--done-text); } .fa-chip--partial { color: var(--state-partial); } .fa-chip--skipped { color: var(--state-skipped); } .fa-chip--swapped { color: var(--state-swapped); } .fa-chip--missed { color: var(--state-missed); border-style: dashed; } .fa-chip--pain { color: var(--state-pain); }
+
+/* Nudge (C-08) */
+.fa-nudge { background: var(--nudge-bg); color: var(--nudge-text); border-radius: var(--r-card); box-shadow: var(--shadow-panel); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; line-height: 20px; }
+.fa-nudge__lead { color: var(--nudge-label); font-weight: 700; }
+.fa-nudge__actions { display: flex; gap: var(--space-1); flex-shrink: 0; }
+.fa-nudge .fa-btn { min-height: 36px; padding: 0 10px; font-size: 13px; }
+.fa-nudge__dismiss { width: var(--tap-min); min-height: var(--tap-min); background: none; border: 0; color: var(--nudge-text); }
+
+/* Today's Workout card (C-09) */
+.fa-today { position: relative; overflow: hidden; }
+.fa-today__band { position: absolute; left: 0; top: 0; width: 100%; height: 10px; }
+[data-theme="clean"] .fa-today__band { display: none; }
+.fa-today__band rect { fill: var(--art-ink); } .fa-today__band polyline { stroke: var(--art-vermilion); }
+.fa-today__alt { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Badge tile (C-10) */
+.fa-badgegrid { background: var(--surface); box-shadow: var(--shadow-panel); border-radius: var(--r-card); padding: var(--space-2); display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.fa-tile { height: 74px; box-sizing: border-box; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between; border: 0; border-radius: var(--r-control); background: var(--surface-sunken); box-shadow: var(--shadow-sunken); color: var(--text); font-family: var(--font-label); text-align: left; cursor: pointer; }
+.fa-tile__top { display: flex; justify-content: space-between; align-items: center; }
+.fa-tile__v { font-size: calc(16px * var(--display-scale)); font-weight: var(--w-label); color: var(--text-heading); font-variant-numeric: tabular-nums; }
+.fa-tile__n { font-size: calc(11px * var(--display-scale)); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-tile--locked .fa-tile__art { opacity: var(--opacity-locked); }
+.fa-tile--locked .fa-tile__v { color: var(--text-muted); }
+.fa-tile--unlocked { outline: var(--border-thin) solid var(--done-text); outline-offset: -2px; }
+
+/* Status orb (C-11) */
+.fa-orb { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+.fa-orb__ring { fill: var(--art-ink); stroke: var(--orb-ring); }
+.fa-orb__track { fill: none; stroke: var(--orb-track); }
+.fa-orb__fill--green { stroke: var(--done); } .fa-orb__fill--red { stroke: var(--pr); } .fa-orb__fill--ochre { stroke: var(--art-ochre); }
+.fa-orb__value { fill: var(--text-heading); font-family: var(--font-label); font-weight: var(--w-label); }
+[data-theme="clean"] .fa-orb__ring { fill: var(--surface); }
+[data-mode="light"] .fa-orb__ring { fill: var(--surface); }
+.fa-orb__cap { font-family: var(--font-label); font-size: calc(12px * var(--display-scale)); color: var(--text-muted); }
+
+/* Tab bar (C-12) */
+.fa-tabbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 8px 14px; background: var(--surface); box-shadow: var(--shadow-sheet); }
+.fa-tab { height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--r-control); background: var(--surface-raised); box-shadow: var(--shadow-raised); color: var(--text-muted); text-decoration: none; font-family: var(--font-label); font-size: calc(11px * var(--display-scale)); }
+[data-theme="clean"] .fa-tab { background: transparent; }
+.fa-tab[aria-current="page"] { background: var(--tab-active); color: var(--on-tab-active); }
+
+/* Keep the display face free of ligatures and contextual swaps so labels read letter by letter. */
+.fa-title, .fa-label, .fa-btn, .fa-exercise__name, .fa-tile, .fa-chip, .fa-tab { font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0, "calt" 0; }
+.fa-setrow__error[hidden] { display: none; }
