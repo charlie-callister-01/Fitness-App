@@ -20,6 +20,18 @@ public sealed class AppearancePickerTests : BunitContext
     }
 
     [Fact]
+    public async Task Offers_every_theme_and_mode_under_a_human_label()
+    {
+        var data = await AppData.OpenAsync(new InMemoryDataStore());
+        Services.AddSingleton(data);
+        Services.AddSingleton(new ThemeService(data, new RecordingInterop()));
+
+        var cut = Render<AppearancePicker>();
+
+        Assert.Equal(["Keep", "Clean", "Match phone", "Dark", "Light"], cut.FindAll("button").Select(b => b.TextContent.Trim()));
+    }
+
+    [Fact]
     public async Task Tapping_a_choice_restyles_marks_it_pressed_and_saves_it()
     {
         var data = await AppData.OpenAsync(new InMemoryDataStore());

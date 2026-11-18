@@ -85,6 +85,17 @@ public sealed class ButtonTests : BunitContext
         Assert.Empty(cut.FindAll("button"));
     }
 
+    [Theory]
+    [InlineData(true, "true")]
+    [InlineData(false, "false")]
+    [InlineData(null, null)]
+    public void Button_ExposesWhetherItIsTheChosenOneOfASet(bool? pressed, string? expected)
+    {
+        var cut = RenderButton(ButtonVariant.Secondary, p => p.Add(b => b.Pressed, pressed));
+
+        Assert.Equal(expected, cut.Find("button").GetAttribute("aria-pressed"));
+    }
+
     [Fact]
     public void IconButton_ShowsTheIconAndExposesItsAccessibleName()
     {
