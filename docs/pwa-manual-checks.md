@@ -1,10 +1,10 @@
 # PWA: how it works and the manual phone checks
 
-Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (development: does nothing, no caching), `service-worker.published.js` (becomes `service-worker.js` on publish), icons (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon.png`).
+Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (development: does nothing, no caching), `service-worker.published.js` (becomes `service-worker.js` on publish), icons (`icon-192.png`, `icon-512.png`, `icon-maskable-192.png`, `icon-maskable-512.png`, `icon-monochrome-512.png`, `apple-touch-icon.png`, `favicon.svg`, `favicon-32.png`, `favicon-16.png`). The shared design assets (`tokens.css`, `components.css`, the Jersey 15 font, icons, graphics, illustrations, badges) are copies in `src/Ui/wwwroot`, served under `_content/Ui/`.
 
 ## How offline and updates work
 
-- On publish, .NET generates `service-worker-assets.js`: every published asset (runtime, assemblies, `_content/Ui/ui.css`, icons, `index.html`, manifest) with a hash, plus a `version` that is a hash of the whole set. It changes whenever any asset changes.
+- On publish, .NET generates `service-worker-assets.js`: every published asset (runtime, assemblies, `_content/Ui/*.css`, fonts, SVG artwork, icons, `index.html`, manifest) with a hash, plus a `version` that is a hash of the whole set. It changes whenever any asset changes.
 - The cache is named `offline-cache-<version>`. Install downloads the full list into the new cache. Activate deletes every other `offline-cache-*` cache.
 - A new build installs in the background but **waits** (no `skipWaiting`) until the old version's tabs/windows are closed, then activates. So a page never mixes old shell with new assemblies. Practically: after deploying, open the app once online (it fetches the update), close it fully, open it again: you now have the new build. The placeholder shows the build identifier so you can tell.
 - The worker derives its base path from its own URL, so hosting under a sub-path needs no edit to it. `index.html`'s `<base href>` is rewritten at publish time by `scripts/publish-pages.sh`, which also updates `index.html`'s hash in `service-worker-assets.js` (the worker checks it, so skipping that would break the offline install). See the README Deploy section.
@@ -13,7 +13,7 @@ Files (all in `src/Web/wwwroot`): `manifest.webmanifest`, `service-worker.js` (d
 ## Automated or inspectable checks (no phone)
 
 1. `dotnet publish src/Web -c Release -o <dir>`.
-2. `<dir>/wwwroot/service-worker-assets.js` lists `js/indexeddb-store.js`, `js/storage-environment.js`, `_content/Ui/ui.css`, all `_framework/*.wasm`, icons, `index.html` and `manifest.webmanifest`.
+2. `<dir>/wwwroot/service-worker-assets.js` lists `js/indexeddb-store.js`, `js/storage-environment.js`, `_content/Ui/tokens.css`, `_content/Ui/components.css`, `_content/Ui/fonts/jersey-15-latin-400-normal.woff2`, `_content/Ui/icons/*.svg`, `_content/Ui/badges/*.svg`, all `_framework/*.wasm`, icons, `index.html` and `manifest.webmanifest`.
 3. Changing any asset (for example `css/app.css`) and republishing changes `version`.
 4. Chrome DevTools, Application tab: Manifest shows no errors and "Installability" passes; Service workers shows activated; Cache storage shows one `offline-cache-*`.
 
@@ -26,6 +26,12 @@ Install:
 Offline:
 1. Open the installed app once while online and wait for it to load fully.
 2. Close it, switch on airplane mode, open it again. The placeholder (app name and build id) must appear.
+3. Design assets offline: the heading is in the pixel display font (Jersey 15, not a system fallback), and an icon or illustration on a page (for example the EmptyState artwork once a screen uses it) still shows. In DevTools, Network (offline) shows `_content/Ui/fonts/...woff2` and `_content/Ui/icons/...svg` served from the service worker.
+
+Installed icon:
+- Android: the home-screen icon is the designed icon, shown correctly in both a round mask and a squircle mask (nothing important clipped). With themed icons on (Android 13+), it appears as a single-colour silhouette.
+- iOS: the 180px icon shows without a black border.
+- The splash screen background is the Keep dark brown (`#2B2620`), not blue.
 
 Update pickup:
 1. Note the build id on the phone. Deploy a new build.
@@ -61,3 +67,39 @@ What is **NOT covered by CI** and is on this list: quota-full, the real persiste
 7. Open offline after install, with the storage modules loaded.
    - Trigger: install the app, open it once online until it has loaded (the service worker caches `js/indexeddb-store.js` and `js/storage-environment.js` with the rest), save something, close it, switch on airplane mode, open it again.
    - Expect: the app starts (no blank screen or failed module import), the saved data is still there and `StartupState` is `Ready`. Saving works offline because storage is on the device. Also check after an update pickup (see above) that the new modules are used and the old data still loads.
+
+## Theme and Mode manual checks (B0 ticket 03)
+
+CI covers `wwwroot/js/theme.js` in headless Chromium (`ThemeScriptBrowserTests`: pre-paint attributes, System following the colour scheme, chrome colour, blocked mirror). It does **not** run WebAssembly, so the real Blazor interop (`Web/Theming/ThemeInterop.cs` calling `FitnessTheme.apply`) and a real phone need these checks. Use the Appearance section on the More page.
+
+1. All four looks. Pick each of Keep and Clean with each of Dark and Light. Expect the whole app to restyle instantly, and the browser bar (Android Chrome) to change colour: Keep dark `#4A4237`, Keep light `#E8DFC8`, Clean dark `#111315`, Clean light `#F4F5F7`.
+2. No flash. With a non-default choice (for example Clean, Light), reload and cold-start the installed app several times. Expect the first painted frame to already be the chosen look, never Keep dark first.
+3. Survives restart and airplane mode. Choose Clean, Light, close the app, switch on airplane mode, open it. Expect the same look (the script is in the offline cache).
+4. System follows the phone. Choose Mode System, then switch the phone between dark and light (Quick Settings) with the app open. Expect the app to follow without a reload.
+5. Source of truth. In DevTools (remote debugging) change `data-theme` on `<html>` by hand, then reload: the stored choice comes back. After restoring a Backup that has a different Theme or Mode, expect the app to show the restored look.
+6. Blocked storage. In a private tab, the look still switches for the session and may reset on reload; nothing errors.
+
+## App shell manual checks (B0 ticket 05)
+
+bUnit covers tab marking, layout choice and routing. It cannot check CSS breakpoints, the real router under the sub-path, or a phone, so these are manual.
+
+1. Deep link and refresh. On the deployed build open `/Fitness-App/week`, `/Fitness-App/progress`, `/Fitness-App/trophies`, `/Fitness-App/more` directly, then refresh each. Expect the right page and the right tab marked (the 404 redirect brings the deep link back); the tab bar links stay under `/Fitness-App/`.
+2. Not found. Open `/Fitness-App/nowhere`. Expect the friendly page inside the shell and "Go to Home" landing on `/Fitness-App/`.
+3. Widths. In DevTools device mode check 360 px (no sideways scroll, nothing clipped, bottom bar with five tabs), 600 px (a centred column of at most 560 px, bottom bar), 900 px and wider (a 220 px left rail, content to its right, no bottom bar).
+4. Safe areas. On a notched phone installed to the Home Screen, the bar clears the home indicator and content clears the notch.
+5. Skip link. Press Tab once on a desktop: "Skip to content" appears with a visible outline; Enter moves focus into the content and the address does not change.
+6. Heading focus. Navigate between tabs with a screen reader or by watching `document.activeElement`: the page heading takes focus.
+7. Layouts. A pushed-layout page shows a back arrow and no tab bar; the back arrow returns to the previous page. (The temporary gallery and Appearance pages are gone; both live on More.)
+
+## More menu and B0 finish line (B0 ticket 06)
+
+bUnit covers the More links, the placeholder routes, Appearance changing the Theme, and the build identifier. Needs a phone (tick off here when done):
+
+1. More page. Open More: six entries (Plans, Exercise library, Weight, Weekly review, Export and Import, Settings), each opens a placeholder page and the More tab stays marked. The Appearance pickers work; the collapsed "Components (temporary)" section opens and shows buttons, orbs, empty states and icons in the chosen look.
+2. Build identifier. The "Build ..." line is at the bottom of More (no longer on Home); update pickup (above) is checked against it.
+3. Install with the new icon, and all four looks (Keep and Clean, Dark and Light) on every tab and on More.
+4. Airplane-mode launch: the app opens, fonts and illustrations show, the Theme survives.
+5. Status bar colour matches the chosen look.
+6. Deep link on each tab: `/Fitness-App/week`, `/progress`, `/trophies`, `/more`, and one More entry such as `/settings`, then refresh.
+7. 360 px width: no sideways scroll, nothing clipped, More entries comfortable to tap.
+8. Increased system text size: the tab bar, More entries and Appearance chips still fit and read.

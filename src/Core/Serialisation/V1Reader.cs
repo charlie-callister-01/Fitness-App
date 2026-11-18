@@ -61,5 +61,7 @@ internal static class V1Reader
             reader.RequiredInt("restTimerSeconds", min: 0),
             reader.OptionalPositiveDouble("goalWeightKg"),
             reader.RequiredInt("streakMinWorkoutsPerWeek", min: 1),
-            reader.RequiredBool("streakCountsCustomWorkouts")));
+            reader.RequiredBool("streakCountsCustomWorkouts"),
+            reader.EnumOrDefault("theme", Theme.Keep),
+            reader.EnumOrDefault("mode", Mode.System)));
 }

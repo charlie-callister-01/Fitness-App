@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+
+<SkipLink Target="() => main" />
+<TabBar />
+<div class="shell">
+    <main id="main-content" class="column" tabindex="-1" @ref="main">@Body</main>
+</div>
+
+@code {
+    private ElementReference main;
+}

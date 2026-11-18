@@ -1,0 +1,33 @@
+@page "/more"
+@using Ui.Theming
+@inject IBuildInfo BuildInfo
+
+<div class="fa-root">
+    <h1 class="fa-title fa-title--l">More</h1>
+
+    <nav class="fa-panel entries" aria-label="More">
+        @foreach (var entry in MoreDestinations.Entries)
+        {
+            <a class="entry" href="@entry.Href"><Icon Name="entry.Icon" /><span>@entry.Label</span></a>
+        }
+    </nav>
+
+    @* Temporary (B0): Settings (B10) takes the Appearance section over. *@
+    <AppearancePicker />
+
+    @Gallery
+
+    <p class="build-id">Build @BuildInfo.Identifier</p>
+</div>
+
+@code {
+    // Temporary (B0): the component gallery, for development builds only; a release build compiles it out of the published app.
+#if DEBUG
+    private RenderFragment Gallery => @<details class="fa-panel showcase-section">
+        <summary>Components (temporary)</summary>
+        <ComponentShowcase />
+    </details>;
+#else
+    private static RenderFragment? Gallery => null;
+#endif
+}

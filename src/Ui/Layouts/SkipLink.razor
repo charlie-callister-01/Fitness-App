@@ -1,0 +1,10 @@
+@* The "Skip to content" link every layout offers. A plain "#main-content" href would resolve against the document base and leave the page, so it focuses the main landmark directly. *@
+<a class="skip-link" href="#main-content" @onclick="FocusTarget" @onclick:preventDefault>Skip to content</a>
+
+@code {
+    /// <summary>The layout's main landmark, read when clicked (its reference is only set after the first render); it needs <c>tabindex="-1"</c> to take focus.</summary>
+    [Parameter, EditorRequired]
+    public Func<ElementReference> Target { get; set; } = () => default;
+
+    private Task FocusTarget() => Target().FocusAsync().AsTask();
+}

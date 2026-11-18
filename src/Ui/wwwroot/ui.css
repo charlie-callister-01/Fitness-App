@@ -1,24 +1,35 @@
-html, body {
-    margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    -webkit-text-size-adjust: 100%;
-}
+/* Shell-level rules only. Tokens and the fa- component skin come from tokens.css and components.css,
+   which the host page loads first; anything here uses tokens, never raw colours. */
 
-.home {
-    min-height: 100dvh;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
-             max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-}
+html { -webkit-text-size-adjust: 100%; }
 
-.home h1:focus { outline: none; }
+/* Nothing may push the page sideways at 360 px. */
+body { overflow-x: hidden; }
 
-.build-id { color: #555; }
+/* The page heading takes focus on navigation; it needs no ring. */
+h1:focus { outline: none; }
+
+:focus-visible { outline: var(--border-thick) solid var(--focus); outline-offset: 2px; }
+
+.build-id { color: var(--text-muted); }
 
 button, a, input, select {
     min-height: 44px;
     min-width: 44px;
+}
+
+/* The content column's cap (560 px from 431 px, set by each layout) is the only width limit; components.css's .fa-root max-width
+   is a design-gallery width that would otherwise fight it. Phones up to 390 px see no change. */
+.fa-root { max-width: none; }
+
+/* A link Button that is disabled keeps its look but cannot be followed (it has no href). */
+a.fa-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+
+/* No animation or transition for people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
 }

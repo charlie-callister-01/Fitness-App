@@ -7,11 +7,19 @@
     <title>Fitness App</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
+    <!-- The browser chrome colour (Keep dark until theme.js changes it). Before the script, which sets its content at first paint. -->
+    <meta name="theme-color" content="#4A4237" />
+    <!-- Applies the mirrored Theme and Mode before first paint (no flash); also the Blazor interop's entry point. Keep it first and synchronous. -->
+    <script src="js/theme.js"></script>
+    <link href="_content/Ui/tokens.css" rel="stylesheet" />
+    <link href="_content/Ui/components.css" rel="stylesheet" />
     <link href="_content/Ui/ui.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="Web.styles.css" rel="stylesheet" />
     <link href="manifest.webmanifest" rel="manifest" />
-    <meta name="theme-color" content="#03173d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Fitness" />

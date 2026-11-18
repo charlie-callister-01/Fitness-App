@@ -31,6 +31,8 @@
   <ItemGroup>
     <!-- The real JavaScript modules under test, served to the browser from the test output. -->
     <Content Include="..\Web\wwwroot\js\*.js" Link="wwwroot\js\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The host page, so a test can check how it loads theme.js. -->
+    <Content Include="..\Web\wwwroot\index.html" Link="wwwroot\index.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -1,10 +1,12 @@
 <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="UiAssemblies">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" />
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <p>Page not found.</p>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <Ui.Pages.NotFound />
+        </LayoutView>
     </NotFound>
 </Router>
 

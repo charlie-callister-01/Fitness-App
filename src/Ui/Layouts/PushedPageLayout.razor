@@ -1,0 +1,30 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject InAppHistory History
+
+<SkipLink Target="() => main" />
+<div class="pushed">
+    <header class="bar">
+        <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" OnClick="GoBack" />
+    </header>
+    <main id="main-content" class="column" tabindex="-1" @ref="main">@Body</main>
+</div>
+
+@code {
+    private ElementReference main;
+
+    // After a deep link there is nothing in the app to go back to, so go to the app root (relative to the base, so it works under a sub-path)
+    // rather than out of the app.
+    private async Task GoBack()
+    {
+        if (History.HasEarlierPage)
+        {
+            await JS.InvokeVoidAsync("history.back");
+        }
+        else
+        {
+            Navigation.NavigateTo("", replace: true);
+        }
+    }
+}

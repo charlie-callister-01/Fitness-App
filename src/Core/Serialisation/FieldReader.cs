@@ -244,13 +244,49 @@ internal sealed partial class FieldReader
         return TryTakeRequired(name, out var value) ? ParseEnum<T>(ChildPath(name), value) ?? default : default;
     }
 
+    /// <summary>
+    /// An optional enum that never fails the import: absent gives <paramref name="defaultValue"/>, and so does an unknown or malformed
+    /// value, which is reported as a warning (<c>unknown_value</c> or <c>wrong_type</c>).
+    /// </summary>
+    public T EnumOrDefault<T>(string name, T defaultValue) where T : struct, Enum
+    {
+        if (!TryTakeField(name, out var value))
+        {
+            return defaultValue;
+        }
+
+        var path = ChildPath(name);
+        var parse = TryParseEnum<T>(path, value);
+        if (parse.Issue is not { } issue)
+        {
+            return parse.Value ?? defaultValue;
+        }
+
+        Sink.Warnings.Add(issue with { Message = $"{issue.Message} The default ({defaultValue}) was used." });
+        return defaultValue;
+    }
+
     /// <summary>Reads an enum written as its camelCase name; reports and returns null when it isn't one.</summary>
     private T? ParseEnum<T>(string path, JsonElement value) where T : struct, Enum
     {
+        var parse = TryParseEnum<T>(path, value);
+        if (parse.Issue is { } issue)
+        {
+            Sink.Errors.Add(issue);
+        }
+
+        return parse.Value;
+    }
+
+    /// <summary>The outcome of an enum parse: the value, or the issue saying why it isn't one of the camelCase names.</summary>
+    private readonly record struct EnumParse<T>(T? Value, FormatIssue? Issue) where T : struct, Enum;
+
+    /// <summary>The one enum parse.</summary>
+    private static EnumParse<T> TryParseEnum<T>(string path, JsonElement value) where T : struct, Enum
+    {
         if (value.ValueKind != JsonValueKind.String)
         {
-            Sink.Error(path, "wrong_type", $"{path} must be one of: {AllowedValues<T>()}.");
-            return null;
+            return new(null, new FormatIssue(path, "wrong_type", $"{path} must be one of: {AllowedValues<T>()}."));
         }
 
         var text = value.GetString();
@@ -258,12 +294,11 @@ internal sealed partial class FieldReader
         {
             if (JsonNamingPolicy.CamelCase.ConvertName(candidate.ToString()) == text)
             {
-                return candidate;
+                return new(candidate, null);
             }
         }
 
-        Sink.Error(path, "unknown_value", $"{path} \"{text}\" is not recognised. Use one of: {AllowedValues<T>()}.");
-        return null;
+        return new(null, new FormatIssue(path, "unknown_value", $"{path} \"{text}\" is not recognised. Use one of: {AllowedValues<T>()}."));
     }
 
     public DateTimeOffset? OptionalTimestamp(string name)

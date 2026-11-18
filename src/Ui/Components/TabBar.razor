@@ -1,0 +1,44 @@
+@* C-12 TabBar. One component; CSS shows it as a bottom bar on phones and a left rail from 900 px. *@
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<nav class="tabbar fa-tabbar" aria-label="Main">
+    @foreach (var tab in Tabs)
+    {
+        <a class="fa-tab" href="@tab.Href" aria-current="@(IsActive(tab) ? "page" : null)">
+            <Icon Name="tab.Icon" />
+            <span>@tab.Label</span>
+        </a>
+    }
+</nav>
+
+@code {
+    private sealed record Tab(string Label, IconName Icon, string Href);
+
+    // Hrefs are relative to the document base, so they work under the /Fitness-App/ sub-path. A tab owns every route whose first path
+    // segment is its own href, which is how nested routes keep their parent active. More also owns the screens it lists (MoreDestinations).
+    private static readonly Tab[] Tabs =
+    [
+        new("Home", IconName.Home, ""),
+        new("Week", IconName.Week, "week"),
+        new("Progress", IconName.Progress, "progress"),
+        new("Trophies", IconName.Trophies, "trophies"),
+        new("More", IconName.More, MoreDestinations.MoreHref),
+    ];
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    private bool IsActive(Tab tab) =>
+        tab.Href == MoreDestinations.MoreHref ? MoreDestinations.Owns(CurrentSegment()) : tab.Href == CurrentSegment();
+
+    private string CurrentSegment()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var end = path.IndexOfAny(['/', '?', '#']);
+        return end < 0 ? path : path[..end];
+    }
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}
