@@ -1,7 +1,8 @@
 @* C-01 Button. Skin comes from the global fa-btn classes; one set of classes for both Themes. *@
-@if (Href is not null && !Disabled)
+@if (Href is not null)
 {
-    <a class="@CssClass" href="@Href" aria-label="@AccessibleName">@Content</a>
+    @* A disabled link keeps its element and look but loses its href, so it cannot be followed or focused. *@
+    <a class="@CssClass" href="@(Disabled ? null : Href)" aria-disabled="@(Disabled ? "true" : null)" tabindex="@(Disabled ? "-1" : null)" aria-label="@AccessibleName">@Content</a>
 }
 else
 {
@@ -20,7 +21,7 @@ else
     public bool Disabled { get; set; }
 
     [Parameter]
-    public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnClick { get; set; }
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
 
     /// <summary>The icon shown in the Icon variant.</summary>
     [Parameter]
@@ -33,7 +34,7 @@ else
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    private Task HandleClick(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) => Disabled ? Task.CompletedTask : OnClick.InvokeAsync(e);
+    private Task HandleClick(MouseEventArgs e) => Disabled ? Task.CompletedTask : OnClick.InvokeAsync(e);
 
     private string CssClass => $"fa-btn fa-btn--{Variant.ToString().ToLowerInvariant()}";
 

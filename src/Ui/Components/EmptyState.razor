@@ -27,7 +27,7 @@
     public string? ActionHref { get; set; }
 
     [Parameter]
-    public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnAction { get; set; }
+    public EventCallback<MouseEventArgs> OnAction { get; set; }
 
     private string ArtPath => "_content/Ui/illustrations/" + Kind switch
     {
