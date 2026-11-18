@@ -1,0 +1,10 @@
+@* C-03 PR marker: the pr-marker graphic in Keep (shield) and a "PR!" block in Clean; the theme CSS shows the right one. Static, no motion.
+   Always carries the word PR (visible text and the aria-label), never colour or shape alone. *@
+<span class="fa-pr" role="img" aria-label="PR">
+    <svg class="fa-pr__shield-art" xmlns="http://www.w3.org/2000/svg" width="54" height="56" viewBox="0 0 54 56" aria-hidden="true" focusable="false">
+        <path class="fa-pr__shield" stroke-width="2.5" d="M27 2 L51 10 L51 30 C51 44 40 52 27 55 C14 52 3 44 3 30 L3 10 Z" />
+        <path class="fa-pr__trim" stroke-width="1.5" stroke-dasharray="3 2" d="M27 8 L45 14 L45 30 C45 40 37 46 27 49 C17 46 9 40 9 30 L9 14 Z" />
+        <text class="fa-pr__text" x="27" y="35" text-anchor="middle" font-size="18">PR</text>
+    </svg>
+    <span class="fa-pr__clean" aria-hidden="true">PR!</span>
+</span>

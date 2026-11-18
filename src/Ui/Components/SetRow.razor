@@ -20,7 +20,7 @@
                    @onkeydown="e => OnKey(e, 2)" />
             @if (IsDone)
             {
-                <button type="button" class="fa-setrow__state fa-setrow__state--done" aria-label="@($"Edit set {Number}")" @onclick="OnReopen"><Icon Name="IconName.Check" /></button>
+                <button type="button" class="@StateClass" aria-label="@($"Edit set {Number}{(IsPr ? ", PR" : "")}")" @onclick="OnReopen">@if (IsPr) { <PrMarker /> } else { <Icon Name="IconName.Check" /> }</button>
             }
             else
             {
@@ -51,6 +51,10 @@
     /// <summary>The first field's text (weight, or "bw"), in display units.</summary>
     [Parameter]
     public string First { get; set; } = "";
+
+    /// <summary>True when this confirmed Set carries the PR marker: the state cell shows it and the reps label gains ", PR".</summary>
+    [Parameter]
+    public bool IsPr { get; set; }
 
     /// <summary>The second field's text (reps).</summary>
     [Parameter]
@@ -108,7 +112,9 @@
 
     private string FirstLabel => $"Weight, set {Number}";
 
-    private string SecondLabel => $"Reps, set {Number}";
+    private string SecondLabel => $"Reps, set {Number}{(IsPr ? ", PR" : "")}";
+
+    private string StateClass => IsPr ? "fa-setrow__state fa-setrow__state--pr" : "fa-setrow__state fa-setrow__state--done";
 
     private string ErrorId => $"set-{Number}-error";
 

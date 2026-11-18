@@ -4,10 +4,11 @@
 
 **Blocked by:** 02, 06.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] First ever result shows no PR; a strictly better Set shows marker, label, toast, count
-- [ ] Marker moves to a later better Set; editing a PR Set down clears it
-- [ ] Max set precedence reflected; time (lower is better) works
-- [ ] PR is announced in words (never colour or shape alone)
-- [ ] bUnit tests
+- [x] First ever result shows no PR; a strictly better Set shows marker, label, toast, count
+- [x] Marker moves to a later better Set; editing a PR Set down clears it
+- [x] Max set precedence reflected (page tests with seeded IsMax; Max marking UI arrives with 07)
+- [ ] Time (lower is better): rule covered in Core (ticket 02); the page cannot log time Exercises yet, so no page test
+- [x] PR is announced in words (never colour or shape alone)
+- [x] bUnit tests
