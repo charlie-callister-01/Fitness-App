@@ -12,7 +12,25 @@ public enum DistanceUnit
     Mi,
 }
 
-/// <summary>App-wide settings. Display units affect presentation only; stored data is always canonical (kg, km, m).</summary>
+/// <summary>The look of the app. Keep is the warm default; Clean is the neutral alternative.</summary>
+public enum Theme
+{
+    Keep,
+    Clean,
+}
+
+/// <summary>Whether the app is dark or light. System follows the phone's colour scheme.</summary>
+public enum Mode
+{
+    System,
+    Dark,
+    Light,
+}
+
+/// <summary>
+/// App-wide settings. Display units, Theme and Mode affect presentation only; stored data is always canonical (kg, km, m).
+/// Theme and Mode were added after the first format: optional in the exchange format, defaulting to Keep and System.
+/// </summary>
 public sealed record Settings(
     WeightUnit DisplayWeightUnit,
     DistanceUnit DisplayDistanceUnit,
@@ -20,7 +38,9 @@ public sealed record Settings(
     int RestTimerSeconds,
     double? GoalWeightKg,
     int StreakMinWorkoutsPerWeek,
-    bool StreakCountsCustomWorkouts)
+    bool StreakCountsCustomWorkouts,
+    Theme Theme = Theme.Keep,
+    Mode Mode = Mode.System)
 {
     /// <summary>What the app uses when no Settings are stored (a first run, or the owner has never changed them).</summary>
     public static Settings Default { get; } = new(

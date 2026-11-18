@@ -17,6 +17,8 @@ internal sealed class CamelCaseEnumConverter<T>() : JsonStringEnumConverter<T>(J
         typeof(CamelCaseEnumConverter<LogKind>),
         typeof(CamelCaseEnumConverter<WeightUnit>),
         typeof(CamelCaseEnumConverter<DistanceUnit>),
+        typeof(CamelCaseEnumConverter<Theme>),
+        typeof(CamelCaseEnumConverter<Mode>),
         typeof(CamelCaseEnumConverter<SessionType>),
         typeof(CamelCaseEnumConverter<DayOfWeek>),
         typeof(CamelCaseEnumConverter<EntryStatus>),
