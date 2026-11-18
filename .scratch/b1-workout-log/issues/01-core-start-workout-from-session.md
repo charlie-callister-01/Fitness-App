@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Creating a Workout copies the Phase-override rows when a Phase covers the week, else the Plan rows; later Plan edits do not change it
-- [ ] The Workout has `EndedAt` null and no entries; a helper identifies the in-progress Workout (at most one)
-- [ ] The "next Session to start" query reuses existing scheduling rules and adds no new scheduling logic; none when there is no active Plan or no Sessions
-- [ ] Core unit tests in the style of the existing Rules tests, reusing `PlanFixture`, `WorkoutBuilder`, `HistoryBuilder`
+- [x] Creating a Workout copies the Phase-override rows when a Phase covers the week, else the Plan rows; later Plan edits do not change it
+- [x] The Workout has `EndedAt` null and no entries; a helper identifies the in-progress Workout (at most one)
+- [x] The "next Session to start" query reuses existing scheduling rules and adds no new scheduling logic; none when there is no active Plan or no Sessions
+- [x] Core unit tests in the style of the existing Rules tests, reusing `PlanFixture`, `WorkoutBuilder`, `HistoryBuilder`
