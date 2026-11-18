@@ -209,6 +209,7 @@ Keep maps every component radius (`--r-control`, `--r-card`, `--r-sheet`) to 0. 
 | `bar-tab` | `72px` | Bottom tab bar height incl. safe area padding. |
 | `phone-base` | `390px` | Design width. |
 | `phone-min` | `360px` | Smallest supported width; the log must fit with no horizontal scroll. |
+| `column-log` | `430px` | Widest the log column grows on a tablet or desktop. |
 
 ### 4.8 Borders and opacity
 
@@ -216,6 +217,7 @@ Keep maps every component radius (`--r-control`, `--r-card`, `--r-sheet`) to 0. 
 |---|---|---|
 | `border-thin` | `2px` | Inputs, outlines, chips. |
 | `border-thick` | `3px` | Current Set outline, focus ring. |
+| `outline-offset` | `2px` | Gap between a focus ring or the current-Set outline and its control. |
 
 | Token | Value | Use |
 |---|---|---|

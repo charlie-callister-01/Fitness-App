@@ -1,7 +1,7 @@
 /* The log is one centred column (design 9: max 430 px on wide screens), its bar stuck to the bottom of the screen. */
 .log {
     box-sizing: border-box;
-    max-width: 430px;
+    max-width: var(--column-log);
     margin: 0 auto;
     min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     display: flex;
@@ -77,5 +77,5 @@
 
 .log__link:focus-visible {
     outline: var(--border-thick) solid var(--focus);
-    outline-offset: 2px;
+    outline-offset: var(--outline-offset);
 }
