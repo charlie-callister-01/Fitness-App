@@ -117,7 +117,7 @@ public static class RowPrefill
     private static string Number(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 
     /// <summary>"m:ss", or "h:mm:ss" from an hour up: the forms the parser accepts for a time.</summary>
-    private static string Clock(int totalSeconds)
+    public static string Clock(int totalSeconds)
     {
         var hours = totalSeconds / SecondsPerHour;
         var minutes = totalSeconds % SecondsPerHour / 60;
