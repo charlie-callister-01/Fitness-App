@@ -31,6 +31,8 @@ Training goals behind the product: get fitter and stronger, reduce pain and inju
 - **Phone-first sizes:** design for roughly 360-430 px wide portrait. Test small (360 px) and large phones. Include a sensible tablet/desktop layout.
 - **Screen stays awake** during a Workout (browser wake lock), so the log screen can be glanced at repeatedly. No auto-dimming assumptions.
 - **Dark mode required**, with a light mode. **High contrast** that stays readable in bright light. Don't rely on colour alone to convey state (use icons/labels too).
+- **Two Themes, one component set** (see ADR 0006): **Keep**, the fun theme (an old-school fantasy MMO look: bevelled stone panels, rune-yellow text with a hard black shadow, item-slot Badge tiles, ringed status orbs, Arthurian linocut art), and **Clean**, a plain modern theme (flat surfaces, system font, no texture). Both use identical layouts, sizes, touch targets and behaviour; a Theme only swaps design tokens (colour, font, border, radius, texture, artwork). Each Theme has a dark and a light **Mode**; Keep is designed dark-first. The theme never touches inputs: number fields stay high-contrast and use a plain tabular font in both Themes.
+- **Theme intensity by screen** (Keep): the Workout log stays nearly plain (stone frame only); Settings and Import/Export are light; Home, Week view and Guides are medium; Trophies, Badges and the calendar get the full treatment.
 - **Offline:** the whole app works with no signal. Show a calm offline state only where something genuinely needs a connection (opening a video link).
 - **Units:** kg/lb and km/miles are switchable in Settings (one stored unit, display only). Layouts must cope with both and with long values (e.g. "24 kg x 40 m", "4:25").
 - **Accessibility:** WCAG AA contrast, visible focus states, labels on all inputs, respect "reduce motion", minimum 44x44 px touch targets (aim larger for log inputs), support system text scaling without breaking.
@@ -113,7 +115,7 @@ All must work on the phone alone.
 - **Import:** a big **paste box** first, a file picker second. Kinds: restore a Backup, import a Plan (becomes a new Plan), merge small changes, import Guides. Always a **preview** in plain language ("adds 3 Exercises, changes the target on 2, creates a new Plan called X, touches no Workouts") with **Apply** and **Cancel**; Exercise name matching shows suggestions needing confirmation ("Did you mean Goblet Squat?") and unknown names offered as new; Guide imports let the user choose keep or replace per Guide. Clear, field-level error messages for bad files. Note that an automatic backup is made before applying.
 
 ### 6.11 Settings
-Units (kg/lb, km/miles), Streak rules (minimum Workouts per week, what counts), weight increment, rest timer defaults, theme (system/dark/light), Backup status and "last backed up", and data storage health (persistent storage granted or not, install prompt).
+Units (kg/lb, km/miles), Streak rules (minimum Workouts per week, what counts), weight increment, rest timer defaults, **Theme** (Keep or Clean, with a live preview) and **Mode** (system/dark/light), Backup status and "last backed up", and data storage health (persistent storage granted or not, install prompt).
 
 ### 6.12 First run and install
 Welcome and first-run flow: starts with the owner's current Plan loaded via Import, an install-to-home-screen prompt, a request for persistent storage with a plain explanation, and a reminder to make Backups.
@@ -168,7 +170,7 @@ Everything motivating lives here and on the Home screen, never in the way of log
 
 ## 10. What you need to deliver
 
-1. **A design system:** colour tokens for dark and light (with contrast ratios), type scale, spacing, radii, elevation, touch-target sizes, iconography style, and how colour encodes Session types and states (PR, missed, partial, skipped, swapped, pain).
+1. **A design system:** colour tokens for each Theme (Keep, Clean) in dark and light (with contrast ratios), with every token name shared across Themes, type scale, spacing, radii, elevation, touch-target sizes, iconography style, and how colour encodes Session types and states (PR, missed, partial, skipped, swapped, pain).
 2. **A component inventory** with all states: Set row (per log kind), Exercise header, Suggested target, RPE selector, Nudge, cards (Workout, stat, PR, Badge), buttons, inputs, pickers (Exercise, date range), tabs/nav, chart styles (line chart, heatmap, progress bar), preview/diff list for Import, form patterns, empty/error/offline states.
 3. **Navigation model:** what's in the primary navigation on a phone (suggest a bottom bar), what's secondary, and how the Workout log is entered and exited.
 4. **Annotated mockups** of all screens in section 6, at phone size in dark and light, including the listed states, plus a tablet/desktop layout.
@@ -203,7 +205,7 @@ Keep every section skimmable (tables and lists over prose), and keep each screen
 |---|---|---|
 | Screen mockups | PNG at 2x (or SVG), one per screen and state, named `S-01-home-dark.png`, `S-01-home-light.png`, `S-01-home-nobreak.png` and so on | Phone portrait at 390x844 as the base size, plus 360 px width for the log screen, plus one tablet/desktop layout per major screen |
 | Flow diagrams | SVG (or PNG) named `F-01-log-workout.svg` | One per flow in section 7 |
-| Design tokens | `tokens.json` plus a `tokens.css` of CSS custom properties for dark and light | Names must match the document's token table exactly |
+| Design tokens | `tokens.json` plus a `tokens.css` of CSS custom properties for each Theme and Mode (e.g. `[data-theme="keep"][data-mode="dark"]`) | Names must match the document's token table exactly and be identical across Themes |
 | Icons | SVG, 24x24 viewBox, single colour using `currentColor`, in `assets/icons/`, named by purpose (`icon-swap.svg`, `icon-skip.svg`, `icon-pr.svg`, `icon-pain.svg`, `icon-benchmark.svg` and so on), plus a list of what each means | Only icons the design needs; say if an open-licence set (name it and its licence) is used |
 | App icon and install assets | SVG master plus PNG exports at 192x192 and 512x512 (any and maskable), a monochrome mask, a splash colour, and a favicon | For the PWA manifest |
 | Badge artwork | SVG, one per starter Badge (see 6.13), each with a locked and an unlocked treatment, plus a generic badge frame/template the owner can reuse for custom Badges | Consistent family; named `badge-streak-4.svg`, `badge-streak-4-locked.svg` and so on; works in dark and light |
@@ -215,7 +217,7 @@ Keep every section skimmable (tables and lists over prose), and keep each screen
 | Asset manifest | `assets/README.md` listing every file, what it is and which screen or component uses it | |
 
 ### Rules for assets
-- Use only open-licence or originally created assets and state each licence; no copyrighted or trademarked artwork (including HYROX branding).
+- Use only open-licence or originally created assets and state each licence; no copyrighted or trademarked artwork (including HYROX branding). The Keep Theme is *inspired by* old-school RuneScape: no Jagex art, logos, icons or fonts ship in the app. The display font is a single token (`--font-display`) so a personal build can swap in another face locally.
 - Keep total asset weight small (a PWA): SVG wherever possible, PNG only for mockups, optimised.
 - Every asset must be referenced by the document, and every referenced asset must exist.
 - Do not use real personal data in mockups; use the sample content in section 9.
