@@ -13,6 +13,10 @@ public static class ExercisePerformance
     public static BestResult? Best(Exercise exercise, IEnumerable<Workout> history) =>
         PickBest(Candidates(exercise, history));
 
+    /// <summary>The best of some loose Sets (for example an open Workout's), with the same Max set precedence as <see cref="Best"/>.</summary>
+    internal static BestResult? BestAmong(LogKind kind, IEnumerable<WorkoutSet> sets) =>
+        PickBest(sets.Select(s => Candidate.Of(kind, s, default)).OfType<Candidate>());
+
     /// <summary>Every Workout that set a PR, in date order. The first ever result is a baseline and is not included.</summary>
     public static IReadOnlyList<PersonalRecord> Prs(Exercise exercise, IEnumerable<Workout> history)
     {
