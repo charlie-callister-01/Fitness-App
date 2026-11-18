@@ -1,9 +1,9 @@
-@using Core.Model
+@using Core.Rules.LogKinds
 @* C-02 SetRow: number, one or two inputs, state cell. Driven by parameters and callbacks only; the page owns saving and rules.
-   The layout (two inputs, one wide input, or a tick button) comes from the log kind through RowLayout. *@
+   The layout (two inputs, one wide input, or a tick button) comes from the log kind's RowSpec. *@
 <div class="@RowClass">
     <span class="fa-setrow__n">@Number</span>
-    @switch (Layout.Shape)
+    @switch (Spec.Shape)
     {
         case RowShape.Tick:
             @if (IsDone)
@@ -12,34 +12,34 @@
             }
             else
             {
-                <button type="button" class="fa-setrow__tick" aria-label="@($"Mark set {Number} done")" @onclick="OnConfirm">Done</button>
+                <button type="button" class="fa-setrow__tick" aria-label="@($"Mark Set {Number} done")" @onclick="OnConfirm">Done</button>
             }
             break;
         case RowShape.Wide:
-            <input @ref="_first" class="@InputClass(1) fa-setrow__wide" type="text" inputmode="@Layout.FirstMode" autocomplete="off" enterkeyhint="done"
-                   aria-label="@FirstLabel" aria-invalid="@Invalid(1)" readonly="@IsDone" placeholder="@FirstHint"
+            <input @ref="_first" class="@InputClass(RowField.First) fa-setrow__wide" type="text" inputmode="@Spec.FirstMode" autocomplete="off" enterkeyhint="done"
+                   aria-label="@FirstLabel" aria-invalid="@Invalid(RowField.First)" readonly="@IsDone" placeholder="@FirstHint"
                    value="@First" onfocus="this.select()"
                    @oninput="e => FirstChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
-                   @onkeydown="e => OnKey(e, 1)" />
+                   @onkeydown="e => OnKey(e, RowField.First)" />
             break;
         default:
             @* Two inputs: the first decimal, the second usually whole. *@
-            <input @ref="_first" class="@InputClass(1)" type="text" inputmode="@Layout.FirstMode" autocomplete="off" enterkeyhint="next"
-                   aria-label="@FirstLabel" aria-invalid="@Invalid(1)" readonly="@IsDone" placeholder="@FirstHint"
+            <input @ref="_first" class="@InputClass(RowField.First)" type="text" inputmode="@Spec.FirstMode" autocomplete="off" enterkeyhint="next"
+                   aria-label="@FirstLabel" aria-invalid="@Invalid(RowField.First)" readonly="@IsDone" placeholder="@FirstHint"
                    value="@First" onfocus="this.select()"
                    @oninput="e => FirstChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
-                   @onkeydown="e => OnKey(e, 1)" />
+                   @onkeydown="e => OnKey(e, RowField.First)" />
             <span class="fa-setrow__x" aria-hidden="true">×</span>
-            <input @ref="_second" class="@InputClass(2)" type="text" inputmode="@Layout.SecondMode" autocomplete="off" enterkeyhint="done"
-                   aria-label="@SecondLabel" aria-invalid="@Invalid(2)" readonly="@IsDone" placeholder="@SecondHint"
+            <input @ref="_second" class="@InputClass(RowField.Second)" type="text" inputmode="@Spec.SecondMode" autocomplete="off" enterkeyhint="done"
+                   aria-label="@SecondLabel" aria-invalid="@Invalid(RowField.Second)" readonly="@IsDone" placeholder="@SecondHint"
                    value="@Second" onfocus="this.select()"
                    @oninput="e => SecondChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
-                   @onkeydown="e => OnKey(e, 2)" />
+                   @onkeydown="e => OnKey(e, RowField.Second)" />
             break;
     }
     @if (IsDone)
     {
-        <button type="button" class="@StateClass" aria-label="@($"Edit set {Number}{(IsPr ? ", PR" : "")}")" @onclick="OnReopen">@if (IsPr) { <PrMarker /> } else { <Icon Name="IconName.Check" /> }</button>
+        <button type="button" class="@StateClass" aria-label="@($"Edit Set {Number}{(IsPr ? ", PR" : "")}")" @onclick="OnReopen">@if (IsPr) { <PrMarker /> } else { <Icon Name="IconName.Check" /> }</button>
     }
     else
     {
@@ -59,8 +59,9 @@
     [Parameter, EditorRequired]
     public int Number { get; set; }
 
-    [Parameter]
-    public LogKind Kind { get; set; } = LogKind.Load;
+    /// <summary>The row's layout for its log kind: one, two or a tick. Only kinds that can be logged have one.</summary>
+    [Parameter, EditorRequired]
+    public RowSpec Spec { get; set; } = default!;
 
     [Parameter]
     public SetRowState State { get; set; } = SetRowState.Upcoming;
@@ -89,13 +90,13 @@
     [Parameter]
     public string? ErrorMessage { get; set; }
 
-    /// <summary>Which field is invalid when there is a message: 1 or 2, 0 for none.</summary>
+    /// <summary>Which field is invalid when there is a message.</summary>
     [Parameter]
-    public int InvalidField { get; set; }
+    public RowField? InvalidField { get; set; }
 
-    /// <summary>Which field to focus when <see cref="FocusSequence"/> changes: 1 or 2, 0 for none.</summary>
+    /// <summary>Which field to focus when <see cref="FocusSequence"/> changes; null for none.</summary>
     [Parameter]
-    public int FocusField { get; set; }
+    public RowField? FocusField { get; set; }
 
     /// <summary>A counter: each new value asks this row to move focus to <see cref="FocusField"/>.</summary>
     [Parameter]
@@ -127,13 +128,10 @@
 
     private bool IsDone => State == SetRowState.Done;
 
-    /// <summary>A kind with no layout never reaches a row (the page shows a note instead); Load is only a safe default.</summary>
-    private RowLayout Layout => RowLayout.For(Kind) ?? RowLayout.For(LogKind.Load)!;
-
     /// <summary>The PR suffix goes on the row's last input: the only one in a wide row, the second in a pair.</summary>
-    private string FirstLabel => $"{Layout.FirstLabel}, set {Number}{(Layout.Shape == RowShape.Wide && IsPr ? ", PR" : "")}";
+    private string FirstLabel => $"{Spec.FirstLabel}, Set {Number}{(Spec.Shape == RowShape.Wide && IsPr ? ", PR" : "")}";
 
-    private string SecondLabel => $"{Layout.SecondLabel}, set {Number}{(IsPr ? ", PR" : "")}";
+    private string SecondLabel => $"{Spec.SecondLabel}, Set {Number}{(IsPr ? ", PR" : "")}";
 
     private string StateClass => IsPr ? "fa-setrow__state fa-setrow__state--pr" : "fa-setrow__state fa-setrow__state--done";
 
@@ -141,24 +139,26 @@
 
     private string RowClass => $"fa-setrow fa-setrow--{State.ToString().ToLowerInvariant()}";
 
-    private string InputClass(int field) => string.Join(' ', new[]
+    private bool IsInvalid(RowField field) => ErrorMessage is not null && InvalidField == field;
+
+    private string InputClass(RowField field) => string.Join(' ', new[]
     {
         "fa-input",
         Pending && !IsDone ? "fa-input--pending" : null,
         State == SetRowState.Current ? "fa-input--current" : null,
-        ErrorMessage is not null && InvalidField == field ? "fa-input--error" : null,
+        IsInvalid(field) ? "fa-input--error" : null,
     }.Where(c => c is not null));
 
-    private string? Invalid(int field) => ErrorMessage is not null && InvalidField == field ? "true" : null;
+    private string? Invalid(RowField field) => IsInvalid(field) ? "true" : null;
 
-    private async Task OnKey(KeyboardEventArgs e, int field)
+    private async Task OnKey(KeyboardEventArgs e, RowField field)
     {
         if (e.Key != "Enter" || IsDone)
         {
             return;
         }
 
-        if (field == 1 && Layout.Shape == RowShape.Pair)
+        if (field == RowField.First && Spec.Shape == RowShape.Pair)
         {
             await _second.FocusAsync();
         }
@@ -173,11 +173,11 @@
         if (FocusSequence != _handledFocus)
         {
             _handledFocus = FocusSequence;
-            if (FocusField == 1)
+            if (FocusField == RowField.First)
             {
                 await _first.FocusAsync();
             }
-            else if (FocusField == 2)
+            else if (FocusField == RowField.Second)
             {
                 await _second.FocusAsync();
             }

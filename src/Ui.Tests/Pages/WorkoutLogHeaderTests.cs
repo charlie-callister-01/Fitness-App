@@ -71,8 +71,8 @@ public sealed class WorkoutLogHeaderTests : BunitContext
     {
         var (_, cut) = await OpenAsync();
 
-        cut.Find("input[aria-label='Weight, set 1']").Input("30");
-        cut.Find("input[aria-label='Reps, set 1']").Input("8");
+        cut.Find("input[aria-label='Weight, Set 1']").Input("30");
+        cut.Find("input[aria-label='Reps, Set 1']").Input("8");
         Confirm(cut);
 
         Assert.Empty(cut.FindAll(".fa-exercise__lastbest"));
@@ -127,8 +127,8 @@ public sealed class WorkoutLogHeaderTests : BunitContext
         Confirm(cut); // nothing typed, no RPE: the parser's message shows, RPE is not what blocks it
         Assert.Empty(Stored(data).Entries);
 
-        cut.Find("input[aria-label='Weight, set 1']").Input("20");
-        cut.Find("input[aria-label='Reps, set 1']").Input("8");
+        cut.Find("input[aria-label='Weight, Set 1']").Input("20");
+        cut.Find("input[aria-label='Reps, Set 1']").Input("8");
         Confirm(cut);
         Rpe(cut, 7).Click();
 
@@ -146,8 +146,8 @@ public sealed class WorkoutLogHeaderTests : BunitContext
         // Move on to the next Exercise: finish the squat sets then Next.
         for (var set = 1; set <= 3; set++)
         {
-            cut.Find($"input[aria-label='Weight, set {set}']").Input("20");
-            cut.Find($"input[aria-label='Reps, set {set}']").Input("8");
+            cut.Find($"input[aria-label='Weight, Set {set}']").Input("20");
+            cut.Find($"input[aria-label='Reps, Set {set}']").Input("8");
             Confirm(cut);
         }
 
@@ -159,8 +159,8 @@ public sealed class WorkoutLogHeaderTests : BunitContext
     public async Task The_next_suggested_target_reflects_the_saved_rpe()
     {
         var (data, cut) = await OpenAsync();
-        cut.Find("input[aria-label='Weight, set 1']").Input("20");
-        cut.Find("input[aria-label='Reps, set 1']").Input("8");
+        cut.Find("input[aria-label='Weight, Set 1']").Input("20");
+        cut.Find("input[aria-label='Reps, Set 1']").Input("8");
         Confirm(cut);
         Rpe(cut, 9).Click();
         await data.CommitAsync(Change.Put(Stored(data) with { EndedAt = Now.AddMinutes(30) }));

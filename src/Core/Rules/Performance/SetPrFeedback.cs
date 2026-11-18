@@ -27,9 +27,12 @@ public static class SetPrFeedbackRule
         // The first ever result is a baseline. A Max set in history outranks any non-Max Set, whatever its key.
         var isPr = previous is not null
             && (current.IsMax || !previous.IsMax)
-            && SetRanking.Compare(Key(exercise, current.Set), Key(exercise, previous.Set)) > 0;
+            && Key(exercise, current.Set) is { } currentKey
+            && Key(exercise, previous.Set) is { } previousKey
+            && SetRanking.Compare(currentKey, previousKey) > 0;
         return new SetPrFeedback(current.Set, isPr, previous);
     }
 
-    private static double[] Key(Exercise exercise, WorkoutSet set) => LogKindRules.For(exercise.LogKind).Key(set)!;
+    /// <summary>The ranking key of a Set; null when it cannot be ranked (both Sets compared here are, having been ranked as bests).</summary>
+    private static double[]? Key(Exercise exercise, WorkoutSet set) => LogKindRules.For(exercise.LogKind).Key(set);
 }

@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.LogKinds;
 using Core.Rules.Parsing;
 using Core.Rules.Units;
 
@@ -96,6 +97,29 @@ public class RowInputTests
         var expected = Assert.IsType<ParseResult.Failure>(Metric.Parse("", kind)).Error;
 
         Assert.Equal(expected, Fail(kind, first, second));
+    }
+
+    [Fact]
+    public void Check_returns_the_set_for_a_good_row()
+    {
+        var check = Assert.IsType<RowCheck.Valid>(RowInput.Check(LogKind.Load, "22,5", "8", Metric));
+
+        Assert.Equal(22.5, check.Set.WeightKg);
+        Assert.Equal(8, check.Set.Reps);
+    }
+
+    [Theory]
+    [InlineData(LogKind.Load, "abc", "8", RowField.First)]
+    [InlineData(LogKind.Load, "20", "many", RowField.Second)]
+    [InlineData(LogKind.Load, "", "", RowField.First)]
+    [InlineData(LogKind.Carry, "32", "", RowField.Second)]
+    [InlineData(LogKind.Reps, "lots", null, RowField.First)]
+    public void Check_names_the_field_to_blame_and_gives_the_parsers_message(LogKind kind, string first, string? second, RowField field)
+    {
+        var check = Assert.IsType<RowCheck.Invalid>(RowInput.Check(kind, first, second, Metric));
+
+        Assert.Equal(field, check.Field);
+        Assert.Equal(Fail(kind, first, second), check.Error);
     }
 
     [Fact]
