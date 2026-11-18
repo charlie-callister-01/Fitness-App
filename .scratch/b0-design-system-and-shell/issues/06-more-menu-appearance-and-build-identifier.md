@@ -4,11 +4,11 @@
 
 **Blocked by:** 03 (Theme switching end to end), 05 (App shell: layouts, TabBar and routes)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The More page lists every secondary entry as a link to a routed placeholder; the active tab stays More on those pages
-- [ ] Appearance holds the working Theme and Mode pickers; the temporary stub page and gallery are removed or folded in so no duplicate controls remain
-- [ ] The build identifier is shown on the More page and the existing build-identifier test still passes at its new location
-- [ ] bUnit tests cover the More links and that choosing a Theme from Appearance updates the app
+- [x] The More page lists every secondary entry as a link to a routed placeholder; the active tab stays More on those pages
+- [x] Appearance holds the working Theme and Mode pickers; the temporary stub page and gallery are removed or folded in so no duplicate controls remain
+- [x] The build identifier is shown on the More page and the existing build-identifier test still passes at its new location
+- [x] bUnit tests cover the More links and that choosing a Theme from Appearance updates the app
 - [ ] Manual checks completed on a phone and recorded in `docs/pwa-manual-checks.md`: install with the new icon, all four looks, airplane-mode launch, status bar colour, deep link on each tab, 360 px width, increased system text size
-- [ ] `docs/build-plan.md` marks B0 implemented (reviews and PR still to do); all app, unit and browser tests green
+- [x] `docs/build-plan.md` marks B0 implemented (reviews and PR still to do); all app, unit and browser tests green

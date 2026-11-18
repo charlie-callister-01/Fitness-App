@@ -70,6 +70,8 @@ None of these block A0 to A4.
 
 **Track B design is delivered and sliced into stages B0 to B11** (see above); the first UI stage to spec is **B0 (design system and app shell)**, which only needs A0 and A3. B9 needs A4 and B10 needs A5.
 
+**B0 (design system and app shell) is implemented** (all six tickets: Theme and Mode settings, design assets and PWA identity, Theme switching, base components, shell and routes, More menu). Remaining for B0: the two reviews, their fixes, and the PR, plus the phone checks in `pwa-manual-checks.md` (B0 sections). The More page holds the temporary Appearance pickers and a collapsed "Components (temporary)" section until Settings lands in B10.
+
 **A1 and A2 are merged** (539 Core and 9 Ui tests green). **A3 (Storage) is implemented** (all nine tickets). Remaining for A3: the two reviews, their fixes, and the PR. **Next stage: A4 (Export, Import and prompt pack)**, once A3's PR is written. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first. The storage manual checks (quota-full, persistence grant, cleared data, blocked upgrade, iOS Safari) still need doing by hand on a phone; see `pwa-manual-checks.md`.
 
 ## Known sharp edges from A3 (for the owner)

@@ -1,9 +1,39 @@
 @page "/more"
+@using Ui.Theming
+@inject IBuildInfo BuildInfo
 
-@* Placeholder so the tab has a destination. Ticket 06 builds the real More page and takes over the temporary links. *@
 <div class="fa-root">
     <h1 class="fa-title fa-title--l">More</h1>
-    <EmptyState Kind="EmptyStateKind.FirstRun" Title="More is on its way" Message="Plans, library, Export and Settings will be listed here." />
-    <p><a href="gallery">Component gallery (temporary)</a></p>
-    <p><a href="appearance-stub">Appearance (temporary)</a></p>
+
+    <nav class="fa-panel entries" aria-label="More">
+        @foreach (var entry in Entries)
+        {
+            <a class="entry" href="@entry.Href"><Icon Name="entry.Icon" /><span>@entry.Label</span></a>
+        }
+    </nav>
+
+    @* Temporary (B0): Settings (B10) takes the Appearance section over. *@
+    <AppearancePicker />
+
+    <details class="fa-panel showcase-section">
+        <summary>Components (temporary)</summary>
+        <ComponentShowcase />
+    </details>
+
+    <p class="build-id">Build @BuildInfo.Identifier</p>
 </div>
+
+@code {
+    private sealed record Entry(string Label, IconName Icon, string Href);
+
+    // Hrefs are relative to the document base. The TabBar's More ownership list holds the same first segments.
+    private static readonly Entry[] Entries =
+    [
+        new("Plans", IconName.Phase, "plans"),
+        new("Exercise library", IconName.Guide, "exercises"),
+        new("Weight", IconName.Weight, "weight"),
+        new("Weekly review", IconName.Calendar, "weekly-review"),
+        new("Export and Import", IconName.Export, "backup"),
+        new("Settings", IconName.Settings, "settings"),
+    ];
+}
