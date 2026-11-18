@@ -24,7 +24,7 @@ public sealed class AppearancePickerTests : BunitContext
     {
         var data = await AppData.OpenAsync(new InMemoryDataStore());
         Services.AddSingleton(data);
-        Services.AddSingleton(new ThemeService(data, new RecordingInterop()));
+        Services.AddSingleton(new ThemeService(data, new RecordingInterop(), new Ui.Saving.SaveFailureNotice()));
 
         var cut = Render<AppearancePicker>();
 
@@ -37,7 +37,7 @@ public sealed class AppearancePickerTests : BunitContext
         var data = await AppData.OpenAsync(new InMemoryDataStore());
         var interop = new RecordingInterop();
         Services.AddSingleton(data);
-        Services.AddSingleton(new ThemeService(data, interop));
+        Services.AddSingleton(new ThemeService(data, interop, new Ui.Saving.SaveFailureNotice()));
 
         var cut = Render<AppearancePicker>();
         Assert.Equal("true", cut.FindAll("button").Single(b => b.TextContent == "Keep").GetAttribute("aria-pressed"));

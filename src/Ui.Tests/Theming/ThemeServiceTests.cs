@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Storage;
 using Core.Tests.Storage;
+using Ui.Saving;
 using Ui.Theming;
 
 namespace Ui.Tests.Theming;
@@ -25,12 +26,15 @@ public sealed class ThemeServiceTests
         }
     }
 
-    private static async Task<(ThemeService Service, AppData Data, FakeThemeInterop Interop, FaultInjectingDataStore Store)> StartAsync()
+    // xUnit makes one instance per test, so this is the notice of the service the test started.
+    private readonly SaveFailureNotice _notice = new();
+
+    private async Task<(ThemeService Service, AppData Data, FakeThemeInterop Interop, FaultInjectingDataStore Store)> StartAsync()
     {
         var store = new FaultInjectingDataStore(new InMemoryDataStore());
         var data = await AppData.OpenAsync(store);
         var interop = new FakeThemeInterop();
-        var service = new ThemeService(data, interop);
+        var service = new ThemeService(data, interop, _notice);
         await service.InitialiseAsync();
         return (service, data, interop, store);
     }
@@ -58,7 +62,7 @@ public sealed class ThemeServiceTests
         Assert.Equal((Theme.Clean, Mode.System), interop.Applied[^1]);
         Assert.Equal(Theme.Clean, data.Snapshot.Settings.Theme);
         Assert.Equal(1, raised);
-        Assert.Null(service.LastSaveFailure);
+        Assert.Null(_notice.Message);
     }
 
     [Fact]
@@ -84,12 +88,13 @@ public sealed class ThemeServiceTests
         Assert.Equal(Mode.Dark, service.Mode);
         Assert.Equal((Theme.Keep, Mode.Dark), interop.Applied[^1]);
         Assert.Equal(Mode.System, data.Snapshot.Settings.Mode);
-        var failed = Assert.IsType<CommitResult.StoreFailed>(service.LastSaveFailure);
-        Assert.Equal(StoreFailureKind.StorageFull, failed.Failure.Kind);
+        var reported = new SaveFailureNotice();
+        reported.Report(new CommitResult.StoreFailed(new StoreFailure(StoreFailureKind.StorageFull)));
+        Assert.Equal(reported.Message, _notice.Message);
 
         store.Recover();
         await service.SetModeAsync(Mode.Dark);
-        Assert.Null(service.LastSaveFailure);
+        Assert.Null(_notice.Message);
     }
 
     [Fact]
@@ -139,7 +144,7 @@ public sealed class ThemeServiceTests
     {
         var store = new HoldingStore(new InMemoryDataStore());
         var data = await AppData.OpenAsync(store);
-        var service = new ThemeService(data, new FakeThemeInterop());
+        var service = new ThemeService(data, new FakeThemeInterop(), new SaveFailureNotice());
         await service.InitialiseAsync();
         store.HoldNextWrite = true;
 
@@ -158,7 +163,7 @@ public sealed class ThemeServiceTests
         var store = new HoldingStore(new InMemoryDataStore());
         var data = await AppData.OpenAsync(store);
         var interop = new FakeThemeInterop();
-        var service = new ThemeService(data, interop);
+        var service = new ThemeService(data, interop, new SaveFailureNotice());
         await service.InitialiseAsync();
         store.HoldNextWrite = true;
 

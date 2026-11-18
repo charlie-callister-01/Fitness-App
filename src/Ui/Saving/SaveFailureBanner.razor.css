@@ -1,0 +1,8 @@
+.save-failure-banner {
+    margin: var(--space-2) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: var(--border-thick) solid var(--state-partial);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text);
+}

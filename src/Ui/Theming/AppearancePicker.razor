@@ -7,11 +7,6 @@
 
     @ChoiceGroup("Theme", "theme-label", Themes.Theme, ThemeLabels, Themes.SetThemeAsync)
     @ChoiceGroup("Mode", "mode-label", Themes.Mode, ModeLabels, Themes.SetModeAsync)
-
-    @if (Themes.LastSaveFailure is not null)
-    {
-        <p class="fa-muted" role="status">This choice is applied now but could not be saved, so it may not be there next time.</p>
-    }
 </section>
 
 @code {

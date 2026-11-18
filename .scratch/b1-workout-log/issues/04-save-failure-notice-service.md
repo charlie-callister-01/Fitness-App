@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each failure kind produces a distinct, plain message; success clears the banner
-- [ ] The banner is rendered once in the shell and full-screen layouts so any screen can use it
-- [ ] `ThemeService` reports through it; its failure test is adapted, not dropped
-- [ ] bUnit tests using the existing fault-injecting store and a held writer lock
+- [x] Each failure kind produces a distinct, plain message; success clears the banner
+- [x] The banner is rendered once in the shell and full-screen layouts so any screen can use it
+- [x] `ThemeService` reports through it; its failure test is adapted, not dropped
+- [x] bUnit tests using the existing fault-injecting store and a held writer lock
