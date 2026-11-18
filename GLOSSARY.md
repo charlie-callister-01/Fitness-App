@@ -128,6 +128,16 @@ _Avoid_: Template prompt
 Which Sessions fall on which days in one particular week. It starts from each Session's default day and can be rearranged for that week only.
 _Avoid_: Calendar, rota
 
+### Appearance
+
+**Theme**:
+The app's visual skin, chosen in Settings: **Keep** (old-school fantasy: stone panels, rune-yellow text, linocut art) or **Clean** (plain and modern). Themes change only design tokens and artwork, never layout or behaviour.
+_Avoid_: Skin, style
+
+**Mode**:
+Dark or light (or follow the system), chosen separately from the Theme. Each Theme has both Modes.
+_Avoid_: Theme (for dark/light)
+
 ### Feedback
 
 **Nudge**:

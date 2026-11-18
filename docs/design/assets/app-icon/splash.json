@@ -1,0 +1,7 @@
+{
+  "background_color": "#2B2620",
+  "theme_color": "#4A4237",
+  "theme_color_clean_dark": "#111315",
+  "theme_color_clean_light": "#F4F5F7",
+  "note": "Manifest background_color (splash) and theme_color for the default Keep dark Theme. The app updates <meta name=\"theme-color\"> when the user changes Theme or Mode."
+}

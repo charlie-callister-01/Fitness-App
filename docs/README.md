@@ -11,9 +11,10 @@ Start here in a new session. The grilling session (usage, then practical, then t
 | [`build-plan.md`](build-plan.md) | The two tracks, proposed stages, inputs still needed, the first step |
 | [`data-spec.md`](data-spec.md) | The written data spec: entities, fields, units, ID rules, JSON exchange format and versioning (final for stage A1) |
 | [`design-brief.md`](design-brief.md) | Self-contained brief to give the UI/UX design agent (requirements, constraints, and the design document and assets we want back) |
+| [`design/design-document.md`](design/design-document.md) | The design document (v1.0, complete): Themes, tokens, components, screens, flows; assets in `design/assets/` (manifest in `design/assets/README.md`) |
 | [`pwa-manual-checks.md`](pwa-manual-checks.md) | How the PWA caches and updates, and the manual phone checks (install, airplane mode, update, and the storage checks) |
 | [`grilling-log.md`](grilling-log.md) | The essence of every question and answer (Q1 to Q78) |
-| [`adr/`](adr/) | Hard-to-reverse decisions: 0001 data foundation, 0002 stack, 0003 storage, 0004 .NET 10 LTS pinned, 0005 single writer, quarantine and two storage versions |
+| [`adr/`](adr/) | Hard-to-reverse decisions: 0001 data foundation, 0002 stack, 0003 storage, 0004 .NET 10 LTS pinned, 0005 single writer, quarantine and two storage versions, 0006 two Themes (Keep and Clean) |
 | [`agents/`](agents/) | Skill config: GitHub issues, triage labels, domain docs layout |
 
 Source material from the old system (not yet in this repo): the pre-plan at `C:\Users\calli\Downloads\Fitness App - Pre-plan.md`, and the Obsidian vault folder `Beta/99 Life Planning/Exercise/` (`Fitness/Config.md`, `Fitness/_scripts/fitness/view.js`, `view.css`, `Fitness/Exercises/*.md`, `Fitness/How to use.md`, `Homepage.md`, `Plan/Tracking/Weight.md`).
