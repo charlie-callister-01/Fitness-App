@@ -1,8 +1,7 @@
-html, body {
-    margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    -webkit-text-size-adjust: 100%;
-}
+/* Shell-level rules only. Tokens and the fa- component skin come from tokens.css and components.css,
+   which the host page loads first; anything here uses tokens, never raw colours. */
+
+html { -webkit-text-size-adjust: 100%; }
 
 .home {
     min-height: 100dvh;
@@ -16,7 +15,7 @@ html, body {
 
 .home h1:focus { outline: none; }
 
-.build-id { color: #555; }
+.build-id { color: var(--text-muted); }
 
 button, a, input, select {
     min-height: 44px;
