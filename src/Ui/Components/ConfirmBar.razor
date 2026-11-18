@@ -1,4 +1,4 @@
-@* C-06 ConfirmBar: fixed to the bottom of the log with the one primary action. Steppers and the Up next strip slot in beside it later. *@
+@* C-06 ConfirmBar: fixed to the bottom of the log with the Up next strip, the one primary action and, when the Exercise has them, a stepper either side. *@
 <div class="fa-confirmbar">
     @if (UpNext is not null)
     {
@@ -8,8 +8,16 @@
     {
         <div class="fa-confirmbar__info"><span>Last Exercise done</span></div>
     }
-    <div class="fa-confirmbar__row confirm-row">
+    <div class="@RowClass">
+        @if (ShowSteppers)
+        {
+            <Button Variant="ButtonVariant.Stepper" AccessibleName="@($"Decrease by {StepName}")" OnClick="() => OnStep.InvokeAsync(-1)">−@StepAmount</Button>
+        }
         <Button Variant="ButtonVariant.Primary" Disabled="Disabled" OnClick="HandlePrimary">@PrimaryLabel</Button>
+        @if (ShowSteppers)
+        {
+            <Button Variant="ButtonVariant.Stepper" AccessibleName="@($"Increase by {StepName}")" OnClick="() => OnStep.InvokeAsync(1)">+@StepAmount</Button>
+        }
     </div>
 </div>
 
@@ -31,6 +39,24 @@
 
     [Parameter]
     public EventCallback OnPrimary { get; set; }
+
+    /// <summary>The step shown on the stepper buttons, such as "2" or "4.5"; null hides the steppers.</summary>
+    [Parameter]
+    public string? StepAmount { get; set; }
+
+    /// <summary>The unit word spoken in the stepper names: "kg", "lb", "s" or "rep".</summary>
+    [Parameter]
+    public string StepUnit { get; set; } = "";
+
+    /// <summary>A stepper was pressed: -1 for minus, 1 for plus.</summary>
+    [Parameter]
+    public EventCallback<int> OnStep { get; set; }
+
+    private bool ShowSteppers => StepAmount is not null;
+
+    private string StepName => $"{StepAmount} {StepUnit}";
+
+    private string RowClass => ShowSteppers ? "fa-confirmbar__row" : "fa-confirmbar__row confirm-row--single";
 
     private Task HandlePrimary() => OnPrimary.InvokeAsync();
 }

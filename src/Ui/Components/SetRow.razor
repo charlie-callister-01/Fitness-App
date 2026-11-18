@@ -26,6 +26,10 @@
             {
                 <span class="fa-setrow__state"></span>
             }
+            @if (IsMax)
+            {
+                <p class="fa-setrow__max"><Icon Name="IconName.MaxSet" /> Max set</p>
+            }
             @if (ErrorMessage is not null)
             {
                 <p class="fa-setrow__error" id="@ErrorId">@ErrorMessage</p>
@@ -55,6 +59,10 @@
     /// <summary>True while the values are only the prefill: shown muted until confirmed or edited.</summary>
     [Parameter]
     public bool Pending { get; set; }
+
+    /// <summary>True when this Set is flagged as a Max set: the row says so in words.</summary>
+    [Parameter]
+    public bool IsMax { get; set; }
 
     /// <summary>Plain-language message for this row, shown under it; null when the row is fine.</summary>
     [Parameter]

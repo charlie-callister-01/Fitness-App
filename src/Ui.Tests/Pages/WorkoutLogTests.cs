@@ -46,7 +46,7 @@ public sealed class WorkoutLogTests : BunitContext
         Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
         Assert.Contains("3 × 8", cut.Markup);
         Assert.Contains("Chest up", cut.Markup);
-        Assert.Equal("Confirm Set", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+        Assert.Equal("Confirm Set", cut.Find(".fa-confirmbar .fa-btn--primary").TextContent.Trim());
         Assert.Empty(cut.FindAll(".log__notice")); // nothing logged yet: not resumed
     }
 
@@ -265,7 +265,7 @@ public sealed class WorkoutLogTests : BunitContext
             Confirm(cut);
         }
 
-        Assert.Equal("Next: Walking lunge", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+        Assert.Equal("Next: Walking lunge", cut.Find(".fa-confirmbar .fa-btn--primary").TextContent.Trim());
         Assert.Contains("1 of 2 done", cut.Find(".log__progress").TextContent);
 
         Confirm(cut);
@@ -277,7 +277,7 @@ public sealed class WorkoutLogTests : BunitContext
             Confirm(cut);
         }
 
-        Assert.Equal("Finish", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+        Assert.Equal("Finish", cut.Find(".fa-confirmbar .fa-btn--primary").TextContent.Trim());
         Confirm(cut);
 
         Assert.Equal(Now, Stored(data).EndedAt);
@@ -501,7 +501,7 @@ public sealed class WorkoutLogTests : BunitContext
         var cut = await OpenLogAsync(locked);
 
         Assert.Contains("Another window", cut.Find(".log__notice").TextContent);
-        Assert.True(cut.Find(".fa-confirmbar .fa-btn").HasAttribute("disabled"));
+        Assert.True(cut.Find(".fa-confirmbar .fa-btn--primary").HasAttribute("disabled"));
         Assert.Contains("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
     }
 
@@ -517,6 +517,219 @@ public sealed class WorkoutLogTests : BunitContext
         Assert.Contains("could not be read", cut.Find(".log__notice").TextContent);
         Assert.Equal("./", cut.Find("a.fa-btn").GetAttribute("href"));
         Assert.Empty(cut.FindAll(".fa-setrow"));
+    }
+
+    // ---- Steppers
+
+    private static IElement Stepper(IRenderedComponent<WorkoutLog> cut, string name) =>
+        cut.Find($".fa-confirmbar button[aria-label='{name}']");
+
+    private async Task<(AppData Data, IRenderedComponent<WorkoutLog> Cut)> OpenWithLastTimeAsync()
+    {
+        var data = await OpenSeededAsync(
+            plan: Plan(), workouts: [Finished("w-old", Today.AddDays(-7), Set("o1", 20, 8), Set("o2", 20, 8), Set("o3", 20, 8)), InProgress()]);
+        return (data, await OpenLogAsync(data));
+    }
+
+    [Fact]
+    public async Task Steppers_have_accessible_names_with_the_plans_increment_and_the_big_target_class()
+    {
+        var (_, cut) = await OpenWithLastTimeAsync();
+
+        Assert.Equal("−2", Stepper(cut, "Decrease by 2 kg").TextContent.Trim());
+        Assert.Equal("+2", Stepper(cut, "Increase by 2 kg").TextContent.Trim());
+        Assert.Contains("fa-btn--stepper", Stepper(cut, "Increase by 2 kg").ClassName);
+    }
+
+    [Fact]
+    public async Task Stepping_changes_the_current_row_and_carries_down_to_later_unconfirmed_rows()
+    {
+        var (_, cut) = await OpenWithLastTimeAsync();
+
+        Stepper(cut, "Increase by 2 kg").Click();
+
+        Assert.Equal("22", Weight(cut, 1).GetAttribute("value"));
+        Assert.Equal("22", Weight(cut, 2).GetAttribute("value"));
+        Assert.Equal("22", Weight(cut, 3).GetAttribute("value"));
+        Assert.Equal("8", Reps(cut, 2).GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task Stepping_never_changes_a_confirmed_row_and_goes_down_as_well()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+        Stepper(cut, "Increase by 2 kg").Click();
+        Confirm(cut);
+
+        Stepper(cut, "Decrease by 2 kg").Click();
+
+        Assert.Equal("22", Weight(cut, 1).GetAttribute("value"));
+        Assert.Equal("20", Weight(cut, 2).GetAttribute("value"));
+        Assert.Equal("20", Weight(cut, 3).GetAttribute("value"));
+        Assert.Equal(22, SquatSets(data).Single().WeightKg);
+    }
+
+    [Fact]
+    public async Task Stepping_from_an_empty_row_starts_at_zero_and_never_goes_below_it()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        var cut = await OpenLogAsync(data);
+
+        Stepper(cut, "Decrease by 2 kg").Click();
+        Assert.Equal("0", Weight(cut, 1).GetAttribute("value"));
+
+        Stepper(cut, "Increase by 2 kg").Click();
+        Assert.Equal("2", Weight(cut, 1).GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task Steppers_show_pounds_when_units_are_lb()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: InProgress());
+        await data.CommitAsync(Change.Put(data.Snapshot.Settings with { DisplayWeightUnit = WeightUnit.Lb }));
+        var cut = await OpenLogAsync(data);
+
+        Stepper(cut, "Increase by 4.5 lb").Click();
+
+        Assert.Equal("4.5", Weight(cut, 1).GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task A_stepped_value_is_what_gets_saved_on_confirm()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+
+        Stepper(cut, "Increase by 2 kg").Click();
+        Confirm(cut);
+
+        Assert.Equal(22, SquatSets(data).Single().WeightKg);
+        Assert.Equal(8, SquatSets(data).Single().Reps);
+    }
+
+    [Fact]
+    public async Task Steppers_are_gone_when_every_row_is_confirmed()
+    {
+        var (_, cut) = await OpenWithLastTimeAsync();
+        for (var set = 0; set < 3; set++)
+        {
+            Confirm(cut);
+        }
+
+        Assert.Empty(cut.FindAll(".fa-confirmbar .fa-btn--stepper"));
+    }
+
+    // ---- Add Set and Max set
+
+    private static IElement Link(IRenderedComponent<WorkoutLog> cut, string text) =>
+        cut.FindAll(".log__tools button").Single(b => b.TextContent.Trim() == text);
+
+    [Fact]
+    public async Task Add_Set_appends_a_row_copied_from_the_one_above_and_it_can_be_confirmed()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+        for (var set = 0; set < 3; set++)
+        {
+            Confirm(cut);
+        }
+
+        Link(cut, "Add Set").Click();
+
+        Assert.Equal(4, cut.FindAll(".fa-setrow").Count);
+        Assert.Equal("20", Weight(cut, 4).GetAttribute("value"));
+        Assert.Equal("Confirm Set", cut.Find(".fa-confirmbar .fa-btn--primary").TextContent.Trim());
+        Confirm(cut);
+        Assert.Equal(4, SquatSets(data).Count);
+    }
+
+    [Fact]
+    public async Task An_extra_unconfirmed_row_can_be_removed_but_a_planned_or_confirmed_one_cannot()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+        Assert.DoesNotContain(cut.FindAll(".log__tools button"), b => b.TextContent.Contains("Remove"));
+
+        Link(cut, "Add Set").Click();
+        Link(cut, "Remove Set 4").Click();
+
+        Assert.Equal(3, cut.FindAll(".fa-setrow").Count);
+        Assert.DoesNotContain(cut.FindAll(".log__tools button"), b => b.TextContent.Contains("Remove"));
+
+        Link(cut, "Add Set").Click();
+        Confirm(cut);
+        Confirm(cut);
+        Confirm(cut);
+        Confirm(cut);
+        Assert.Equal(4, SquatSets(data).Count);
+        Assert.DoesNotContain(cut.FindAll(".log__tools button"), b => b.TextContent.Contains("Remove"));
+    }
+
+    [Fact]
+    public async Task Marking_the_current_set_as_Max_labels_the_row_and_saves_it_on_confirm()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+
+        Link(cut, "Mark Set 1 as Max set").Click();
+
+        Assert.Contains("Max set", cut.FindAll(".fa-setrow")[0].TextContent);
+        Confirm(cut);
+        Assert.True(SquatSets(data).Single().IsMax);
+        Assert.Contains("Max set", cut.FindAll(".fa-setrow")[0].TextContent);
+    }
+
+    [Fact]
+    public async Task The_mark_can_be_taken_back_before_confirming()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+
+        Link(cut, "Mark Set 1 as Max set").Click();
+        Link(cut, "Unmark Set 1 as Max set").Click();
+        Confirm(cut);
+
+        Assert.DoesNotContain("Max set", cut.FindAll(".fa-setrow")[0].TextContent);
+        Assert.False(SquatSets(data).Single().IsMax);
+    }
+
+    [Fact]
+    public async Task A_confirmed_max_set_can_be_unmarked_after_reopening_and_the_change_is_saved_at_once()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+        Link(cut, "Mark Set 1 as Max set").Click();
+        Confirm(cut);
+
+        cut.Find("button[aria-label='Edit set 1']").Click();
+        Link(cut, "Unmark Set 1 as Max set").Click();
+
+        Assert.False(SquatSets(data).Single().IsMax);
+        Assert.DoesNotContain("Max set", cut.FindAll(".fa-setrow")[0].TextContent);
+    }
+
+    [Fact]
+    public async Task Once_every_row_is_confirmed_the_link_targets_the_last_set()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+        for (var set = 0; set < 3; set++)
+        {
+            Confirm(cut);
+        }
+
+        Link(cut, "Mark Set 3 as Max set").Click();
+
+        Assert.True(SquatSets(data)[2].IsMax);
+        Assert.False(SquatSets(data)[0].IsMax);
+    }
+
+    [Fact]
+    public async Task Reopening_and_confirming_a_max_set_keeps_the_mark()
+    {
+        var (data, cut) = await OpenWithLastTimeAsync();
+        Link(cut, "Mark Set 1 as Max set").Click();
+        Confirm(cut);
+
+        cut.Find("button[aria-label='Edit set 1']").Click();
+        Weight(cut, 1).Input("25");
+        Confirm(cut);
+
+        Assert.True(SquatSets(data).Single().IsMax);
+        Assert.Equal(25, SquatSets(data).Single().WeightKg);
     }
 
     // ---- Exercises the page cannot log yet
@@ -539,7 +752,7 @@ public sealed class WorkoutLogTests : BunitContext
 
         Assert.Contains("cannot be logged here yet", cut.Find(".log__notice").TextContent);
         Assert.Empty(cut.FindAll(".fa-setrow"));
-        Assert.Equal("Next: Goblet squat", cut.Find(".fa-confirmbar .fa-btn").TextContent.Trim());
+        Assert.Equal("Next: Goblet squat", cut.Find(".fa-confirmbar .fa-btn--primary").TextContent.Trim());
 
         Confirm(cut);
 

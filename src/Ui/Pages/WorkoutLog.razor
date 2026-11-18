@@ -66,6 +66,7 @@ else
                                 First="@row.First"
                                 Second="@row.Second"
                                 Pending="row.Pending"
+                                IsMax="row.IsMax"
                                 SecondHint="@row.SecondHint"
                                 ErrorMessage="@(row.HasError ? _errorMessage : null)"
                                 InvalidField="@(row.HasError ? _invalidField : 0)"
@@ -80,11 +81,23 @@ else
 
                 @if (shown.Rows.Count > 0)
                 {
+                    <div class="log__tools">
+                        <button type="button" class="log__link" @onclick="() => AddSet(shown)">Add Set</button>
+                        @if (shown.RemovableRow is { } removable)
+                        {
+                            <button type="button" class="log__link" @onclick="() => RemoveSet(shown)">Remove Set @(removable + 1)</button>
+                        }
+                        @if (shown.MaxTarget is { } target)
+                        {
+                            <button type="button" class="log__link" @onclick="() => ToggleMaxAsync(shown)">@(shown.Rows[target].IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
+                        }
+                    </div>
                     <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => SetRpeAsync(shown.ExerciseId, rpe)" />
                 }
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.PrimaryLabel" UpNext="@view.UpNext" LastDone="@view.AllDone" Disabled="@(!CanWrite && view.PrimaryNeedsWrite)" OnPrimary="PrimaryAsync" />
+        <ConfirmBar PrimaryLabel="@view.PrimaryLabel" UpNext="@view.UpNext" LastDone="@view.AllDone" Disabled="@(!CanWrite && view.PrimaryNeedsWrite)" OnPrimary="PrimaryAsync"
+                    StepAmount="@view.Exercise?.StepAmount" StepUnit="@(view.Exercise?.Step?.Unit ?? "")" OnStep="Step" />
     </div>
 }

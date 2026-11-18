@@ -1,5 +1,7 @@
+using System.Globalization;
 using Core.Ids;
 using Core.Model;
+using Core.Rules.LogKinds;
 using Core.Rules.Parsing;
 using Core.Rules.Performance;
 using Core.Rules.Units;
@@ -40,9 +42,14 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     public string WorkoutId { get; set; } = "";
 
     /// <summary>What the owner typed in a row and has not confirmed. A null field still shows the prefill.</summary>
-    private sealed record Draft(string? First, string? Second);
+    /// <param name="Carried">The values were only carried down by a stepper, so the row still looks pending.</param>
+    /// <param name="Max">Marked as a Max set before it is confirmed; a stored Set carries its own flag.</param>
+    private sealed record Draft(string? First, string? Second, bool Carried = false, bool Max = false);
 
     private readonly Dictionary<(string ExerciseId, int Row), Draft> _drafts = [];
+
+    /// <summary>Rows added with Add Set beyond the planned count, per Exercise. Transient: a confirmed extra Set is stored and needs no counter.</summary>
+    private readonly Dictionary<string, int> _extraRows = [];
     private string? _landedFor;
     private int _current;
     private bool _resumed;
@@ -83,6 +90,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
         _landedFor = WorkoutId;
         _drafts.Clear();
+        _extraRows.Clear();
         _editingRow = null;
         _errorRow = null;
         if (OpenWorkout is { } workout)
@@ -95,11 +103,20 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     // ---- What is on screen
 
-    private sealed record RowView(int Index, SetRowState State, string First, string Second, bool Pending, string? SecondHint, bool HasError);
+    private sealed record RowView(
+        int Index, SetRowState State, string First, string Second, bool Pending, string? SecondHint, bool HasError,
+        bool IsMax = false, bool Stored = false);
 
+    /// <param name="Step">The steppers' step while a row is waiting to be confirmed; null hides them.</param>
+    /// <param name="MaxTarget">The row the Max set link acts on: the current row, else the last confirmed one.</param>
+    /// <param name="RemovableRow">The last row when it is an extra, unconfirmed one that Remove would take away.</param>
     private sealed record ExerciseView(
         string ExerciseId, string Name, LogKind Kind, string? PlannedText, string? Cue,
-        IReadOnlyList<RowView> Rows, string UnavailableMessage, bool Complete, HeaderText? Header = null, int? Rpe = null);
+        IReadOnlyList<RowView> Rows, string UnavailableMessage, bool Complete,
+        StepSize? Step = null, int? MaxTarget = null, int? RemovableRow = null, HeaderText? Header = null, int? Rpe = null)
+    {
+        public string? StepAmount => Step?.Amount.ToString("0.##", CultureInfo.InvariantCulture);
+    }
 
     /// <summary>Last, Best and the Suggested target as text in the owner's units; a part is null when there is none.</summary>
     private sealed record HeaderText(string? Last, string? Best, string? Target, string? Reason);
@@ -184,10 +201,12 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
 
         var confirmed = Confirmed(workout, exercise.Id);
-        var rowCount = Math.Max(planned.Sets, confirmed);
+        var extra = _extraRows.GetValueOrDefault(exercise.Id);
+        var rowCount = Math.Max(planned.Sets + extra, confirmed);
         var current = _editingRow ?? confirmed;
         var snapshot = SnapshotOf(workout, exercise);
-        var rows = Enumerable.Range(0, rowCount).Select(i =>
+        var rows = new List<RowView>();
+        for (var i = 0; i < rowCount; i++)
         {
             var stored = workout.Entries.FirstOrDefault(e => e.ExerciseId == exercise.Id)?.Sets.ElementAtOrDefault(i);
             var isDone = i < confirmed && _editingRow != i;
@@ -196,22 +215,38 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
                 : RowPrefill.For(exercise.LogKind, i + 1, snapshot, planned, Units);
             var draft = _drafts.GetValueOrDefault((exercise.Id, i));
             var state = isDone ? SetRowState.Done : i == current ? SetRowState.Current : SetRowState.Upcoming;
-            return new RowView(
-                i, state, draft?.First ?? prefill.First, draft?.Second ?? prefill.Second,
-                !isDone && draft is null, prefill.RepsHint, _errorRow == (exercise.Id, i));
-        }).ToList();
+
+            // An added Set starts as "same as the one above".
+            var (first, second) = !isDone && i >= planned.Sets && rows.Count > 0
+                ? (rows[^1].First, rows[^1].Second)
+                : (prefill.First, prefill.Second);
+            rows.Add(new RowView(
+                i, state, draft?.First ?? first, draft?.Second ?? second,
+                !isDone && (draft is null || draft.Carried), prefill.RepsHint, _errorRow == (exercise.Id, i),
+                stored?.IsMax ?? draft?.Max ?? false, stored is not null));
+        }
 
         var complete = confirmed >= planned.Sets && _editingRow is null;
+        var hasCurrent = rows.Any(r => r.State == SetRowState.Current);
+        var step = hasCurrent
+            ? StepRules.For(exercise.LogKind, Units, PlanOf(workout)?.WeightIncrementKg ?? Data.Snapshot.Settings.WeightIncrementKg,
+                Data.Snapshot.Settings.DisplayWeightUnit)
+            : null;
+        int? maxTarget = _editingRow ?? (confirmed < rowCount ? confirmed : confirmed > 0 ? confirmed - 1 : null);
+        int? removable = extra > 0 && _editingRow is null && rowCount > confirmed && rowCount > 1 ? rowCount - 1 : null;
         var rpe = workout.Entries.FirstOrDefault(e => e.ExerciseId == exercise.Id && e.Status == EntryStatus.Done)?.Rpe;
         return new(exercise.Id, exercise.Name, exercise.LogKind, plannedText, planned.Cue, rows, "", complete,
-            HeaderOf(exercise.LogKind, snapshot), rpe);
+            step, maxTarget, removable, HeaderOf(exercise.LogKind, snapshot), rpe);
     }
+
+    private Plan? PlanOf(Workout workout) =>
+        Data.Snapshot.Plans.FirstOrDefault(p => p.Sessions.Any(s => s.Id == workout.SessionId))
+            ?? Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
 
     /// <summary>Last and the Suggested target come from finished history only, never from this Workout.</summary>
     private ExerciseSnapshot SnapshotOf(Workout workout, Exercise exercise)
     {
-        var plan = Data.Snapshot.Plans.FirstOrDefault(p => p.Sessions.Any(s => s.Id == workout.SessionId))
-            ?? Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
+        var plan = PlanOf(workout);
         var history = Data.Snapshot.Workouts.Where(w => w.Id != workout.Id && w.EndedAt is not null);
         return ExercisePerformance.Snapshot(exercise, history, plan);
     }
@@ -240,14 +275,113 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     {
         var shown = exercise.Rows[row];
         var key = (exercise.ExerciseId, row);
-        _drafts[key] = new Draft(text, _drafts.GetValueOrDefault(key)?.Second ?? shown.Second);
+        var existing = _drafts.GetValueOrDefault(key);
+        _drafts[key] = new Draft(text, existing?.Second ?? shown.Second, Max: existing?.Max ?? false);
     }
 
     private void EditSecond(ExerciseView exercise, int row, string text)
     {
         var shown = exercise.Rows[row];
         var key = (exercise.ExerciseId, row);
-        _drafts[key] = new Draft(_drafts.GetValueOrDefault(key)?.First ?? shown.First, text);
+        var existing = _drafts.GetValueOrDefault(key);
+        _drafts[key] = new Draft(existing?.First ?? shown.First, text, Max: existing?.Max ?? false);
+    }
+
+    // ---- Steppers, Add Set and Max set
+
+    private void Step(int direction)
+    {
+        if (OpenWorkout is not { } workout
+            || ViewOf(workout).Exercise is not { Step: { } step } exercise
+            || exercise.Rows.FirstOrDefault(r => r.State == SetRowState.Current) is not { } current)
+        {
+            return;
+        }
+
+        var useSecond = step.Field == StepField.Second;
+        var typed = (useSecond ? current.Second : current.First).Replace(',', '.');
+        var start = double.TryParse(typed, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ? number : 0;
+        var stepped = Math.Max(0, Math.Round(start + direction * step.Amount, 2))
+            .ToString("0.##", CultureInfo.InvariantCulture);
+
+        // The new value goes to this row and down to the later rows not yet confirmed, which stay muted.
+        foreach (var row in exercise.Rows.Where(r => r.Index >= current.Index && r.State != SetRowState.Done))
+        {
+            var key = (exercise.ExerciseId, row.Index);
+            var existing = _drafts.GetValueOrDefault(key) ?? new Draft(null, null);
+            var carried = row.Index != current.Index && (existing.Carried || !_drafts.ContainsKey(key));
+            _drafts[key] = useSecond
+                ? existing with { First = existing.First ?? row.First, Second = stepped, Carried = carried }
+                : existing with { First = stepped, Second = existing.Second ?? row.Second, Carried = carried };
+        }
+
+        _errorRow = null;
+    }
+
+    private void AddSet(ExerciseView exercise) =>
+        _extraRows[exercise.ExerciseId] = _extraRows.GetValueOrDefault(exercise.ExerciseId) + 1;
+
+    private void RemoveSet(ExerciseView exercise)
+    {
+        if (exercise.RemovableRow is not { } row)
+        {
+            return;
+        }
+
+        _extraRows[exercise.ExerciseId] = Math.Max(0, _extraRows.GetValueOrDefault(exercise.ExerciseId) - 1);
+        _drafts.Remove((exercise.ExerciseId, row));
+        if (_errorRow == (exercise.ExerciseId, row))
+        {
+            _errorRow = null;
+        }
+    }
+
+    /// <summary>A Set that exists is flagged in the stored Workout at once; a row still to be confirmed keeps the flag until it is.</summary>
+    private async Task ToggleMaxAsync(ExerciseView exercise)
+    {
+        if (_busy || exercise.MaxTarget is not { } index)
+        {
+            return;
+        }
+
+        var row = exercise.Rows[index];
+        if (!row.Stored)
+        {
+            var key = (exercise.ExerciseId, index);
+            var existing = _drafts.GetValueOrDefault(key) ?? new Draft(null, null, Carried: row.Pending);
+            _drafts[key] = existing with { Max = !row.IsMax };
+            return;
+        }
+
+        if (!CanWrite)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await CommitAsync(latest => WithMax(latest, exercise.ExerciseId, index, !row.IsMax));
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static Workout WithMax(Workout workout, string exerciseId, int row, bool isMax)
+    {
+        var entries = workout.Entries.ToList();
+        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done);
+        if (index < 0 || row >= entries[index].Sets.Count)
+        {
+            return workout;
+        }
+
+        var sets = entries[index].Sets.ToList();
+        sets[row] = sets[row] with { IsMax = isMax };
+        entries[index] = entries[index] with { Sets = sets };
+        return workout with { Entries = entries };
     }
 
     private void Reopen(ExerciseView exercise, int row)
@@ -315,7 +449,8 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _busy = true;
         try
         {
-            var result = await CommitAsync(latest => WithSet(latest, exercise.ExerciseId, row.Index, parsed));
+            var isMax = _drafts.GetValueOrDefault((exercise.ExerciseId, row.Index))?.Max ?? false;
+            var result = await CommitAsync(latest => WithSet(latest, exercise.ExerciseId, row.Index, parsed, isMax));
             if (result is CommitResult.Committed)
             {
                 _drafts.Remove((exercise.ExerciseId, row.Index));
@@ -406,13 +541,13 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     }
 
     /// <summary>The Set goes into its Exercise's entry, created on the first Set; a reopened row keeps its ID and Max flag.</summary>
-    private Workout WithSet(Workout workout, string exerciseId, int row, ParsedSet parsed)
+    private Workout WithSet(Workout workout, string exerciseId, int row, ParsedSet parsed, bool isMax)
     {
         var entries = workout.Entries.ToList();
         var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done);
         if (index < 0)
         {
-            entries.Add(new WorkoutEntry(exerciseId, EntryStatus.Done, null, null, null, [parsed.ToWorkoutSet(Ids.NewId(), false)]));
+            entries.Add(new WorkoutEntry(exerciseId, EntryStatus.Done, null, null, null, [parsed.ToWorkoutSet(Ids.NewId(), isMax)]));
             return workout with { Entries = entries };
         }
 
@@ -423,7 +558,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
         else
         {
-            sets.Add(parsed.ToWorkoutSet(Ids.NewId(), false));
+            sets.Add(parsed.ToWorkoutSet(Ids.NewId(), isMax));
         }
 
         entries[index] = entries[index] with { Sets = sets };
