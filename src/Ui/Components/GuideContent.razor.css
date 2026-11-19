@@ -10,7 +10,7 @@
     min-height: var(--tap-min);
     color: var(--text);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-underline-offset: var(--underline-offset);
 }
 
 .fa-guide__video:focus-visible {

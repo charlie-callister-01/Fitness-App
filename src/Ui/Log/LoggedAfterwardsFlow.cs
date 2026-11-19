@@ -1,4 +1,3 @@
-using System.Globalization;
 using Core.Model;
 using Core.Rules.Finishing;
 using Core.Storage;
@@ -26,10 +25,6 @@ public sealed class LoggedAfterwardsFlow(AppData data, SaveFailureNotice notice)
 
     /// <summary>The Workout was re-dated (the rest countdown has no meaning any more).</summary>
     public event Action? Redated;
-
-    /// <summary>"Logged afterwards · Sun 15 Nov. No timers."</summary>
-    public static string BannerText(DateOnly date) =>
-        $"Logged afterwards · {date.ToString("ddd d MMM", CultureInfo.InvariantCulture)}. No timers.";
 
     public void Reset()
     {

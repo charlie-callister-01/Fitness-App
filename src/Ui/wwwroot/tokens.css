@@ -24,6 +24,8 @@
   --border-thin: 2px;
   --border-thick: 3px;
   --outline-offset: 2px;
+  --underline-offset: 3px;
+  --sheet-max-height: 90dvh;
   --opacity-upcoming: 0.55;
   --opacity-locked: 0.45;
   --font-pixel: "Jersey 15", ui-monospace, monospace;
