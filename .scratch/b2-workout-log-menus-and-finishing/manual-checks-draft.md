@@ -19,7 +19,20 @@ Ticket 09 moves these into `docs/pwa-manual-checks.md` under "Workout log manual
 - Sheet focus: opening a menu moves focus inside it, Tab stays inside, Escape closes and focus returns to the button (bUnit only checks that the component asks for this).
 - Mode in the Workout menu offers Match phone, Dark, Light (the mockup shows two).
 
+## From ticket 08 (Finish flow)
+- Pain check sheet: focus starts on No, Escape equals Skip, Tab stays inside, focus is not lost when Yes expands.
+- Pain check and Partial prompt on a 360 px phone: three equal buttons, chips wrap, textarea and select are comfortable with the keyboard open, bottom safe area respected.
+- Kill the tab right after Finish (while the Pain check is showing), then reopen `/log/{id}`: the summary shows "Not answered" and no Pain check.
+- Finish in airplane mode and in a storage-full state, then check the banner.
+- Screen lock is released on the summary, and the rest countdown disappears on Finish.
+- Summary in all four looks, including the chips, the unlock well and the 44 px rows.
+- Partial finish: skipped rows are on the summary, and Home and the Week still count the Workout toward the Streak.
+- Done link goes Home and Back from the summary behaves.
+
 ## Notes for the docs and PR
+- Ticket 08 deviations: body-area chips cover all 11 body areas (design text lists 5); backdrop tap on the Pain check counts as Skip and on the Partial prompt as Keep going; the Badge unlock toast is a static well with no auto-hide (derived, so reopening the summary shows it again); the side is saved as a note prefix ("Left side: ...").
+- Flaky test to fix: `WorkoutLogGuideRestTests.Confirming_another_Set_restarts_the_countdown` failed 2 of 6 full-suite runs and passes alone (ticker timing, from ticket 07). Ticket 09 must make it deterministic.
+- Stale B1 wording to fix in docs: "Finish only when every Exercise is done".
 - Added Exercise position limitation (ticket 06): the model does not record which row an added Exercise follows; it is placed after the row owning the nearest earlier entry. A proper fix needs a position field (A-stage change). Mention in the PR and open items.
 - Past-dated Workout has no end time, so it is in progress until finished (ticket 02).
 - Undoing Logged afterwards cannot restore the start time (re-dating discards it) (ticket 02).
