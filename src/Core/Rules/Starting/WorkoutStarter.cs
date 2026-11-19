@@ -32,4 +32,24 @@ public sealed class WorkoutStarter(AppData data, IIdGenerator ids, IClock clock)
         var workout = WorkoutStart.Create(plan, session, today, ids, clock);
         return StartOutcome.Saved(workout, await data.CommitAsync(Change.Put(workout)));
     }
+
+    /// <summary>
+    /// Creates and saves a past-dated Workout (logged afterwards) for a Session, or a Custom workout when <paramref name="session"/> is null.
+    /// A future <paramref name="date"/> saves nothing (null Workout, null Commit); a Workout already in progress is continued instead.
+    /// </summary>
+    public async Task<StartOutcome> StartLoggedAfterwardsAsync(Plan? plan, Session? session, DateOnly date, DateOnly today)
+    {
+        if (date > today)
+        {
+            return new StartOutcome(null, null);
+        }
+
+        if (WorkoutStart.InProgress(data.Snapshot.Workouts) is { } existing)
+        {
+            return StartOutcome.Continued(existing);
+        }
+
+        var workout = WorkoutStart.CreatePastDated(plan, session, date, ids);
+        return StartOutcome.Saved(workout, await data.CommitAsync(Change.Put(workout)));
+    }
 }
