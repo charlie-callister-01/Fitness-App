@@ -13,5 +13,6 @@ Parent spec: `docs/specs/b2-workout-log-menus-and-finishing.md` (Ui: menus and s
 - [ ] StateChip shows glyph and word for each state, never colour alone, and uses design tokens only
 - [ ] Benchmark toggle saves at once, label and mark reflect the state, a failed save shows the banner and leaves the screen unchanged; read-only disables it
 - [ ] Theme and Mode switch from the Workout menu; rest-timer choice persists across reload and defaults to Off
+- [ ] Wire the unit-aware Suggested target reason (ticket 03 added a `Snapshot` overload taking a `UnitConverter`; the log view builder still calls the old 3-argument one), with a page test showing "lb" for an lb user and "kg" for a kg user
 - [ ] New tokens (if any) added to both `tokens.css` copies, `tokens.json` and the design document tables in the same change; no raw hex or px in component CSS
 - [ ] bUnit page tests written first (red run in the report); all existing tests stay green; no browser test
