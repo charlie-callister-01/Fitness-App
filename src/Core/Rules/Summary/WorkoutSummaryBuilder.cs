@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Badges;
+using Core.Rules.Finishing;
 using Core.Rules.Outcomes;
 using Core.Rules.Performance;
 using Core.Rules.Weeks;
@@ -9,8 +10,6 @@ namespace Core.Rules.Summary;
 /// <summary>Turns a finished Workout and the history into the finish summary. Pure: no I/O, no clock.</summary>
 public static class WorkoutSummaryBuilder
 {
-    private static readonly string[] SidePhrases = ["Left side", "Right side", "Both sides"];
-
     /// <param name="workout">The finished Workout.</param>
     /// <param name="history">Everything Badge progress and the Streak are worked out from. Its Workouts may or may not include <paramref name="workout"/>.</param>
     /// <param name="badges">The Badges to check for a new unlock.</param>
@@ -22,7 +21,7 @@ public static class WorkoutSummaryBuilder
         var without = history with { Workouts = others };
 
         var outcome = WorkoutOutcomes.Of(workout);
-        var rows = Rows(workout, outcome);
+        var rows = Rows(outcome);
         var doneCount = outcome.Rows.Count(r => r.Kind is RowOutcomeKind.Done or RowOutcomeKind.Swapped);
         var sets = workout.Entries.Where(CountsAsDone).Sum(e => e.Sets.Count);
 
@@ -57,17 +56,13 @@ public static class WorkoutSummaryBuilder
         return prs;
     }
 
-    // Planned order, then extras. Entries are matched to planned rows the way WorkoutOutcomes matches them, to carry the RPE.
-    private static IReadOnlyList<SummaryRow> Rows(Workout workout, WorkoutOutcome outcome)
+    // Planned order, then extras. Each row's entry (for the RPE) comes from WorkoutOutcomes.
+    private static IReadOnlyList<SummaryRow> Rows(WorkoutOutcome outcome)
     {
-        var remaining = workout.Entries.ToList();
         var rows = new List<SummaryRow>();
         foreach (var row in outcome.Rows)
         {
-            var index = remaining.FindIndex(e => Matches(e, row.Row));
-            var entry = index < 0 ? null : remaining[index];
-            if (index >= 0) remaining.RemoveAt(index);
-
+            var entry = row.Entry;
             var shown = row.Kind == RowOutcomeKind.Swapped ? row.ReplacementExerciseId! : row.Row.ExerciseId;
             var original = row.Kind == RowOutcomeKind.Swapped ? row.Row.ExerciseId : null;
             rows.Add(new SummaryRow(shown, row.Kind, row.SkipReason, original, entry?.Rpe, false));
@@ -77,17 +72,12 @@ public static class WorkoutSummaryBuilder
         return rows;
     }
 
-    private static bool Matches(WorkoutEntry entry, SessionExercise row) =>
-        entry.Status == EntryStatus.Swapped
-            ? entry.SwappedFromExerciseId == row.ExerciseId
-            : entry.ExerciseId == row.ExerciseId;
-
     private static string PainCheckText(PainCheck? pain, IReadOnlyList<Exercise> exercises)
     {
         if (pain is null) return "Not answered";
         if (pain.Status == PainStatus.None) return "No";
 
-        var side = SidePhrases.FirstOrDefault(p => pain.Note?.StartsWith(p, StringComparison.OrdinalIgnoreCase) == true)?.Split(' ')[0];
+        var side = PainNote.Parse(pain.Note).Side?.Split(' ')[0];
         var areas = string.Join(", ", pain.Areas.Select(AreaName));
         var where = side is null ? areas : $"{side} {areas}";
         var parts = new List<string> { Capitalise(where) };

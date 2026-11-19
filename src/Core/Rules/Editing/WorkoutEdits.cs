@@ -1,5 +1,6 @@
 using Core.Ids;
 using Core.Model;
+using Core.Rules.Outcomes;
 using Core.Rules.Parsing;
 
 namespace Core.Rules.Editing;
@@ -110,7 +111,7 @@ public static class WorkoutEdits
     {
         var isAdded = workout.Planned.All(p => p.ExerciseId != exerciseId);
         var entries = workout.Entries.ToList();
-        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done && e.Sets.Count == 0);
+        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done && !WorkoutOutcomes.HasSets(e));
         if (!isAdded || index < 0)
         {
             return workout;
@@ -120,20 +121,16 @@ public static class WorkoutEdits
         return workout with { Entries = entries };
     }
 
-    // Sets are logged into a Done entry, or into a swapped entry (the replacement Exercise is logged like any other).
+    // An entry that takes Sets (not the same as having them: an empty one qualifies): a Done entry, or a swapped entry (the replacement Exercise is logged like any other).
     private static bool IsLogged(WorkoutEntry entry) => entry.Status is EntryStatus.Done or EntryStatus.Swapped;
 
     private static bool IsInWorkout(Workout workout, string exerciseId) =>
         workout.Planned.Any(p => p.ExerciseId == exerciseId) || workout.Entries.Any(e => e.ExerciseId == exerciseId);
 
-    // The entry that stands for a planned row: the row's own entry, or the swapped entry naming it as the original.
-    private static bool StandsFor(WorkoutEntry entry, string plannedExerciseId) =>
-        entry.Status == EntryStatus.Swapped ? entry.SwappedFromExerciseId == plannedExerciseId : entry.ExerciseId == plannedExerciseId;
-
     private static Workout ReplacePlannedEntry(Workout workout, string plannedExerciseId, WorkoutEntry replacement)
     {
         var entries = workout.Entries.ToList();
-        var index = entries.FindIndex(e => StandsFor(e, plannedExerciseId));
+        var index = entries.FindIndex(e => WorkoutOutcomes.StandsFor(e, plannedExerciseId));
         if (index < 0)
         {
             entries.Add(replacement);
@@ -149,7 +146,7 @@ public static class WorkoutEdits
     private static Workout RemovePlannedEntry(Workout workout, string plannedExerciseId, EntryStatus status)
     {
         var entries = workout.Entries.ToList();
-        var removed = entries.RemoveAll(e => e.Status == status && StandsFor(e, plannedExerciseId));
+        var removed = entries.RemoveAll(e => e.Status == status && WorkoutOutcomes.StandsFor(e, plannedExerciseId));
         return removed == 0 ? workout : workout with { Entries = entries };
     }
 

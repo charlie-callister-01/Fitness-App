@@ -35,6 +35,28 @@ public class FinishCheckTests
     }
 
     [Fact]
+    public void An_unlogged_swap_is_not_done_and_prompts_Partial()
+    {
+        var swapped = new WorkoutEntry("goblet", EntryStatus.Swapped, null, "press", null, []);
+
+        var check = FinishCheck.Of(Open(Done("squat", Set()), swapped));
+
+        Assert.True(check.WouldBePartial);
+        Assert.Equal((1, 2), (check.DoneCount, check.PlannedCount));
+    }
+
+    [Fact]
+    public void A_logged_swap_counts_as_done()
+    {
+        var swapped = new WorkoutEntry("goblet", EntryStatus.Swapped, null, "press", null, [Set()]);
+
+        var check = FinishCheck.Of(Open(Done("squat", Set()), swapped));
+
+        Assert.False(check.WouldBePartial);
+        Assert.Equal((2, 2), (check.DoneCount, check.PlannedCount));
+    }
+
+    [Fact]
     public void An_Exercise_left_or_done_with_no_Sets_makes_it_Partial_and_is_not_counted_done()
     {
         var check = FinishCheck.Of(Open(Done("squat", Set()), Done("press")));

@@ -19,7 +19,7 @@ public sealed record FinishCheck(string? Refusal, bool WouldBePartial, int DoneC
         }
 
         var outcome = WorkoutOutcomes.Of(finished);
-        var done = outcome.Rows.Count(r => r.Kind is RowOutcomeKind.Done or RowOutcomeKind.Swapped);
+        var done = outcome.Rows.Count(r => r.Kind is RowOutcomeKind.Done or RowOutcomeKind.Swapped && r.Entry is { } e && WorkoutOutcomes.HasSets(e));
         return new FinishCheck(null, outcome.IsPartial, done, workout.Planned.Count);
     }
 }

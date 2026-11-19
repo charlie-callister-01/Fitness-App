@@ -121,7 +121,7 @@ public sealed class FinishFlow(AppData data, SaveFailureNotice notice, IClock cl
                 change = w => WorkoutFinishing.WithPainNone(w, ids);
                 break;
             case PainAnswer.Yes yes:
-                var note = NoteOf(yes);
+                var note = PainNote.Compose(yes.Side, yes.Note);
                 var result = WorkoutFinishing.WithPainReported(workout, yes.Areas, yes.Severity, yes.ExerciseId, note, ids);
                 if (result.IsRefused)
                 {
@@ -139,13 +139,6 @@ public sealed class FinishFlow(AppData data, SaveFailureNotice notice, IClock cl
             Phase = FinishPhase.None;
             Changed?.Invoke();
         }
-    }
-
-    // The summary reads the side back from the start of the note ("Left side: ..."), so the side leads when there is one.
-    private static string? NoteOf(PainAnswer.Yes yes)
-    {
-        var note = string.IsNullOrWhiteSpace(yes.Note) ? null : yes.Note.Trim();
-        return yes.Side is null ? note : note is null ? yes.Side : $"{yes.Side}: {note}";
     }
 
     private async Task FinishAsync(string workoutId, bool partial)

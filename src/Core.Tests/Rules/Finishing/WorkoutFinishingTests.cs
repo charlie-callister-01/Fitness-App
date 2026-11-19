@@ -154,6 +154,31 @@ public class WorkoutFinishingTests
     }
 
     [Fact]
+    public void Full_finish_with_every_planned_row_done_drops_an_empty_added_Exercise_and_an_RPE_only_one()
+    {
+        var rpeOnly = new WorkoutEntry("dip", EntryStatus.Done, null, null, 7, []);
+        var open = Open(Done("squat", Set()), Done("press", Set()), Done("row", Set()), Done("curl"), rpeOnly, Done("fly", Set()));
+
+        var workout = WorkoutFinishing.Finish(open, false, End).Workout!;
+
+        Assert.Equal(["squat", "press", "row", "fly"], workout.Entries.Select(e => e.ExerciseId));
+    }
+
+    [Fact]
+    public void Partial_finish_turns_an_unlogged_swap_into_a_skipped_entry_for_the_original_with_no_reason()
+    {
+        var swapped = new WorkoutEntry("goblet", EntryStatus.Swapped, null, "press", 6, []);
+
+        var workout = WorkoutFinishing.Finish(Open(Done("squat", Set()), swapped, Done("row", Set())), true, End).Workout!;
+
+        Assert.DoesNotContain(workout.Entries, e => e.ExerciseId == "goblet");
+        var press = Assert.Single(workout.Entries, e => e.ExerciseId == "press");
+        Assert.Equal(EntryStatus.Skipped, press.Status);
+        Assert.Null(press.SkipReason);
+        Assert.True(WorkoutOutcomes.Of(workout).IsPartial);
+    }
+
+    [Fact]
     public void Partial_finish_keeps_an_existing_skip_reason()
     {
         var skipped = new WorkoutEntry("press", EntryStatus.Skipped, "Shoulder", null, null, []);

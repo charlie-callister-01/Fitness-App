@@ -1,5 +1,6 @@
 using Core.Ids;
 using Core.Model;
+using Core.Rules.Outcomes;
 
 namespace Core.Rules.Finishing;
 
@@ -32,8 +33,9 @@ public static class WorkoutFinishing
 
     /// <summary>
     /// Stamps <paramref name="endedAt"/>. A Workout with no confirmed Set is refused. An already finished Workout is returned
-    /// unchanged. With <paramref name="partial"/>, every planned row with no entry (or only an empty Done entry) first becomes a
-    /// skipped entry with no reason (an RPE on an empty entry is dropped), and added Exercises with no Sets are removed.
+    /// unchanged. Added Exercises with no Sets are always removed. With <paramref name="partial"/>,
+    /// every planned row with no entry (or only an empty one, an unlogged swap included) first becomes a skipped entry for the
+    /// planned Exercise with no reason (an RPE on an empty entry is dropped).
     /// </summary>
     public static EditResult Finish(Workout workout, bool partial, DateTimeOffset endedAt)
     {
@@ -42,12 +44,12 @@ public static class WorkoutFinishing
             return EditResult.Changed(workout);
         }
 
-        if (!workout.Entries.Any(e => e.Sets.Count > 0))
+        if (!workout.Entries.Any(WorkoutOutcomes.HasSets))
         {
             return EditResult.Refused(NoSetRefusal);
         }
 
-        var finished = partial ? RecordUnfinishedRows(workout) : workout;
+        var finished = FinishRows(workout, partial);
         return EditResult.Changed(finished with { EndedAt = endedAt });
     }
 
@@ -63,40 +65,35 @@ public static class WorkoutFinishing
 
     private static string PainId(Workout workout, IIdGenerator ids) => workout.PainCheck?.Id ?? ids.NewId();
 
-    private static Workout RecordUnfinishedRows(Workout workout)
+    // Added Exercises with no Sets are always dropped. With partial, every planned row with no entry, or only an empty one (no Sets:
+    // a Done entry, an RPE-only entry or an unlogged swap), becomes a skipped entry for the planned Exercise with no reason.
+    private static Workout FinishRows(Workout workout, bool partial)
     {
-        var entries = workout.Entries.ToList();
-        var matched = new HashSet<int>();
-        var added = new List<WorkoutEntry>();
+        var outcome = WorkoutOutcomes.Of(workout);
+        var dropped = outcome.Extras.Where(IsEmpty).ToHashSet(ReferenceEqualityComparer.Instance);
+        var emptyRows = partial
+            ? outcome.Rows.Where(r => r.Entry is { } e && IsEmpty(e)).ToDictionary(r => (object)r.Entry!, r => r.Row.ExerciseId, ReferenceEqualityComparer.Instance)
+            : [];
 
-        foreach (var row in workout.Planned)
+        var entries = new List<WorkoutEntry>();
+        foreach (var entry in workout.Entries)
         {
-            var index = Enumerable.Range(0, entries.Count).FirstOrDefault(i => !matched.Contains(i) && Matches(entries[i], row), -1);
-            if (index < 0)
+            if (!dropped.Contains(entry))
             {
-                added.Add(Skipped(row.ExerciseId));
-                continue;
-            }
-
-            matched.Add(index);
-            if (IsEmptyDone(entries[index]))
-            {
-                entries[index] = Skipped(row.ExerciseId);
+                entries.Add(emptyRows.TryGetValue(entry, out var plannedId) ? Skipped(plannedId) : entry);
             }
         }
 
-        var kept = entries.Where((e, i) => matched.Contains(i) || !IsEmptyDone(e));
-        return workout with { Entries = [.. kept, .. added] };
+        if (partial)
+        {
+            entries.AddRange(outcome.Rows.Where(r => r.Kind == RowOutcomeKind.Unrecorded).Select(r => Skipped(r.Row.ExerciseId)));
+        }
+
+        return workout with { Entries = entries };
     }
 
     private static WorkoutEntry Skipped(string exerciseId) =>
         new(exerciseId, EntryStatus.Skipped, null, null, null, []);
 
-    private static bool IsEmptyDone(WorkoutEntry entry) => entry.Status == EntryStatus.Done && entry.Sets.Count == 0;
-
-    // A swapped entry names the planned original; every other entry names the planned Exercise itself.
-    private static bool Matches(WorkoutEntry entry, SessionExercise row) =>
-        entry.Status == EntryStatus.Swapped
-            ? entry.SwappedFromExerciseId == row.ExerciseId
-            : entry.ExerciseId == row.ExerciseId;
+    private static bool IsEmpty(WorkoutEntry entry) => entry.Status != EntryStatus.Skipped && !WorkoutOutcomes.HasSets(entry);
 }

@@ -1,3 +1,4 @@
+@using Core.Rules.Editing
 @* The skip sheet (design 8.4): optional reason chips and a plain Skip button. An Exercise that already has confirmed Sets asks first, because
    skipping removes them; Cancel at either step changes nothing. Picking Pain here is only a reason: it never starts a Pain check. *@
 <Sheet Open="Open" Title="@($"Skip {ExerciseName}")" Opener="Opener" OnClose="OnCancel">
@@ -18,9 +19,6 @@
 </Sheet>
 
 @code {
-    /// <summary>The reasons offered, in order. All are optional.</summary>
-    public static readonly IReadOnlyList<string> Reasons = ["Short on time", "Pain", "No equipment", "Other"];
-
     private string? _reason;
     private bool _confirming;
 
@@ -46,7 +44,7 @@
     public EventCallback<string?> OnSkip { get; set; }
 
     private IReadOnlyList<MenuChoices.Choice> ReasonChoices =>
-        [.. Reasons.Select(r => new MenuChoices.Choice(r, _reason == r, () => Toggle(r)))];
+        [.. SkipReasons.All.Select(r => new MenuChoices.Choice(r, _reason == r, () => Toggle(r)))];
 
     protected override void OnParametersSet()
     {
