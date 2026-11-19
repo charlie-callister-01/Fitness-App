@@ -105,7 +105,7 @@ public sealed class WorkoutLogMenusTests : BunitContext
         Assert.Equal(["Rest timer", "Theme", "Mode"],
             cut.FindAll("[role='dialog'] [role='group']").Select(g => g.GetAttribute("aria-label")).ToList());
         Assert.True(Item(cut, "Logged afterwards").HasAttribute("disabled"));
-        Assert.True(Item(cut, "Finish Workout").HasAttribute("disabled"));
+        Assert.False(Item(cut, "Finish Workout").HasAttribute("disabled"));
     }
 
     [Fact]

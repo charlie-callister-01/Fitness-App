@@ -1,0 +1,112 @@
+@using Core.Model
+@using Core.Rules.Badges
+@using Core.Rules.LogKinds
+@using Core.Rules.Outcomes
+@using Core.Rules.Summary
+@using Core.Rules.Units
+@using Core.Storage
+@* The finish summary (design 8.5, S-02): duration, Sets, PRs with the previous best, every Exercise with its state chip, reason or "was X" and
+   RPE, the Pain check result, the Streak line, a static Badge unlock toast and Done back to Home. Everything comes from the Core builder over
+   the stored data, so it reads the same however the page was reached, including a finished Workout reopened by its URL. *@
+<div class="fa-summary">
+    <h1 class="fa-title fa-title--l fa-summary__title">@(_summary.IsPartial ? "Partial workout" : "Workout done")</h1>
+    <p class="fa-summary__stats">
+        <span class="fa-summary__duration">@DurationText</span>
+        <span>@_summary.SetCount @(_summary.SetCount == 1 ? "Set" : "Sets")</span>
+        @if (_summary.IsPartial)
+        {
+            <StateChip Kind="StateChipKind.Partial" />
+        }
+    </p>
+
+    @if (_summary.Prs.Count > 0)
+    {
+        <section class="fa-summary__prs" aria-label="Personal records">
+            @foreach (var pr in _summary.Prs)
+            {
+                var exercise = ExerciseOf(pr.ExerciseId);
+                <p class="fa-summary__pr">
+                    <StateChip Kind="StateChipKind.Pr" />
+                    <span>@NameOf(pr.ExerciseId): @ResultText(exercise, pr.Set)@(pr.PreviousBest is { } previous ? $" (previous best {ResultText(exercise, previous.Set)})" : "")</span>
+                </p>
+            }
+        </section>
+    }
+
+    <ul class="fa-summary__rows">
+        @foreach (var row in _summary.Rows)
+        {
+            <li class="fa-summary__row">
+                <StateChip Kind="ChipOf(row.Kind)" />
+                <span class="fa-summary__name">@NameOf(row.ExerciseId)</span>
+                @if (row.OriginalExerciseId is { } original)
+                {
+                    <span class="fa-muted">was @NameOf(original)</span>
+                }
+                @if (row.SkipReason is { } reason)
+                {
+                    <span class="fa-muted">@reason</span>
+                }
+                @if (row.IsExtra)
+                {
+                    <span class="fa-muted">Added</span>
+                }
+                @if (row.Rpe is { } rpe)
+                {
+                    <span class="fa-muted">RPE @rpe</span>
+                }
+            </li>
+        }
+    </ul>
+
+    <p class="fa-summary__pain">Pain check: @_summary.PainCheck</p>
+
+    @if (_summary.StreakLine is { } streak)
+    {
+        <p class="fa-summary__streak">@streak</p>
+    }
+
+    @foreach (var badge in _summary.UnlockedBadges)
+    {
+        <p class="fa-well fa-unlock" role="status">Badge unlocked: <b>@badge.Name</b></p>
+    }
+
+    <Button Variant="ButtonVariant.Primary" Href="./">Done</Button>
+</div>
+
+@code {
+    private WorkoutSummary _summary = default!;
+
+    /// <summary>The finished Workout.</summary>
+    [Parameter, EditorRequired]
+    public Workout Workout { get; set; } = default!;
+
+    /// <summary>The stored data, for the history, Exercise names, Badges and the owner's units.</summary>
+    [Parameter, EditorRequired]
+    public DataSnapshot Data { get; set; } = default!;
+
+    /// <summary>The day the summary is read, for the Streak line and Badge rules.</summary>
+    [Parameter]
+    public DateOnly Today { get; set; }
+
+    private string DurationText => _summary.Duration is { } d
+        ? d.TotalMinutes < 60 ? $"{Math.Max(1, (int)Math.Round(d.TotalMinutes))} min" : $"{(int)d.TotalHours} h {d.Minutes:00} min"
+        : "—";
+
+    protected override void OnParametersSet() =>
+        _summary = WorkoutSummaryBuilder.Build(Workout, BadgeHistories.For(Data, Workout), Data.Badges, Today);
+
+    private Exercise? ExerciseOf(string id) => Data.Exercises.FirstOrDefault(e => e.Id == id);
+
+    private string NameOf(string id) => ExerciseOf(id)?.Name ?? "Exercise";
+
+    private string ResultText(Exercise? exercise, WorkoutSet set) =>
+        exercise is null ? "" : SetText.Result(exercise.LogKind, set, new UnitConverter(Data.Settings));
+
+    private static StateChipKind ChipOf(RowOutcomeKind kind) => kind switch
+    {
+        RowOutcomeKind.Done => StateChipKind.Done,
+        RowOutcomeKind.Swapped => StateChipKind.Swapped,
+        _ => StateChipKind.Skipped,
+    };
+}

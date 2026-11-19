@@ -29,6 +29,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private bool _busy;
     private bool _screenLocked;
     private RestCountdown _rest = default!;
+    private FinishFlow _finish = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
 
@@ -62,6 +63,19 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private Workout? OpenWorkout =>
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: null } open ? open : null;
 
+    /// <summary>A Workout with an end time: its summary is shown here, whether it just finished or the URL was reopened later.</summary>
+    private Workout? FinishedWorkout =>
+        Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: not null } finished ? finished : null;
+
+    private DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.ToLocalTime().DateTime);
+
+    /// <summary>The Exercises of the finished Workout, for the Pain check's "During which Exercise?".</summary>
+    private IReadOnlyList<(string Id, string Name)> PainExercises =>
+        FinishedWorkout is { } finished
+            ? [.. finished.Entries.Select(e => e.ExerciseId).Distinct()
+                .Select(id => (id, Data.Snapshot.Exercises.FirstOrDefault(x => x.Id == id)?.Name ?? "Exercise"))]
+            : [];
+
     private bool CanWrite => Data.Health.CanWrite;
 
     /// <summary>Plain wording for why this window cannot save, or null when it can.</summary>
@@ -77,9 +91,13 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         Data.Changed += OnDataChanged;
         _rest = new RestCountdown(Clock, Ticker);
         _rest.Changed += OnDataChanged;
+        _finish = new FinishFlow(Data, Notice, Clock, Ids);
+        _finish.Changed += OnDataChanged;
+        _finish.Finished += _rest.Stop;
         RestSetting.Changed += OnRestSettingChanged;
     }
 
+    /// <summary>The screen stays on while a Workout is open, and is released the moment it finishes.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!_screenLocked && OpenWorkout is not null)
@@ -87,11 +105,18 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             _screenLocked = true;
             await WakeLock.AcquireAsync();
         }
+        else if (_screenLocked && OpenWorkout is null)
+        {
+            _screenLocked = false;
+            await WakeLock.ReleaseAsync();
+        }
     }
 
     public void Dispose()
     {
         Data.Changed -= OnDataChanged;
+        _finish.Changed -= OnDataChanged;
+        _finish.Finished -= _rest.Stop;
         RestSetting.Changed -= OnRestSettingChanged;
         _rest.Dispose();
         if (_screenLocked)
@@ -118,6 +143,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
 
         _landedFor = WorkoutId;
+        _finish.Reset();
         if (OpenWorkout is { } workout)
         {
             State.Reset(Builder.FirstIncomplete(workout), IsResumed(workout));
@@ -275,18 +301,12 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
     }
 
-    // TEMPORARY (B1): Finish only stamps EndedAt and returns Home, so a Workout is never stranded in progress. B2 replaces this wholesale
-    // with the full finish flow (Partial prompt, Pain check, summary). Once committed the Workout is no longer open, so a second tap is a
-    // no-op; _busy covers a second tap while the first save is still in flight. Either way EndedAt is stamped once.
-    private Task FinishAsync() =>
-        RunExclusive(async () =>
-        {
-            var result = await Writer.ChangeAsync(WorkoutId, w => w with { EndedAt = Clock.UtcNow });
-            if (result is CommitResult.Committed)
-            {
-                Navigation.NavigateTo("");
-            }
-        });
+    /// <summary>Starts the finish flow (<see cref="FinishFlow"/>): a refusal, the Partial prompt or the finish write.</summary>
+    private Task FinishAsync() => _finish.RequestAsync(WorkoutId, CanWrite);
+
+    private Task AnswerPainAsync(PainAnswer answer) => _finish.AnswerAsync(WorkoutId, answer, CanWrite);
+
+    private Task ConfirmPartialAsync() => _finish.ConfirmPartialAsync(WorkoutId, CanWrite);
 
     private bool CanAct => !_busy && CanWrite;
 

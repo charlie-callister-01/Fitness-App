@@ -1,0 +1,32 @@
+@* The Partial prompt (design 8.5): shown on Finish when planned Exercises are not done. Keep going changes nothing; Finish records the rest as
+   skipped. Escape and a tap outside are Keep going. *@
+<Sheet Open="Open" Title="Finish as Partial?" OnClose="OnKeepGoing">
+    <ChildContent>
+        <p>@Done of @Planned done; the rest are recorded as skipped. Partial still counts toward your Streak.</p>
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="OnFinish">Finish</Button>
+        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnKeepGoing">Keep going</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter]
+    public int Done { get; set; }
+
+    [Parameter]
+    public int Planned { get; set; }
+
+    /// <summary>The finish write is in flight: both buttons wait, so a second tap does nothing.</summary>
+    [Parameter]
+    public bool Saving { get; set; }
+
+    [Parameter]
+    public EventCallback OnFinish { get; set; }
+
+    [Parameter]
+    public EventCallback OnKeepGoing { get; set; }
+}

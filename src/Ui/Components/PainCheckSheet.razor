@@ -1,0 +1,151 @@
+@using Core.Model
+@using Ui.Log
+@* C-13 PainCheckSheet: "Any pain today?" after Finish. No, Yes and Skip are three distinct answers: No is a saved "none", Skip records nothing (not
+   answered). Yes expands in place into area and severity chips (both required), an optional side, Exercise and note, then Save and see summary.
+   Escape and a tap outside are Skip. Chips are aria-pressed toggles (MenuChoices). Focus starts on the first button, No (Sheet). *@
+<Sheet Open="Open" Title="Any pain today?" OnClose="SkipAsync">
+    <ChildContent>
+        <div class="fa-painanswers">
+            <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="NoAsync">No</Button>
+            <Button Variant="ButtonVariant.Secondary" Disabled="Saving" Pressed="_expanded" OnClick="ExpandAsync">Yes</Button>
+            <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="SkipAsync">Skip</Button>
+        </div>
+        @if (_expanded)
+        {
+            <MenuChoices Label="Body area" Choices="AreaChoices" />
+            <MenuChoices Label="Severity" Choices="SeverityChoices" />
+            <MenuChoices Label="Side" Choices="SideChoices" />
+            <label class="fa-painfield">
+                <span class="fa-label">During which Exercise?</span>
+                <select class="fa-painfield__control" @onchange="e => _exerciseId = string.IsNullOrEmpty((string?)e.Value) ? null : (string?)e.Value">
+                    <option value="">Not sure</option>
+                    @foreach (var exercise in Exercises)
+                    {
+                        <option value="@exercise.Id" selected="@(exercise.Id == _exerciseId)">@exercise.Name</option>
+                    }
+                </select>
+            </label>
+            <label class="fa-painfield">
+                <span class="fa-label">Note</span>
+                <textarea class="fa-painfield__control" rows="2" value="@_note" @onchange="e => _note = (string?)e.Value"></textarea>
+            </label>
+            @if (Message is not null)
+            {
+                <p class="fa-well fa-painmessage" role="alert">@Message</p>
+            }
+        }
+        @if (Saving)
+        {
+            <p class="fa-muted" role="status">Saving…</p>
+        }
+    </ChildContent>
+    <Actions>
+        @if (_expanded)
+        {
+            <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="SaveAsync">Save and see summary</Button>
+        }
+    </Actions>
+</Sheet>
+
+@code {
+    private static readonly BodyArea[] Areas = Enum.GetValues<BodyArea>();
+
+    private static readonly (string Label, string Phrase)[] Sides = [("Left", "Left side"), ("Right", "Right side"), ("Both", "Both sides")];
+
+    private readonly HashSet<BodyArea> _areas = [];
+    private bool _expanded;
+    private PainSeverity? _severity;
+    private string? _side;
+    private string? _exerciseId;
+    private string? _note;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    /// <summary>The answer is being saved: every button waits.</summary>
+    [Parameter]
+    public bool Saving { get; set; }
+
+    /// <summary>A plain message under the Yes form (for example when no area was chosen).</summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    /// <summary>This Workout's Exercises, for "During which Exercise?".</summary>
+    [Parameter]
+    public IReadOnlyList<(string Id, string Name)> Exercises { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<PainAnswer> OnAnswer { get; set; }
+
+    private IReadOnlyList<MenuChoices.Choice> AreaChoices =>
+        [.. Areas.Select(a => new MenuChoices.Choice(AreaName(a), _areas.Contains(a), () => ToggleArea(a)))];
+
+    private IReadOnlyList<MenuChoices.Choice> SeverityChoices =>
+        [.. Enum.GetValues<PainSeverity>().Select(s => new MenuChoices.Choice(s.ToString(), _severity == s, () => PickSeverity(s)))];
+
+    private IReadOnlyList<MenuChoices.Choice> SideChoices =>
+        [.. Sides.Select(s => new MenuChoices.Choice(s.Label, _side == s.Phrase, () => PickSide(s.Phrase)))];
+
+    protected override void OnParametersSet()
+    {
+        if (!Open)
+        {
+            _expanded = false;
+            _areas.Clear();
+            _severity = null;
+            _side = null;
+            _exerciseId = null;
+            _note = null;
+        }
+    }
+
+    private static string AreaName(BodyArea area) => area switch
+    {
+        BodyArea.UpperBack => "Upper back",
+        BodyArea.LowerBack => "Lower back",
+        _ => area.ToString(),
+    };
+
+    // The chips' buttons belong to MenuChoices, which would not re-render this sheet, so each pick asks for it.
+    private Task ToggleArea(BodyArea area)
+    {
+        if (!_areas.Remove(area))
+        {
+            _areas.Add(area);
+        }
+
+        return Redraw();
+    }
+
+    // Single-choice chips: tapping the chosen one again clears it.
+    private Task PickSeverity(PainSeverity severity)
+    {
+        _severity = _severity == severity ? null : severity;
+        return Redraw();
+    }
+
+    private Task PickSide(string side)
+    {
+        _side = _side == side ? null : side;
+        return Redraw();
+    }
+
+    private Task Redraw()
+    {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task NoAsync() => OnAnswer.InvokeAsync(new PainAnswer.No());
+
+    private Task SkipAsync() => Saving ? Task.CompletedTask : OnAnswer.InvokeAsync(new PainAnswer.Skipped());
+
+    private Task ExpandAsync()
+    {
+        _expanded = true;
+        return Task.CompletedTask;
+    }
+
+    private Task SaveAsync() =>
+        OnAnswer.InvokeAsync(new PainAnswer.Yes([.. _areas.OrderBy(a => a)], _severity, _exerciseId, _side, _note));
+}
