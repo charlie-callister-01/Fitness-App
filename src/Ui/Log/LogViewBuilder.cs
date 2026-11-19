@@ -100,17 +100,17 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
     {
         if (ExerciseOf(planned.ExerciseId) is not { } exercise)
         {
-            return new(new(planned.ExerciseId, "Exercise not found", LogKind.Text, null, null), null, null,
+            return new(new(planned.ExerciseId, "Exercise not found", LogKind.Text, null, null, false), null, null,
                 "This Exercise is no longer in your library, so it cannot be shown here.", null);
         }
 
-        var info = new ExerciseInfo(exercise.Id, exercise.Name, exercise.LogKind, PlannedText(planned), planned.Cue);
+        var info = new ExerciseInfo(exercise.Id, exercise.Name, exercise.LogKind, PlannedText(planned), planned.Cue, exercise.IsBenchmark);
         if (RowSpec.For(exercise.LogKind) is not { } spec)
         {
             return new(info, null, null, "A text Exercise cannot be logged here yet, because a Set cannot hold text. Use Next to move on.", null);
         }
 
-        var history = ExercisePerformance.Snapshot(exercise, FinishedHistory(workout), PlanOf(workout));
+        var history = ExercisePerformance.Snapshot(exercise, FinishedHistory(workout), PlanOf(workout), _units);
         var rows = RowsOf(workout, exercise, planned, spec, history);
         var rpe = WorkoutEdits.FindDoneEntry(workout, exercise.Id)?.Rpe;
         return new(info, HeaderOf(exercise.LogKind, history), rows, null, rpe);

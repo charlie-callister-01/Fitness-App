@@ -1,0 +1,21 @@
+@* A labelled row of choices in a menu sheet (rest timer, Theme, Mode): one button each, the current one pressed. *@
+<div role="group" aria-label="@Label" class="fa-menuchoices">
+    <p class="fa-label fa-menuchoices__label" aria-hidden="true">@Label</p>
+    <div class="fa-chips">
+        @foreach (var choice in Choices)
+        {
+            <Button Variant="ButtonVariant.Secondary" Pressed="choice.Pressed" OnClick="() => choice.Pick()">@choice.Label</Button>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>One choice: its words, whether it is the current one and what picking it does.</summary>
+    public sealed record Choice(string Label, bool Pressed, Func<Task> Pick);
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Choice> Choices { get; set; } = [];
+}

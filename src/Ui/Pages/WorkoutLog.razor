@@ -31,6 +31,7 @@ else
                 <h1 class="fa-title fa-title--m log__session">@view.SessionName</h1>
                 <p class="fa-muted log__progress" aria-live="polite">@progress.DoneCount of @progress.ExerciseCount done · @progress.PrCount @(progress.PrCount == 1 ? "PR" : "PRs")</p>
             </div>
+            <WorkoutMenu FinishHint="@($"{progress.DoneCount} of {progress.ExerciseCount} Exercises done")" />
         </header>
 
         <div class="log__body">
@@ -53,7 +54,12 @@ else
                 var id = shown.Info.ExerciseId;
                 <ExerciseHeader Name="@shown.Info.Name" Planned="@shown.Info.PlannedText" Cue="@shown.Info.Cue"
                                 Last="@shown.Header?.Last" Best="@shown.Header?.Best"
-                                Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" />
+                                Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" Benchmark="shown.Info.IsBenchmark">
+                    <Actions>
+                        <ExerciseMenu ExerciseName="@shown.Info.Name" IsBenchmark="shown.Info.IsBenchmark" CanWrite="CanWrite"
+                                      OnToggleBenchmark="() => ToggleBenchmarkAsync(id, !shown.Info.IsBenchmark)" />
+                    </Actions>
+                </ExerciseHeader>
 
                 @if (shown.Unavailable is { } unavailable)
                 {

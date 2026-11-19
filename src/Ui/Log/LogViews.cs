@@ -17,7 +17,7 @@ public sealed record RowView(int Index, SetRowState State, RowFace Face, RowMark
 /// <summary>Last, Best and the Suggested target as text in the owner's units; a part is null when there is none.</summary>
 public sealed record HeaderText(string? Last, string? Best, string? Target, string? Reason);
 
-public sealed record ExerciseInfo(string ExerciseId, string Name, LogKind Kind, string? PlannedText, string? Cue);
+public sealed record ExerciseInfo(string ExerciseId, string Name, LogKind Kind, string? PlannedText, string? Cue, bool IsBenchmark);
 
 /// <summary>The links and steppers around the rows.</summary>
 /// <param name="Step">The steppers' step while a row is waiting to be confirmed; null hides them.</param>

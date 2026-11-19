@@ -1,0 +1,41 @@
+@* The Exercise menu (design 8.4): an icon button beside the Exercise name that opens a sheet of what can be done to this Exercise. Mark or
+   unmark as benchmark works here; Swap, Skip, Add an Exercise and View Guide are listed so later tickets only fill in their behaviour. *@
+<button type="button" class="fa-btn fa-btn--icon" aria-label="@($"Menu for {ExerciseName}")" aria-haspopup="dialog" @ref="_opener" @onclick="OpenMenu">
+    <Icon Name="IconName.MenuMore" />
+</button>
+
+<Sheet Open="_open" Title="@ExerciseName" Opener="_opener" OnClose="CloseMenu">
+    <ChildContent>
+        <MenuItem Glyph="IconName.Swap" Label="Swap Exercise" Hint="Similar Exercises first" Disabled="true" />
+        <MenuItem Glyph="IconName.Skip" Label="Skip Exercise" Hint="Pick a reason (optional)" Disabled="true" />
+        <MenuItem Glyph="IconName.AddExercise" Label="Add an Exercise" Hint="Adds after this one" Disabled="true" />
+        <MenuItem Glyph="IconName.Benchmark" Label="@(IsBenchmark ? "Unmark as benchmark" : "Mark as benchmark")"
+                  Hint="Results go to Progress › Benchmarks" Disabled="@(!CanWrite)" OnClick="OnToggleBenchmark" />
+        <MenuItem Glyph="IconName.Guide" Label="View Guide" Hint="How to do it, cues, mistakes" Disabled="true" />
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Secondary" OnClick="CloseMenu">Cancel</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    private bool _open;
+    private ElementReference _opener;
+
+    [Parameter, EditorRequired]
+    public string ExerciseName { get; set; } = "";
+
+    [Parameter]
+    public bool IsBenchmark { get; set; }
+
+    /// <summary>False when this window cannot save: items that write are then disabled.</summary>
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
+
+    [Parameter]
+    public EventCallback OnToggleBenchmark { get; set; }
+
+    private void OpenMenu() => _open = true;
+
+    private void CloseMenu() => _open = false;
+}

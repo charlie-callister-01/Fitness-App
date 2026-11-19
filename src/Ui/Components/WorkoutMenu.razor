@@ -1,0 +1,60 @@
+@* The Workout menu (design 8.4), in the log's top bar: rest timer, Theme, Mode, Logged afterwards and Finish Workout. The rest timer choice
+   (remembered on this device), Theme and Mode work here; Logged afterwards and Finish Workout are listed, disabled, for later tickets. *@
+@implements IDisposable
+@inject ThemeService Themes
+@inject RestTimerSetting RestTimer
+
+<button type="button" class="fa-btn fa-btn--icon" aria-label="Workout menu" aria-haspopup="dialog" @ref="_opener" @onclick="OpenMenu">
+    <Icon Name="IconName.More" />
+</button>
+
+<Sheet Open="_open" Title="Workout" Opener="_opener" OnClose="CloseMenu">
+    <ChildContent>
+        <MenuChoices Label="Rest timer" Choices="RestChoices" />
+        <MenuChoices Label="Theme" Choices="ThemeChoices" />
+        <MenuChoices Label="Mode" Choices="ModeChoices" />
+        <MenuItem Glyph="IconName.LoggedAfterwards" Label="Logged afterwards" Hint="For a gym visit without the phone" Disabled="true" />
+        <MenuItem Glyph="IconName.Check" Label="Finish Workout" Hint="@FinishHint" Disabled="true" />
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Secondary" OnClick="CloseMenu">Back to the Set</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    private bool _open;
+    private ElementReference _opener;
+
+    /// <summary>For example "1 of 6 Exercises done".</summary>
+    [Parameter]
+    public string? FinishHint { get; set; }
+
+    private IReadOnlyList<MenuChoices.Choice> RestChoices =>
+        [.. RestTimerSetting.Choices.Select(seconds => new MenuChoices.Choice(
+            seconds == 0 ? "Off" : $"{seconds} s", RestTimer.Seconds == seconds, () => RestTimer.SetAsync(seconds)))];
+
+    private IReadOnlyList<MenuChoices.Choice> ThemeChoices =>
+        [.. AppearanceLabels.Themes.Select(t => new MenuChoices.Choice(t.Value, Themes.Theme == t.Key, () => Themes.SetThemeAsync(t.Key)))];
+
+    private IReadOnlyList<MenuChoices.Choice> ModeChoices =>
+        [.. AppearanceLabels.Modes.Select(m => new MenuChoices.Choice(m.Value, Themes.Mode == m.Key, () => Themes.SetModeAsync(m.Key)))];
+
+    protected override async Task OnInitializedAsync()
+    {
+        Themes.Changed += OnChanged;
+        RestTimer.Changed += OnChanged;
+        await RestTimer.LoadAsync();
+    }
+
+    public void Dispose()
+    {
+        Themes.Changed -= OnChanged;
+        RestTimer.Changed -= OnChanged;
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void OpenMenu() => _open = true;
+
+    private void CloseMenu() => _open = false;
+}

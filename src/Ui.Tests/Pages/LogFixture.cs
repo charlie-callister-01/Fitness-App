@@ -5,7 +5,9 @@ using Core.Rules.Starting;
 using Core.Storage;
 using Core.Time;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Preferences;
 using Ui.Saving;
+using Ui.Theming;
 
 namespace Ui.Tests.Pages;
 
@@ -88,13 +90,37 @@ internal static class LogFixture
 
     public static WorkoutSet Set(string id, double kg, int reps) => new(id, kg, reps, null, null, null, false);
 
-    public static void Wire(BunitContext context, AppData data, SaveFailureNotice? notice = null)
+    public sealed class FakeThemeInterop : IThemeInterop
     {
+        public Task ApplyAsync(Theme theme, Mode mode) => Task.CompletedTask;
+    }
+
+    /// <summary>Per-device settings held in memory, so a "reload" is a new component over the same instance.</summary>
+    public sealed class FakeDevicePreferences : IDevicePreferences
+    {
+        public Dictionary<string, string> Values { get; } = [];
+
+        public Task<string?> GetAsync(string key) => Task.FromResult(Values.GetValueOrDefault(key));
+
+        public Task SetAsync(string key, string value)
+        {
+            Values[key] = value;
+            return Task.CompletedTask;
+        }
+    }
+
+    public static void Wire(BunitContext context, AppData data, SaveFailureNotice? notice = null, FakeDevicePreferences? preferences = null)
+    {
+        notice ??= new SaveFailureNotice();
+        preferences ??= new FakeDevicePreferences();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddSingleton(data);
         context.Services.AddSingleton<IClock>(new FixedClock(Now));
         context.Services.AddSingleton<IIdGenerator>(new CountingIds());
-        context.Services.AddSingleton(notice ?? new SaveFailureNotice());
+        context.Services.AddSingleton(notice);
         context.Services.AddSingleton<InAppHistory>();
+        context.Services.AddSingleton(new ThemeService(data, new FakeThemeInterop(), notice));
+        context.Services.AddSingleton<IDevicePreferences>(preferences);
+        context.Services.AddSingleton<RestTimerSetting>();
     }
 }

@@ -3,10 +3,12 @@ using Core.Time;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Ui;
+using Ui.Preferences;
 using Ui.Saving;
 using Ui.Theming;
 using Web;
 using Web.Storage;
+using Web.Preferences;
 using Web.Theming;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -20,6 +22,8 @@ builder.Services.AddStorage();
 builder.Services.AddSingleton<IThemeInterop, ThemeInterop>();
 builder.Services.AddSingleton<SaveFailureNotice>();
 builder.Services.AddSingleton<ThemeService>();
+builder.Services.AddSingleton<IDevicePreferences, LocalStorageDevicePreferences>();
+builder.Services.AddSingleton<RestTimerSetting>();
 builder.Services.AddSingleton<InAppHistory>();
 
 // Ui injects AppData; its storage health is AppData.Health and a blocked open is AppData.Startup.Failure.IsBlockedByAnotherWindow.

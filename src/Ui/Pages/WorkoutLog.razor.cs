@@ -132,6 +132,10 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private Task SetRpeAsync(string exerciseId, int? rpe) =>
         RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.WithRpe(w, exerciseId, rpe)));
 
+    /// <summary>Marks or unmarks an Exercise as a benchmark and saves at once; a failed save shows the banner and changes nothing.</summary>
+    private Task ToggleBenchmarkAsync(string exerciseId, bool isBenchmark) =>
+        RunExclusive(() => new ExerciseWriter(Data, Notice).ChangeAsync(exerciseId, e => ExerciseEdits.WithBenchmark(e, isBenchmark)));
+
     // ---- The primary action
 
     private Task PrimaryAsync()
