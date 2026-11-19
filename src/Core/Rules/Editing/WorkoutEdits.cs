@@ -58,6 +58,98 @@ public static class WorkoutEdits
     public static Workout WithRpe(Workout workout, string exerciseId, int? rpe) =>
         Update(workout, exerciseId, entry => entry with { Rpe = rpe });
 
+    /// <summary>
+    /// Records the planned Exercise as skipped with an optional reason. Any confirmed Sets, RPE, earlier skip or swap for it are replaced.
+    /// </summary>
+    public static Workout Skip(Workout workout, string exerciseId, string? reason) =>
+        ReplacePlannedEntry(workout, exerciseId, new WorkoutEntry(exerciseId, EntryStatus.Skipped, reason, null, null, []));
+
+    /// <summary>Takes back a skip, returning the Exercise to not-yet-done. Unchanged when it is not skipped.</summary>
+    public static Workout Unskip(Workout workout, string exerciseId) => RemovePlannedEntry(workout, exerciseId, EntryStatus.Skipped);
+
+    /// <summary>
+    /// Replaces the planned Exercise with <paramref name="newExerciseId"/> at the same position, recording the original; the planned rows
+    /// are untouched. Any earlier entry for the row is replaced. Refused (the Workout is returned unchanged) when the row is not planned
+    /// or the new Exercise is already in the Workout.
+    /// </summary>
+    public static Workout Swap(Workout workout, string plannedExerciseId, string newExerciseId)
+    {
+        if (workout.Planned.All(p => p.ExerciseId != plannedExerciseId) || IsInWorkout(workout, newExerciseId))
+        {
+            return workout;
+        }
+
+        return ReplacePlannedEntry(
+            workout, plannedExerciseId, new WorkoutEntry(newExerciseId, EntryStatus.Swapped, null, plannedExerciseId, null, []));
+    }
+
+    /// <summary>Takes back a swap, restoring the original as not-yet-done. Unchanged when it is not swapped.</summary>
+    public static Workout UndoSwap(Workout workout, string plannedExerciseId) =>
+        RemovePlannedEntry(workout, plannedExerciseId, EntryStatus.Swapped);
+
+    /// <summary>
+    /// Adds an empty entry for <paramref name="newExerciseId"/> right after the entry of <paramref name="afterExerciseId"/> (at the end
+    /// when that Exercise has no entry yet). It matches no planned row, so the outcomes rule reports it as an extra. Refused (unchanged)
+    /// when the Exercise is already in the Workout.
+    /// </summary>
+    public static Workout AddExercise(Workout workout, string afterExerciseId, string newExerciseId)
+    {
+        if (IsInWorkout(workout, newExerciseId))
+        {
+            return workout;
+        }
+
+        var entries = workout.Entries.ToList();
+        var after = entries.FindIndex(e => e.ExerciseId == afterExerciseId);
+        entries.Insert(after < 0 ? entries.Count : after + 1, new WorkoutEntry(newExerciseId, EntryStatus.Done, null, null, null, []));
+        return workout with { Entries = entries };
+    }
+
+    /// <summary>Removes an added Exercise that has no Sets. Unchanged for a planned Exercise or one with Sets.</summary>
+    public static Workout RemoveAdded(Workout workout, string exerciseId)
+    {
+        var isAdded = workout.Planned.All(p => p.ExerciseId != exerciseId);
+        var entries = workout.Entries.ToList();
+        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done && e.Sets.Count == 0);
+        if (!isAdded || index < 0)
+        {
+            return workout;
+        }
+
+        entries.RemoveAt(index);
+        return workout with { Entries = entries };
+    }
+
+    private static bool IsInWorkout(Workout workout, string exerciseId) =>
+        workout.Planned.Any(p => p.ExerciseId == exerciseId) || workout.Entries.Any(e => e.ExerciseId == exerciseId);
+
+    // The entry that stands for a planned row: the row's own entry, or the swapped entry naming it as the original.
+    private static bool StandsFor(WorkoutEntry entry, string plannedExerciseId) =>
+        entry.Status == EntryStatus.Swapped ? entry.SwappedFromExerciseId == plannedExerciseId : entry.ExerciseId == plannedExerciseId;
+
+    private static Workout ReplacePlannedEntry(Workout workout, string plannedExerciseId, WorkoutEntry replacement)
+    {
+        var entries = workout.Entries.ToList();
+        var index = entries.FindIndex(e => StandsFor(e, plannedExerciseId));
+        if (index < 0)
+        {
+            entries.Add(replacement);
+        }
+        else
+        {
+            entries[index] = replacement;
+        }
+
+        return workout with { Entries = entries };
+    }
+
+    private static Workout RemovePlannedEntry(Workout workout, string plannedExerciseId, EntryStatus status)
+    {
+        var entries = workout.Entries.ToList();
+        var removed = entries.RemoveAll(e => e.Status == status && StandsFor(e, plannedExerciseId));
+        return removed == 0 ? workout : workout with { Entries = entries };
+    }
+
     private static Workout Update(Workout workout, string exerciseId, Func<WorkoutEntry, WorkoutEntry> change)
     {
         var entries = workout.Entries.ToList();
