@@ -13,7 +13,7 @@
     z-index: 11;
     box-sizing: border-box;
     max-width: var(--column-log);
-    max-height: 90dvh;
+    max-height: var(--sheet-max-height);
     margin-inline: auto;
     display: flex;
     flex-direction: column;
