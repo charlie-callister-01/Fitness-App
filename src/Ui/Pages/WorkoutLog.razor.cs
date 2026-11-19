@@ -1,9 +1,6 @@
 using Core.Ids;
 using Core.Model;
-using Core.Rules.Editing;
 using Core.Rules.LogKinds;
-using Core.Rules.Parsing;
-using Core.Rules.Units;
 using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
@@ -15,10 +12,9 @@ using Ui.Saving;
 namespace Ui.Pages;
 
 /// <summary>
-/// S-02, the Workout log, at /log/{WorkoutId}. The page owns all saving: every change is merged into the snapshot's latest copy of the
-/// Workout by <see cref="WorkoutWriter"/> and committed at once, and a failed commit is reported to <see cref="SaveFailureNotice"/>
-/// while the typed text stays. What is on screen comes from <see cref="LogViewBuilder"/>; what is not saved lives in
-/// <see cref="LogEditState"/>. This class only wires events to them.
+/// S-02, the Workout log, at /log/{WorkoutId}. What is on screen comes from <see cref="LogViewBuilder"/>; what is not saved lives in
+/// <see cref="LogEditState"/>; every write is <see cref="LogActions"/> or one of the two flows; the rest countdown, screen lock and
+/// subscriptions are <see cref="LogSession"/>. This class only wires events to them.
 /// </summary>
 public sealed partial class WorkoutLog : ComponentBase, IDisposable
 {
@@ -26,9 +22,9 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private static readonly TimeSpan ResumedAfter = TimeSpan.FromMinutes(1);
 
     private string? _landedFor;
-    private bool _busy;
-    private bool _screenLocked;
-    private RestCountdown _rest = default!;
+    private LogViewBuilder _builder = default!;
+    private LogSession _session = default!;
+    private LogActions _actions = default!;
     private FinishFlow _finish = default!;
     private LoggedAfterwardsFlow _afterwards = default!;
 
@@ -57,10 +53,6 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     private LogEditState State { get; } = new();
 
-    private LogViewBuilder Builder => new(Data.Snapshot, State);
-
-    private WorkoutWriter Writer => new(Data, Notice);
-
     private Workout? OpenWorkout =>
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: null } open ? open : null;
 
@@ -69,13 +61,6 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: not null } finished ? finished : null;
 
     private DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.ToLocalTime().DateTime);
-
-    /// <summary>The Exercises of the finished Workout, for the Pain check's "During which Exercise?".</summary>
-    private IReadOnlyList<(string Id, string Name)> PainExercises =>
-        FinishedWorkout is { } finished
-            ? [.. finished.Entries.Select(e => e.ExerciseId).Distinct()
-                .Select(id => (id, Data.Snapshot.Exercises.FirstOrDefault(x => x.Id == id)?.Name ?? "Exercise"))]
-            : [];
 
     private bool CanWrite => Data.Health.CanWrite;
 
@@ -89,56 +74,16 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     protected override void OnInitialized()
     {
-        Data.Changed += OnDataChanged;
-        _rest = new RestCountdown(Clock, Ticker);
-        _rest.Changed += OnDataChanged;
+        _builder = new LogViewBuilder(Data, State);
         _finish = new FinishFlow(Data, Notice, Clock, Ids);
-        _finish.Changed += OnDataChanged;
-        _finish.Finished += _rest.Stop;
         _afterwards = new LoggedAfterwardsFlow(Data, Notice);
-        _afterwards.Changed += OnDataChanged;
-        _afterwards.Redated += _rest.Stop;
-        RestSetting.Changed += OnRestSettingChanged;
+        _session = new LogSession(Data, Clock, Ticker, WakeLock, RestSetting, _finish, _afterwards, OnDataChanged);
+        _actions = new LogActions(Data, Notice, Ids, State, _builder, _session);
     }
 
-    /// <summary>The screen stays on while a Workout with timers is open (not one logged afterwards), and is released the moment it finishes.</summary>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        var wantsScreenLock = OpenWorkout is { LoggedAfterwards: false };
-        if (!_screenLocked && wantsScreenLock)
-        {
-            _screenLocked = true;
-            await WakeLock.AcquireAsync();
-        }
-        else if (_screenLocked && !wantsScreenLock)
-        {
-            _screenLocked = false;
-            await WakeLock.ReleaseAsync();
-        }
-    }
+    protected override Task OnAfterRenderAsync(bool firstRender) => _session.SyncScreenLockAsync(OpenWorkout);
 
-    public void Dispose()
-    {
-        Data.Changed -= OnDataChanged;
-        _finish.Changed -= OnDataChanged;
-        _finish.Finished -= _rest.Stop;
-        _afterwards.Changed -= OnDataChanged;
-        _afterwards.Redated -= _rest.Stop;
-        RestSetting.Changed -= OnRestSettingChanged;
-        _rest.Dispose();
-        if (_screenLocked)
-        {
-            _ = WakeLock.ReleaseAsync();
-        }
-    }
-
-    private void OnRestSettingChanged()
-    {
-        if (RestSetting.Seconds == 0)
-        {
-            _rest.Stop();
-        }
-    }
+    public void Dispose() => _session.Dispose();
 
     private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
 
@@ -150,11 +95,12 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
 
         _landedFor = WorkoutId;
+        _actions.WorkoutId = WorkoutId;
         _finish.Reset();
         _afterwards.Reset();
         if (OpenWorkout is { } workout)
         {
-            State.Reset(Builder.FirstIncomplete(workout), IsResumed(workout));
+            State.Reset(_builder.Standing.FirstIncomplete(workout), IsResumed(workout));
         }
         else
         {
@@ -168,11 +114,9 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     private LogView ViewOf(Workout workout)
     {
-        State.ClampTo(Builder.SlotCount(workout));
-        return Builder.Build(workout);
+        State.ClampTo(LogStanding.SlotCount(workout));
+        return _builder.Build(workout);
     }
-
-    // ---- Steppers, Max set and RPE
 
     private void Step(int direction)
     {
@@ -183,77 +127,8 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
     }
 
-    /// <summary>A Set that exists is flagged in the stored Workout at once; a row still to be confirmed keeps the flag until it is.</summary>
-    private async Task ToggleMaxAsync(ExerciseView exercise)
-    {
-        if (_busy || exercise.Rows is not { Tools.MaxTarget: { } index } rows)
-        {
-            return;
-        }
-
-        var id = exercise.Info.ExerciseId;
-        var marks = rows.Items[index].Marks;
-        if (marks.Stored)
-        {
-            await RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.WithMax(w, id, index, !marks.IsMax)));
-        }
-        else
-        {
-            State.MarkMax(new RowKey(id, index), !marks.IsMax, marks.Pending);
-        }
-    }
-
-    /// <summary>Sets or clears the Exercise's RPE, creating its entry when no Set has been confirmed yet. Never blocks Confirm.</summary>
-    private Task SetRpeAsync(string exerciseId, int? rpe) =>
-        RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.WithRpe(w, exerciseId, rpe)));
-
-    /// <summary>Marks or unmarks an Exercise as a benchmark and saves at once; a failed save shows the banner and changes nothing.</summary>
-    private Task ToggleBenchmarkAsync(string exerciseId, bool isBenchmark) =>
-        RunExclusive(() => new ExerciseWriter(Data, Notice).ChangeAsync(exerciseId, e => ExerciseEdits.WithBenchmark(e, isBenchmark)));
-
-    /// <summary>Skips the Exercise (dropping any Sets) and moves on to the next one not yet handled; a failed save changes nothing.</summary>
-    private Task SkipAsync(string exerciseId, string? reason) =>
-        RunExclusive(async () =>
-        {
-            var result = await Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.Skip(w, exerciseId, reason));
-            if (result is CommitResult.Committed && OpenWorkout is { } saved)
-            {
-                State.Show(Builder.AfterSkip(saved, State.Current));
-            }
-        });
-
-    private Task UnskipAsync(string exerciseId) =>
-        RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.Unskip(w, exerciseId)));
-
-    /// <summary>Swaps the planned Exercise for another (dropping any Sets); a failed save changes nothing.</summary>
-    private Task SwapAsync(string rowId, string newExerciseId) =>
-        RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.Swap(w, rowId, newExerciseId)));
-
-    private Task UndoSwapAsync(string rowId) =>
-        RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.UndoSwap(w, rowId)));
-
-    /// <summary>Adds an Exercise after the shown one and goes to it; a failed save changes nothing.</summary>
-    private Task AddAsync(string afterExerciseId, string newExerciseId) =>
-        RunExclusive(async () =>
-        {
-            var result = await Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.AddExercise(w, afterExerciseId, newExerciseId));
-            if (result is CommitResult.Committed && OpenWorkout is { } saved && Builder.IndexOf(saved, newExerciseId) is { } index)
-            {
-                State.Show(index);
-            }
-        });
-
-    private Task RemoveAddedAsync(string exerciseId) =>
-        RunExclusive(async () =>
-        {
-            var result = await Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.RemoveAdded(w, exerciseId));
-            if (result is CommitResult.Committed)
-            {
-                State.Show(Math.Max(0, State.Current - 1));
-            }
-        });
-
-    // ---- The primary action
+    private Task ConfirmAsync() =>
+        OpenWorkout is { } workout && ViewOf(workout).Exercise is { } exercise ? _actions.ConfirmSetAsync(exercise) : Task.CompletedTask;
 
     private Task PrimaryAsync()
     {
@@ -262,8 +137,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             return Task.CompletedTask;
         }
 
-        var primary = ViewOf(workout).Primary;
-        switch (primary)
+        switch (ViewOf(workout).Primary)
         {
             case { Action: PrimaryAction.ConfirmSet }:
                 return ConfirmAsync();
@@ -275,41 +149,6 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
     }
 
-    private async Task ConfirmAsync()
-    {
-        if (!CanAct
-            || OpenWorkout is not { } workout
-            || ViewOf(workout).Exercise is not { Rows.CurrentRow: { } row } exercise)
-        {
-            return;
-        }
-
-        var info = exercise.Info;
-        var key = new RowKey(info.ExerciseId, row.Index);
-        var parser = new InputParser(new UnitConverter(Data.Snapshot.Settings));
-        switch (RowInput.Check(info.Kind, row.Face.First, row.Face.Second, parser))
-        {
-            case RowCheck.Invalid invalid:
-                State.Fail(key, invalid.Error, invalid.Field);
-                break;
-            case RowCheck.Valid valid:
-                var isMax = State.EditOf(key)?.Max ?? false;
-                await RunExclusive(async () =>
-                {
-                    var result = await Writer.ChangeAsync(
-                        WorkoutId, w => WorkoutEdits.WithSet(w, info.ExerciseId, row.Index, valid.Set, isMax, Ids));
-                    if (result is CommitResult.Committed)
-                    {
-                        State.Confirmed(key);
-                        _rest.Start(OpenWorkout is { LoggedAfterwards: true } ? 0 : RestSetting.Seconds);
-                        State.Toast = OpenWorkout is { } saved ? Builder.ToastFor(saved, info.ExerciseId, row.Index) : null;
-                    }
-                });
-                break;
-        }
-    }
-
-    /// <summary>Starts the finish flow (<see cref="FinishFlow"/>): a refusal, the Partial prompt or the finish write.</summary>
     private Task FinishAsync() => _finish.RequestAsync(WorkoutId, CanWrite);
 
     private Task AnswerPainAsync(PainAnswer answer) => _finish.AnswerAsync(WorkoutId, answer, CanWrite);
@@ -334,27 +173,6 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     }
 
     private Task SaveDateAsync(DateOnly date) => _afterwards.SaveAsync(WorkoutId, date, Today, CanWrite);
-
-    private bool CanAct => !_busy && CanWrite;
-
-    /// <summary>Runs a save unless another is in flight or this window cannot write, so two taps never save twice.</summary>
-    private async Task RunExclusive(Func<Task> save)
-    {
-        if (!CanAct)
-        {
-            return;
-        }
-
-        _busy = true;
-        try
-        {
-            await save();
-        }
-        finally
-        {
-            _busy = false;
-        }
-    }
 
     // After a deep link there is nothing in the app to go back to, so go Home rather than out of the app.
     private async Task GoBack()

@@ -27,7 +27,7 @@
         }
     </div>
     <PainCheckSheet Open="_finish.Phase == FinishPhase.PainCheck" Saving="_finish.Saving" CanWrite="CanWrite" Message="@_finish.PainMessage"
-                    Exercises="PainExercises" OnAnswer="AnswerPainAsync" />
+                    Exercises="_builder.PainExercises(FinishedWorkout)" OnAnswer="AnswerPainAsync" />
 }
 else
 {
@@ -74,19 +74,12 @@ else
             else
             {
                 var id = shown.Info.ExerciseId;
-                var rowId = shown.Swap?.OriginalId ?? id;
                 <ExerciseHeader Name="@shown.Info.Name" Planned="@shown.Info.PlannedText" Cue="@shown.Info.Cue"
                                 Last="@shown.Header?.Last" Best="@shown.Header?.Best"
                                 Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" Benchmark="shown.Info.IsBenchmark">
                     <Actions>
-                        <ExerciseMenu ExerciseName="@shown.Info.Name" IsBenchmark="shown.Info.IsBenchmark" CanWrite="CanWrite"
-                                      OnToggleBenchmark="() => ToggleBenchmarkAsync(id, !shown.Info.IsBenchmark)"
-                                      Guide="Data.Snapshot.Guides.FirstOrDefault(g => g.ExerciseId == id)"
-                                      IsSkipped="shown.Skip is not null" HasSets="@(shown.Rows?.Items.Any(r => r.Marks.Stored) ?? false)"
-                                      OnSkip="reason => SkipAsync(rowId, reason)" OnUnskip="() => UnskipAsync(rowId)"
-                                      IsSwapped="shown.Swap is not null" IsAdded="shown.Added" Picker="shown.Picker"
-                                      OnSwap="newId => SwapAsync(rowId, newId)" OnUndoSwap="() => UndoSwapAsync(rowId)"
-                                      OnAdd="newId => AddAsync(id, newId)" OnRemoveAdded="() => RemoveAddedAsync(id)" />
+                        <ExerciseMenu State="ExerciseMenuState.For(shown, Data.Snapshot.Guides.FirstOrDefault(g => g.ExerciseId == id), CanWrite)"
+                                      OnAction="_actions.ApplyAsync" />
                     </Actions>
                 </ExerciseHeader>
 
@@ -151,15 +144,15 @@ else
                         }
                         @if (rows.Tools.MaxTarget is { } target)
                         {
-                            <button type="button" class="log__link" @onclick="() => ToggleMaxAsync(shown)">@(rows.Items[target].Marks.IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
+                            <button type="button" class="log__link" @onclick="() => _actions.ToggleMaxAsync(shown)">@(rows.Items[target].Marks.IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
                         }
                     </div>
-                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => SetRpeAsync(id, rpe)" />
+                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => _actions.SetRpeAsync(id, rpe)" />
                 }
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@(workout.LoggedAfterwards ? null : _rest.Label)" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
+        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@(workout.LoggedAfterwards ? null : _session.Rest.Label)" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
                     StepAmount="@view.Exercise?.Rows?.Tools.StepAmount" StepUnit="@(view.Exercise?.Rows?.Tools.Step?.Unit ?? "")" OnStep="Step" />
     </div>
     <LoggedAfterwardsSheet Open="_afterwards.Open" Today="Today" Saving="_afterwards.Saving" CanWrite="CanWrite" Message="@_afterwards.Message"
