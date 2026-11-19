@@ -5,6 +5,7 @@ using Core.Rules.Starting;
 using Core.Storage;
 using Core.Time;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Log;
 using Ui.Preferences;
 using Ui.Saving;
 using Ui.Theming;
@@ -25,6 +26,62 @@ internal static class LogFixture
     public sealed class FixedClock(DateTimeOffset now) : IClock
     {
         public DateTimeOffset UtcNow => now;
+    }
+
+    /// <summary>A clock a test moves by hand.</summary>
+    public sealed class TestClock(DateTimeOffset now) : IClock
+    {
+        public DateTimeOffset UtcNow { get; private set; } = now;
+
+        public void Advance(TimeSpan by) => UtcNow += by;
+    }
+
+    /// <summary>The rest readout's pacing, fired by hand: <see cref="Tick"/> is "a second passed".</summary>
+    public sealed class FakeTicker : ISecondTicker
+    {
+        private TaskCompletionSource _next = new();
+
+        /// <summary>How many waits are open, so a test can see that a disposed page left none running.</summary>
+        public int Waiting { get; private set; }
+
+        public async Task WaitNextAsync(CancellationToken cancellation)
+        {
+            Waiting++;
+            try
+            {
+                await _next.Task.WaitAsync(cancellation);
+            }
+            finally
+            {
+                Waiting--;
+            }
+        }
+
+        public void Tick()
+        {
+            var current = _next;
+            _next = new TaskCompletionSource();
+            current.SetResult();
+        }
+    }
+
+    public sealed class RecordingWakeLock : IWakeLock
+    {
+        public List<string> Calls { get; } = [];
+
+        public Task<bool> IsSupportedAsync() => Task.FromResult(true);
+
+        public Task AcquireAsync()
+        {
+            Calls.Add("acquire");
+            return Task.CompletedTask;
+        }
+
+        public Task ReleaseAsync()
+        {
+            Calls.Add("release");
+            return Task.CompletedTask;
+        }
     }
 
     public sealed class CountingIds : IIdGenerator
@@ -115,7 +172,13 @@ internal static class LogFixture
         preferences ??= new FakeDevicePreferences();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddSingleton(data);
-        context.Services.AddSingleton<IClock>(new FixedClock(Now));
+        var clock = new TestClock(Now);
+        context.Services.AddSingleton(clock);
+        context.Services.AddSingleton<IClock>(clock);
+        context.Services.AddSingleton<FakeTicker>();
+        context.Services.AddSingleton<ISecondTicker>(sp => sp.GetRequiredService<FakeTicker>());
+        context.Services.AddSingleton<RecordingWakeLock>();
+        context.Services.AddSingleton<IWakeLock>(sp => sp.GetRequiredService<RecordingWakeLock>());
         context.Services.AddSingleton<IIdGenerator>(new CountingIds());
         context.Services.AddSingleton(notice);
         context.Services.AddSingleton<InAppHistory>();

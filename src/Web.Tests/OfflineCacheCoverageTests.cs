@@ -27,6 +27,25 @@ public class OfflineCacheCoverageTests
         Assert.True(unmatched.Count == 0, "Not matched by offlineAssetsInclude: " + string.Join(", ", unmatched));
     }
 
+    /// <summary>
+    /// Collocated component modules (<c>Foo.razor.js</c>) are served from <c>_content/Ui/</c> and are only in the offline cache when the include
+    /// list matches them; the wake lock module and the Sheet's focus module are what the log needs with no network.
+    /// </summary>
+    [Theory]
+    [InlineData("js/wake-lock.js")]
+    [InlineData("_content/Ui/Components/Sheet.razor.js")]
+    public void The_script_modules_the_log_imports_are_matched_by_the_include_list_and_exist_in_the_source(string servedPath)
+    {
+        var root = FindRepoRoot();
+        var patterns = ReadIncludePatterns(Path.Combine(root, "src", "Web", "wwwroot", "service-worker.published.js"));
+        var source = servedPath.StartsWith("_content/Ui/", StringComparison.Ordinal)
+            ? Path.Combine(root, "src", "Ui", servedPath["_content/Ui/".Length..])
+            : Path.Combine(root, "src", "Web", "wwwroot", servedPath);
+
+        Assert.True(File.Exists(source), $"{servedPath} is not where the app serves it from ({source}).");
+        Assert.Contains(patterns, p => p.IsMatch(servedPath));
+    }
+
     private static List<Regex> ReadIncludePatterns(string workerPath)
     {
         var line = File.ReadAllLines(workerPath).Single(l => l.TrimStart().StartsWith("const offlineAssetsInclude", StringComparison.Ordinal));

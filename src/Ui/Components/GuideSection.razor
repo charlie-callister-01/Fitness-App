@@ -1,0 +1,31 @@
+@* One titled section of a Guide: a paragraph or a list. Renders nothing when it has no text. *@
+@if (!string.IsNullOrWhiteSpace(Text) || Items is { Count: > 0 })
+{
+    <section class="fa-guide__section">
+        <h3 class="fa-label fa-guide__heading">@Heading</h3>
+        @if (!string.IsNullOrWhiteSpace(Text))
+        {
+            <p class="fa-guide__text">@Text</p>
+        }
+        @if (Items is { Count: > 0 })
+        {
+            <ul class="fa-guide__list">
+                @foreach (var item in Items)
+                {
+                    <li>@item</li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Heading { get; set; } = "";
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<string>? Items { get; set; }
+}

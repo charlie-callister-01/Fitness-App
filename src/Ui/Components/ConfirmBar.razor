@@ -1,12 +1,21 @@
 @* C-06 ConfirmBar: fixed to the bottom of the log with the Up next strip, the one primary action and, when the Exercise has them, a stepper either side. *@
 <div class="fa-confirmbar">
-    @if (UpNext is not null)
+    @if (UpNext is not null || LastDone || Rest is not null)
     {
-        <div class="fa-confirmbar__info"><span>Up next: <b>@UpNext</b></span></div>
-    }
-    else if (LastDone)
-    {
-        <div class="fa-confirmbar__info"><span>Last Exercise done</span></div>
+        <div class="fa-confirmbar__info">
+            @if (UpNext is not null)
+            {
+                <span>Up next: <b>@UpNext</b></span>
+            }
+            else if (LastDone)
+            {
+                <span>Last Exercise done</span>
+            }
+            @if (Rest is not null)
+            {
+                <span class="fa-confirmbar__rest" role="timer" aria-live="off">@Rest</span>
+            }
+        </div>
     }
     <div class="@RowClass">
         @if (ShowSteppers)
@@ -33,6 +42,10 @@
     /// <summary>Every Exercise is complete, so the strip says so in place of an Up next.</summary>
     [Parameter]
     public bool LastDone { get; set; }
+
+    /// <summary>The rest countdown, such as "Rest 1:12", shown at the right of the strip; null shows nothing.</summary>
+    [Parameter]
+    public string? Rest { get; set; }
 
     [Parameter]
     public bool Disabled { get; set; }

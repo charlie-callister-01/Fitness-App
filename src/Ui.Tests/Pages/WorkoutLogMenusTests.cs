@@ -63,23 +63,6 @@ public sealed class WorkoutLogMenusTests : BunitContext
     }
 
     [Fact]
-    public async Task The_Guide_item_is_present_but_disabled_and_does_nothing()
-    {
-        var (data, cut) = await OpenAsync();
-        ExerciseMenuButton(cut).Click();
-
-        foreach (var label in new[] { "View Guide" })
-        {
-            var item = Item(cut, label);
-            Assert.True(item.HasAttribute("disabled"), label);
-            item.Click();
-        }
-
-        Assert.NotNull(Dialog(cut));
-        Assert.Equal(InProgress().Entries, data.Snapshot.Workouts.Single(w => w.Id == "w-now").Entries);
-    }
-
-    [Fact]
     public async Task The_exercise_menu_closes_by_Cancel_an_outside_tap_and_Escape()
     {
         var (_, cut) = await OpenAsync();

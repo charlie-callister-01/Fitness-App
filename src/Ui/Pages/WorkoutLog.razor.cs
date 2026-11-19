@@ -9,6 +9,7 @@ using Core.Time;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Ui.Log;
+using Ui.Preferences;
 using Ui.Saving;
 
 namespace Ui.Pages;
@@ -26,6 +27,8 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     private string? _landedFor;
     private bool _busy;
+    private bool _screenLocked;
+    private RestCountdown _rest = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
 
@@ -38,6 +41,12 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    [Inject] private ISecondTicker Ticker { get; set; } = default!;
+
+    [Inject] private IWakeLock WakeLock { get; set; } = default!;
+
+    [Inject] private RestTimerSetting RestSetting { get; set; } = default!;
 
     [Inject] private InAppHistory History { get; set; } = default!;
 
@@ -63,9 +72,41 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             ? "Your saved data could not be read, so nothing can be shown or saved here. Your data is untouched."
             : "This window cannot save right now, so the log is read-only.";
 
-    protected override void OnInitialized() => Data.Changed += OnDataChanged;
+    protected override void OnInitialized()
+    {
+        Data.Changed += OnDataChanged;
+        _rest = new RestCountdown(Clock, Ticker);
+        _rest.Changed += OnDataChanged;
+        RestSetting.Changed += OnRestSettingChanged;
+    }
 
-    public void Dispose() => Data.Changed -= OnDataChanged;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_screenLocked && OpenWorkout is not null)
+        {
+            _screenLocked = true;
+            await WakeLock.AcquireAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        Data.Changed -= OnDataChanged;
+        RestSetting.Changed -= OnRestSettingChanged;
+        _rest.Dispose();
+        if (_screenLocked)
+        {
+            _ = WakeLock.ReleaseAsync();
+        }
+    }
+
+    private void OnRestSettingChanged()
+    {
+        if (RestSetting.Seconds == 0)
+        {
+            _rest.Stop();
+        }
+    }
 
     private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
 
@@ -226,6 +267,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
                     if (result is CommitResult.Committed)
                     {
                         State.Confirmed(key);
+                        _rest.Start(RestSetting.Seconds);
                         State.Toast = OpenWorkout is { } saved ? Builder.ToastFor(saved, info.ExerciseId, row.Index) : null;
                     }
                 });

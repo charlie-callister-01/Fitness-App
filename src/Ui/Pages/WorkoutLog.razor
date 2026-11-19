@@ -59,6 +59,7 @@ else
                     <Actions>
                         <ExerciseMenu ExerciseName="@shown.Info.Name" IsBenchmark="shown.Info.IsBenchmark" CanWrite="CanWrite"
                                       OnToggleBenchmark="() => ToggleBenchmarkAsync(id, !shown.Info.IsBenchmark)"
+                                      Guide="Data.Snapshot.Guides.FirstOrDefault(g => g.ExerciseId == id)"
                                       IsSkipped="shown.Skip is not null" HasSets="@(shown.Rows?.Items.Any(r => r.Marks.Stored) ?? false)"
                                       OnSkip="reason => SkipAsync(rowId, reason)" OnUnskip="() => UnskipAsync(rowId)"
                                       IsSwapped="shown.Swap is not null" IsAdded="shown.Added" Picker="shown.Picker"
@@ -136,7 +137,7 @@ else
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
+        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@_rest.Label"Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
                     StepAmount="@view.Exercise?.Rows?.Tools.StepAmount" StepUnit="@(view.Exercise?.Rows?.Tools.Step?.Unit ?? "")" OnStep="Step" />
     </div>
 }

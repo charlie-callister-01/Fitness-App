@@ -1,5 +1,6 @@
+@using Core.Model
 @* The Exercise menu (design 8.4): an icon button beside the Exercise name that opens a sheet of what can be done to this Exercise. Mark or
-   unmark as benchmark works here; Swap, Skip, Add an Exercise and View Guide are listed so later tickets only fill in their behaviour. *@
+   unmark as benchmark works here; Swap, Skip, Add an Exercise and View Guide each open their own sheet from here. *@
 <button type="button" class="fa-btn fa-btn--icon" aria-label="@($"Menu for {ExerciseName}")" aria-haspopup="dialog" @ref="_opener" @onclick="OpenMenu">
     <Icon Name="IconName.MenuMore" />
 </button>
@@ -26,12 +27,16 @@
         }
         <MenuItem Glyph="IconName.Benchmark" Label="@(IsBenchmark ? "Unmark as benchmark" : "Mark as benchmark")"
                   Hint="Results go to Progress › Benchmarks" Disabled="@(!CanWrite)" OnClick="OnToggleBenchmark" />
-        <MenuItem Glyph="IconName.Guide" Label="View Guide" Hint="How to do it, cues, mistakes" Disabled="true" />
+        <MenuItem Glyph="IconName.Guide" Label="View Guide" Hint="How to do it, cues, mistakes" OnClick="StartGuide" />
     </ChildContent>
     <Actions>
         <Button Variant="ButtonVariant.Secondary" OnClick="CloseMenu">Cancel</Button>
     </Actions>
 </Sheet>
+
+<GuideSheet Open="_guiding" ExerciseName="@ExerciseName" Opener="_opener" OnClose="CloseGuide">
+    <GuideContent Guide="Guide" ExerciseName="@ExerciseName" />
+</GuideSheet>
 
 <SkipSheet Open="_skipping" ExerciseName="@ExerciseName" HasSets="HasSets" Opener="_opener" OnClose="CloseSkip" OnSkip="Skip" />
 
@@ -53,6 +58,7 @@
 
     private bool _open;
     private bool _skipping;
+    private bool _guiding;
     private PickerMode _picking;
     private ElementReference _opener;
 
@@ -113,6 +119,18 @@
     private void OpenMenu() => _open = true;
 
     private void CloseMenu() => _open = false;
+
+    /// <summary>The Exercise's Guide, or null when it has none (the sheet then says so).</summary>
+    [Parameter]
+    public Guide? Guide { get; set; }
+
+    private void StartGuide()
+    {
+        _open = false;
+        _guiding = true;
+    }
+
+    private void CloseGuide() => _guiding = false;
 
     private void StartSkip()
     {

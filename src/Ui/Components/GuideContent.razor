@@ -1,0 +1,43 @@
+@using Core.Model
+@* The Guide content that exists today, as read-only sections in the Guide's own order, or a plain message when the Exercise has none. *@
+@if (Guide is null || !HasContent)
+{
+    <p class="fa-muted">No Guide yet for @ExerciseName.</p>
+}
+else
+{
+    <div class="fa-guide">
+        <GuideSection Heading="What it works" Text="@Guide.Works" />
+        <GuideSection Heading="Why it's in your plan" Text="@Guide.WhyInPlan" />
+        <GuideSection Heading="Setup" Text="@Guide.Setup" />
+        <GuideSection Heading="How to do it" Text="@Guide.HowTo" />
+        <GuideSection Heading="Cues" Items="Guide.Cues" />
+        <GuideSection Heading="Common mistakes" Items="Guide.CommonMistakes" />
+        <GuideSection Heading="Easier" Text="@Guide.Easier" />
+        <GuideSection Heading="Harder" Text="@Guide.Harder" />
+        <GuideSection Heading="Watch-outs" Items="Guide.WatchOuts" />
+        <GuideSection Heading="My notes" Text="@Guide.PersonalNotes" />
+        @if (VideoLink is { } video)
+        {
+            <a class="fa-guide__video" href="@video" target="_blank" rel="noopener">Watch a demo (opens in a new tab)</a>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guide? Guide { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ExerciseName { get; set; } = "";
+
+    private bool HasContent =>
+        Guide is { } g
+        && (VideoLink is not null
+            || new[] { g.Works, g.WhyInPlan, g.Setup, g.HowTo, g.Easier, g.Harder, g.PersonalNotes }.Any(t => !string.IsNullOrWhiteSpace(t))
+            || g.Cues.Count + g.CommonMistakes.Count + g.WatchOuts.Count > 0);
+
+    /// <summary>The video address when it is a web address; anything else (a script address, say) is never made a link.</summary>
+    private string? VideoLink =>
+        Uri.TryCreate(Guide?.VideoUrl, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" ? uri.AbsoluteUri : null;
+}
