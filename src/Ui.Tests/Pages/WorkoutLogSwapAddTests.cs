@@ -214,7 +214,7 @@ public sealed class WorkoutLogSwapAddTests : BunitContext
     }
 
     [Fact]
-    public async Task A_swapped_Exercise_is_logged_into_its_swapped_entry_and_counts_as_handled_for_the_primary_button()
+    public async Task A_swapped_Exercise_is_logged_into_its_swapped_entry_and_counts_as_handled_for_the_primary_button_once_it_has_a_Set()
     {
         var data = await SeedAsync();
         var lunges = new WorkoutEntry(Lunge, EntryStatus.Done, null, null, null, [Set("l1", 10, 10), Set("l2", 10, 10)]);
@@ -224,12 +224,14 @@ public sealed class WorkoutLogSwapAddTests : BunitContext
 
         cut.FindAll(".pager__chip")[1].Click();
         Assert.Equal("Walking lunge", ShownExercise(cut));
-        Assert.Equal("Finish", Primary(cut));
+        Assert.Equal("Next: Romanian deadlift", Primary(cut));
 
         cut.FindAll(".pager__chip")[0].Click();
         cut.Find("input[aria-label='Weight, Set 1']").Input("40");
         cut.Find("input[aria-label='Reps, Set 1']").Input("5");
         cut.Find(".fa-confirmbar .fa-btn--primary").Click();
+        cut.FindAll(".pager__chip")[1].Click();
+        Assert.Equal("Finish", Primary(cut));
 
         var stored = Stored(data);
         Assert.Equal(2, stored.Entries.Count);
@@ -253,6 +255,28 @@ public sealed class WorkoutLogSwapAddTests : BunitContext
         Assert.Equal("Goblet squat", ShownExercise(cut));
         Assert.Empty(cut.FindAll(".fa-swapped"));
         Assert.DoesNotContain("⇄", cut.FindAll(".pager__chip")[0].TextContent);
+    }
+
+    private static WorkoutEntry LungeDone() =>
+        new(Lunge, EntryStatus.Done, null, null, null, [Set("l1", 10, 10), Set("l2", 10, 10)]);
+
+    [Fact]
+    public async Task An_unlogged_swap_is_not_handled_so_the_last_Exercise_offers_Next_back_to_it_not_Finish()
+    {
+        var cut = await OpenAsync(await SeedAsync(), SwappedEntry(Rdl, Squat), LungeDone());
+        cut.FindAll(".pager__chip")[1].Click();
+
+        Assert.Equal("Next: Romanian deadlift", Primary(cut));
+        Assert.Contains("1 of 2 done", cut.Find(".log__progress").TextContent);
+    }
+
+    [Fact]
+    public async Task A_swap_with_a_Set_is_handled_so_the_last_Exercise_offers_Finish()
+    {
+        var cut = await OpenAsync(await SeedAsync(), SwappedEntry(Rdl, Squat, Set("r1", 40, 5)), LungeDone());
+        cut.FindAll(".pager__chip")[1].Click();
+
+        Assert.Equal("Finish", Primary(cut));
     }
 
     [Fact]

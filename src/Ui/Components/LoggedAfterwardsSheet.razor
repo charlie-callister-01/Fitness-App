@@ -14,7 +14,7 @@
         }
     </ChildContent>
     <Actions>
-        <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="SaveAsync">Save date</Button>
+        <Button Variant="ButtonVariant.Primary" Disabled="Saving || !CanWrite" OnClick="SaveAsync">Save date</Button>
         <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnCancel">Cancel</Button>
     </Actions>
 </Sheet>
@@ -35,6 +35,10 @@
 
     [Parameter]
     public bool Saving { get; set; }
+
+    /// <summary>This window can save; when it cannot, Save date waits (Cancel writes nothing).</summary>
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
 
     /// <summary>Why the date was refused, in plain words.</summary>
     [Parameter]

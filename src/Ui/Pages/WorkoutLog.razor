@@ -26,7 +26,7 @@
             <Button Variant="ButtonVariant.Primary" Href="./">Back to Home</Button>
         }
     </div>
-    <PainCheckSheet Open="_finish.Phase == FinishPhase.PainCheck" Saving="_finish.Saving" Message="@_finish.PainMessage"
+    <PainCheckSheet Open="_finish.Phase == FinishPhase.PainCheck" Saving="_finish.Saving" CanWrite="CanWrite" Message="@_finish.PainMessage"
                     Exercises="PainExercises" OnAnswer="AnswerPainAsync" />
 }
 else
@@ -162,9 +162,9 @@ else
         <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@(workout.LoggedAfterwards ? null : _rest.Label)" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
                     StepAmount="@view.Exercise?.Rows?.Tools.StepAmount" StepUnit="@(view.Exercise?.Rows?.Tools.Step?.Unit ?? "")" OnStep="Step" />
     </div>
-    <LoggedAfterwardsSheet Open="_afterwards.Open" Today="Today" Saving="_afterwards.Saving" Message="@_afterwards.Message"
+    <LoggedAfterwardsSheet Open="_afterwards.Open" Today="Today" Saving="_afterwards.Saving" CanWrite="CanWrite" Message="@_afterwards.Message"
                            OnSave="SaveDateAsync" OnCancel="_afterwards.Cancel" />
     <PartialPrompt Open="_finish.Phase == FinishPhase.PartialPrompt" Done="_finish.PartialCounts.Done" Planned="_finish.PartialCounts.Planned"
-                   Saving="_finish.Saving" OnFinish="ConfirmPartialAsync" OnKeepGoing="_finish.KeepGoing" />
+                   Saving="_finish.Saving" CanWrite="CanWrite" OnFinish="ConfirmPartialAsync" OnKeepGoing="_finish.KeepGoing" />
 }
 }

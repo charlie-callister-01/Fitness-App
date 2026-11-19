@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Outcomes;
 using Core.Rules.Editing;
 using Core.Rules.LogKinds;
 using Core.Rules.Parsing;
@@ -52,14 +53,14 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
 
     public int SlotCount(Workout workout) => LogSlots.Of(workout).Count;
 
-    // An added Exercise only counts once logged; a swapped one counts as handled, so neither holds the count or Finish back.
+    // An added Exercise only counts once logged; a swapped one counts once it has Sets, so neither holds the count or Finish back.
     private LogProgress ProgressOf(Workout workout, IReadOnlyList<LogSlot> slots) =>
         new(
             slots.Count(s => !s.Added || IsComplete(workout, s.Row)),
             slots.Count(s => IsComplete(workout, s.Row)),
             PrCount(workout),
             slots.Count(s => SkipOf(workout, s.Row) is not null),
-            slots.Count(s => s.SwappedFromId is not null && !IsComplete(workout, s.Row)));
+            slots.Count(s => IsSwapLogged(workout, s) && !IsComplete(workout, s.Row)));
 
     /// <summary>The toast for the Set just confirmed, or null when it is not a PR.</summary>
     public string? ToastFor(Workout workout, string exerciseId, int row)
@@ -88,13 +89,19 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
 
     /// <summary>The skip recorded for a planned Exercise, or null when it is not skipped.</summary>
     private static SkipInfo? SkipOf(Workout workout, SessionExercise planned) =>
-        workout.Entries.FirstOrDefault(e => e.Status == EntryStatus.Skipped && e.ExerciseId == planned.ExerciseId) is { } entry
-            ? new SkipInfo(entry.SkipReason)
+        WorkoutOutcomes.Of(workout).Rows.FirstOrDefault(r => r.Kind == RowOutcomeKind.Skipped && r.Row.ExerciseId == planned.ExerciseId) is { } skipped
+            ? new SkipInfo(skipped.SkipReason)
             : null;
 
-    /// <summary>Complete, skipped or swapped, or an optional added Exercise: nothing more is needed for this one.</summary>
+    /// <summary>A swapped row whose replacement has Sets (the Core rule): an unlogged swap is not done, so Finish still prompts Partial.</summary>
+    private static bool IsSwapLogged(Workout workout, LogSlot slot) =>
+        slot.SwappedFromId is { } original
+        && WorkoutOutcomes.Of(workout).Rows.FirstOrDefault(r => r.Kind == RowOutcomeKind.Swapped && r.Row.ExerciseId == original)?.Entry is { } entry
+        && WorkoutOutcomes.HasSets(entry);
+
+    /// <summary>Complete, skipped or swapped with Sets, or an optional added Exercise: nothing more is needed for this one.</summary>
     private bool IsHandled(Workout workout, LogSlot slot) =>
-        slot.Added || slot.SwappedFromId is not null || IsComplete(workout, slot.Row) || SkipOf(workout, slot.Row) is not null;
+        slot.Added || IsSwapLogged(workout, slot) || IsComplete(workout, slot.Row) || SkipOf(workout, slot.Row) is not null;
 
     /// <summary>
     /// Where the log goes after an Exercise is skipped: the next Exercise (wrapping round) that is not complete or skipped, else the last

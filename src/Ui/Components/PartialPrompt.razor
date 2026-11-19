@@ -5,7 +5,7 @@
         <p>@Done of @Planned done; the rest are recorded as skipped. Partial still counts toward your Streak.</p>
     </ChildContent>
     <Actions>
-        <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="OnFinish">Finish</Button>
+        <Button Variant="ButtonVariant.Primary" Disabled="Saving || !CanWrite" OnClick="OnFinish">Finish</Button>
         <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnKeepGoing">Keep going</Button>
     </Actions>
 </Sheet>
@@ -19,6 +19,10 @@
 
     [Parameter]
     public int Planned { get; set; }
+
+    /// <summary>This window can save; when it cannot, Finish waits (Keep going writes nothing).</summary>
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
 
     /// <summary>The finish write is in flight: both buttons wait, so a second tap does nothing.</summary>
     [Parameter]

@@ -7,7 +7,7 @@
 <Sheet Open="Open" Title="Any pain today?" OnClose="SkipAsync">
     <ChildContent>
         <div class="fa-painanswers">
-            <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="NoAsync">No</Button>
+            <Button Variant="ButtonVariant.Primary" Disabled="Saving || !CanWrite" OnClick="NoAsync">No</Button>
             <Button Variant="ButtonVariant.Secondary" Disabled="Saving" Pressed="_expanded" OnClick="ExpandAsync">Yes</Button>
             <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="SkipAsync">Skip</Button>
         </div>
@@ -43,7 +43,7 @@
     <Actions>
         @if (_expanded)
         {
-            <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="SaveAsync">Save and see summary</Button>
+            <Button Variant="ButtonVariant.Primary" Disabled="Saving || !CanWrite" OnClick="SaveAsync">Save and see summary</Button>
         }
     </Actions>
 </Sheet>
@@ -60,6 +60,10 @@
 
     [Parameter]
     public bool Open { get; set; }
+
+    /// <summary>This window can save. When it cannot, the buttons that write wait (Skip and Yes write nothing).</summary>
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
 
     /// <summary>The answer is being saved: every button waits.</summary>
     [Parameter]
