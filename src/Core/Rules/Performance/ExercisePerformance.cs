@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.LogKinds;
+using Core.Rules.Units;
 
 namespace Core.Rules.Performance;
 
@@ -80,7 +81,11 @@ public static class ExercisePerformance
     /// Last, Best and Suggested target for the log screen. The weight increment comes from the Plan, and the first row
     /// for the Exercise in Plan order gives the rep range. A null Plan gives no target.
     /// </summary>
-    public static ExerciseSnapshot Snapshot(Exercise exercise, IEnumerable<Workout> history, Plan? plan)
+    public static ExerciseSnapshot Snapshot(Exercise exercise, IEnumerable<Workout> history, Plan? plan) =>
+        Snapshot(exercise, history, plan, null);
+
+    /// <summary>As above, with the Suggested target reason written in the owner's display unit. A null <paramref name="units"/> reads in kg.</summary>
+    public static ExerciseSnapshot Snapshot(Exercise exercise, IEnumerable<Workout> history, Plan? plan, UnitConverter? units)
     {
         var all = history.ToList();
         var lastVisit = Visits(exercise, all).LastOrDefault();
@@ -94,7 +99,7 @@ public static class ExercisePerformance
                 PickBest(CandidatesOf(exercise.LogKind, lastVisit))?.Set);
         var best = Best(exercise, all);
         var row = plan?.Sessions.SelectMany(s => s.Exercises).FirstOrDefault(r => r.ExerciseId == exercise.Id);
-        var target = plan is null ? null : TargetRules.For(exercise.LogKind, last, best, plan, row);
+        var target = plan is null ? null : TargetRules.For(exercise.LogKind, last, best, plan, row, units ?? new UnitConverter(WeightUnit.Kg, DistanceUnit.Km, plan.WeightIncrementKg));
         return new ExerciseSnapshot(exercise.Id, last, best, target);
     }
 
