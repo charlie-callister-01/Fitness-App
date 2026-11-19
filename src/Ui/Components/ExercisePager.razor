@@ -6,20 +6,24 @@
         var chip = Chips[i];
         <button type="button" class="pager__chip"
                 aria-current="@(index == Current ? "step" : null)"
-                aria-label="@($"Exercise {index + 1}: {chip.Name}{(chip.Done ? ", done" : "")}")"
+                aria-label="@($"Exercise {index + 1}: {chip.Name}{(chip.Done ? ", done" : chip.Skipped ? ", skipped" : "")}")"
                 @onclick="() => OnJump.InvokeAsync(index)">
             <span class="@(chip.Done ? "pager__done" : null)">@(index + 1)</span>
             @if (chip.Done)
             {
                 <span class="pager__done" aria-hidden="true">✓</span>
             }
+            else if (chip.Skipped)
+            {
+                <span class="pager__skipped" aria-hidden="true">—</span>
+            }
         </button>
     }
 </nav>
 
 @code {
-    /// <summary>One chip: the Exercise's name (for the accessible name) and whether all its Sets are confirmed.</summary>
-    public sealed record Chip(string Name, bool Done);
+    /// <summary>One chip: the Exercise's name (for the accessible name) and whether all its Sets are confirmed, and whether it was skipped.</summary>
+    public sealed record Chip(string Name, bool Done, bool Skipped = false);
 
     [Parameter, EditorRequired]
     public IReadOnlyList<Chip> Chips { get; set; } = [];

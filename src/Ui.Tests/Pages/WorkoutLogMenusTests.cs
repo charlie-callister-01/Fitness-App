@@ -68,7 +68,7 @@ public sealed class WorkoutLogMenusTests : BunitContext
         var (data, cut) = await OpenAsync();
         ExerciseMenuButton(cut).Click();
 
-        foreach (var label in new[] { "Swap Exercise", "Skip Exercise", "Add an Exercise", "View Guide" })
+        foreach (var label in new[] { "Swap Exercise", "Add an Exercise", "View Guide" })
         {
             var item = Item(cut, label);
             Assert.True(item.HasAttribute("disabled"), label);

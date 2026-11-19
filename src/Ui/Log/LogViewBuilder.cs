@@ -23,7 +23,7 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
     /// <summary>The first Exercise still to log, else the last one: where a reopened Workout lands.</summary>
     public int FirstIncomplete(Workout workout)
     {
-        var index = workout.Planned.ToList().FindIndex(p => !IsComplete(workout, p));
+        var index = workout.Planned.ToList().FindIndex(p => !IsHandled(workout, p));
         return index < 0 ? Math.Max(0, workout.Planned.Count - 1) : index;
     }
 
@@ -35,10 +35,10 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
         var session = snapshot.Plans.SelectMany(p => p.Sessions).FirstOrDefault(s => s.Id == workout.SessionId);
         return new LogView(
             session?.Name ?? "Workout",
-            new LogProgress(planned.Count, planned.Count(p => IsComplete(workout, p)), PrCount(workout)),
+            new LogProgress(planned.Count, planned.Count(p => IsComplete(workout, p)), PrCount(workout), planned.Count(p => SkipOf(workout, p) is not null)),
             exercise,
             PrimaryOf(workout, exercise),
-            [.. planned.Select(p => new ExercisePager.Chip(NameOf(p), IsComplete(workout, p)))],
+            [.. planned.Select(p => new ExercisePager.Chip(NameOf(p), IsComplete(workout, p), SkipOf(workout, p) is not null))],
             current < planned.Count - 1 ? NameOf(planned[current + 1]) : null);
     }
 
@@ -67,6 +67,34 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
 
     private static int Confirmed(Workout workout, string exerciseId) => WorkoutEdits.ConfirmedSets(workout, exerciseId).Count;
 
+    /// <summary>The skip recorded for a planned Exercise, or null when it is not skipped.</summary>
+    private static SkipInfo? SkipOf(Workout workout, SessionExercise planned) =>
+        workout.Entries.FirstOrDefault(e => e.Status == EntryStatus.Skipped && e.ExerciseId == planned.ExerciseId) is { } entry
+            ? new SkipInfo(entry.SkipReason)
+            : null;
+
+    /// <summary>Complete or skipped: nothing more to do for this Exercise.</summary>
+    private bool IsHandled(Workout workout, SessionExercise planned) => IsComplete(workout, planned) || SkipOf(workout, planned) is not null;
+
+    /// <summary>
+    /// Where the log goes after an Exercise is skipped: the next Exercise (wrapping round) that is not complete or skipped, else the last
+    /// one, whose primary button is then Finish.
+    /// </summary>
+    public int AfterSkip(Workout workout, int from)
+    {
+        var planned = workout.Planned;
+        for (var step = 1; step < planned.Count; step++)
+        {
+            var index = (from + step) % planned.Count;
+            if (!IsHandled(workout, planned[index]))
+            {
+                return index;
+            }
+        }
+
+        return Math.Max(0, planned.Count - 1);
+    }
+
     private bool IsComplete(Workout workout, SessionExercise planned) =>
         IsLoggable(planned) && Confirmed(workout, planned.ExerciseId) >= planned.Sets;
 
@@ -88,7 +116,7 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
             return new($"Next: {NameOf(planned[state.Current + 1])}", PrimaryAction.Next, state.Current + 1);
         }
 
-        var unlogged = planned.ToList().FindIndex(p => IsLoggable(p) && !IsComplete(workout, p));
+        var unlogged = planned.ToList().FindIndex(p => IsLoggable(p) && !IsHandled(workout, p));
         return unlogged < 0
             ? new("Finish", PrimaryAction.Finish)
             : new($"Next: {NameOf(planned[unlogged])}", PrimaryAction.Next, unlogged);
@@ -105,6 +133,11 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
         }
 
         var info = new ExerciseInfo(exercise.Id, exercise.Name, exercise.LogKind, PlannedText(planned), planned.Cue, exercise.IsBenchmark);
+        if (SkipOf(workout, planned) is { } skip)
+        {
+            return new(info, null, null, null, null, skip);
+        }
+
         if (RowSpec.For(exercise.LogKind) is not { } spec)
         {
             return new(info, null, null, "A text Exercise cannot be logged here yet, because a Set cannot hold text. Use Next to move on.", null);

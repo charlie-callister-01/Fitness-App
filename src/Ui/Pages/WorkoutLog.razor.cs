@@ -136,6 +136,20 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private Task ToggleBenchmarkAsync(string exerciseId, bool isBenchmark) =>
         RunExclusive(() => new ExerciseWriter(Data, Notice).ChangeAsync(exerciseId, e => ExerciseEdits.WithBenchmark(e, isBenchmark)));
 
+    /// <summary>Skips the Exercise (dropping any Sets) and moves on to the next one not yet handled; a failed save changes nothing.</summary>
+    private Task SkipAsync(string exerciseId, string? reason) =>
+        RunExclusive(async () =>
+        {
+            var result = await Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.Skip(w, exerciseId, reason));
+            if (result is CommitResult.Committed && OpenWorkout is { } saved)
+            {
+                State.Show(Builder.AfterSkip(saved, State.Current));
+            }
+        });
+
+    private Task UnskipAsync(string exerciseId) =>
+        RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.Unskip(w, exerciseId)));
+
     // ---- The primary action
 
     private Task PrimaryAsync()

@@ -1,0 +1,13 @@
+@* The Skipped state of an Exercise (C-07): the chip and the reason, if one was given. Shown in place of the Sets. *@
+<div class="fa-well fa-skipped">
+    <StateChip Kind="StateChipKind.Skipped" />
+    @if (Reason is not null)
+    {
+        <span>@Reason</span>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Reason { get; set; }
+}

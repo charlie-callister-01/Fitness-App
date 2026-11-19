@@ -57,9 +57,16 @@ else
                                 Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" Benchmark="shown.Info.IsBenchmark">
                     <Actions>
                         <ExerciseMenu ExerciseName="@shown.Info.Name" IsBenchmark="shown.Info.IsBenchmark" CanWrite="CanWrite"
-                                      OnToggleBenchmark="() => ToggleBenchmarkAsync(id, !shown.Info.IsBenchmark)" />
+                                      OnToggleBenchmark="() => ToggleBenchmarkAsync(id, !shown.Info.IsBenchmark)"
+                                      IsSkipped="shown.Skip is not null" HasSets="@(shown.Rows?.Items.Any(r => r.Marks.Stored) ?? false)"
+                                      OnSkip="reason => SkipAsync(id, reason)" OnUnskip="() => UnskipAsync(id)" />
                     </Actions>
                 </ExerciseHeader>
+
+                @if (shown.Skip is { } skip)
+                {
+                    <SkippedNotice Reason="@skip.Reason" />
+                }
 
                 @if (shown.Unavailable is { } unavailable)
                 {
