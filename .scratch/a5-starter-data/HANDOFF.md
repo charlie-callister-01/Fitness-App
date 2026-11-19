@@ -1,5 +1,7 @@
 # Handoff: write the A5 (Starter data) spec
 
+> **Superseded (19 Nov 2026).** The A5 spec is written (`docs/specs/a5-starter-data.md`) and depends on the new A4.5 (Tracks) stage. Use `.scratch/a4-5-tracks/HANDOFF.md` instead. The notes below are kept for the inputs list and background.
+
 Point a fresh chat at this file to start the A5 `/mattpocock-skills:to-spec`. File lives at `.scratch/a5-starter-data/HANDOFF.md`.
 
 **Task: run `/mattpocock-skills:to-spec` for stage A5 of the Fitness App.** Stop after the spec is written and pushed. Then follow the workflow in `CLAUDE.md` (`/to-tickets`, implement, `/mattpocock-skills:code-review`, the thermo-nuclear review, fixes, `/mattpocock-skills:pr`). Don't start the next stage until A5's PR is written.
