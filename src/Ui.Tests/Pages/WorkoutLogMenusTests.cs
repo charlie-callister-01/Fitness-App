@@ -63,12 +63,12 @@ public sealed class WorkoutLogMenusTests : BunitContext
     }
 
     [Fact]
-    public async Task Items_for_later_tickets_are_present_but_disabled_and_do_nothing()
+    public async Task The_Guide_item_is_present_but_disabled_and_does_nothing()
     {
         var (data, cut) = await OpenAsync();
         ExerciseMenuButton(cut).Click();
 
-        foreach (var label in new[] { "Swap Exercise", "Add an Exercise", "View Guide" })
+        foreach (var label in new[] { "View Guide" })
         {
             var item = Item(cut, label);
             Assert.True(item.HasAttribute("disabled"), label);

@@ -52,6 +52,7 @@ else
             else
             {
                 var id = shown.Info.ExerciseId;
+                var rowId = shown.Swap?.OriginalId ?? id;
                 <ExerciseHeader Name="@shown.Info.Name" Planned="@shown.Info.PlannedText" Cue="@shown.Info.Cue"
                                 Last="@shown.Header?.Last" Best="@shown.Header?.Best"
                                 Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" Benchmark="shown.Info.IsBenchmark">
@@ -59,9 +60,22 @@ else
                         <ExerciseMenu ExerciseName="@shown.Info.Name" IsBenchmark="shown.Info.IsBenchmark" CanWrite="CanWrite"
                                       OnToggleBenchmark="() => ToggleBenchmarkAsync(id, !shown.Info.IsBenchmark)"
                                       IsSkipped="shown.Skip is not null" HasSets="@(shown.Rows?.Items.Any(r => r.Marks.Stored) ?? false)"
-                                      OnSkip="reason => SkipAsync(id, reason)" OnUnskip="() => UnskipAsync(id)" />
+                                      OnSkip="reason => SkipAsync(rowId, reason)" OnUnskip="() => UnskipAsync(rowId)"
+                                      IsSwapped="shown.Swap is not null" IsAdded="shown.Added" Picker="shown.Picker"
+                                      OnSwap="newId => SwapAsync(rowId, newId)" OnUndoSwap="() => UndoSwapAsync(rowId)"
+                                      OnAdd="newId => AddAsync(id, newId)" OnRemoveAdded="() => RemoveAddedAsync(id)" />
                     </Actions>
                 </ExerciseHeader>
+
+                @if (shown.Swap is { } swap)
+                {
+                    <SwappedNotice WasName="@swap.OriginalName" />
+                }
+
+                @if (shown.Added)
+                {
+                    <AddedMarker />
+                }
 
                 @if (shown.Skip is { } skip)
                 {

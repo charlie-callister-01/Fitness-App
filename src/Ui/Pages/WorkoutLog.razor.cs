@@ -93,7 +93,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     private LogView ViewOf(Workout workout)
     {
-        State.ClampTo(workout.Planned.Count);
+        State.ClampTo(Builder.SlotCount(workout));
         return Builder.Build(workout);
     }
 
@@ -149,6 +149,34 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     private Task UnskipAsync(string exerciseId) =>
         RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.Unskip(w, exerciseId)));
+
+    /// <summary>Swaps the planned Exercise for another (dropping any Sets); a failed save changes nothing.</summary>
+    private Task SwapAsync(string rowId, string newExerciseId) =>
+        RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.Swap(w, rowId, newExerciseId)));
+
+    private Task UndoSwapAsync(string rowId) =>
+        RunExclusive(() => Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.UndoSwap(w, rowId)));
+
+    /// <summary>Adds an Exercise after the shown one and goes to it; a failed save changes nothing.</summary>
+    private Task AddAsync(string afterExerciseId, string newExerciseId) =>
+        RunExclusive(async () =>
+        {
+            var result = await Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.AddExercise(w, afterExerciseId, newExerciseId));
+            if (result is CommitResult.Committed && OpenWorkout is { } saved && Builder.IndexOf(saved, newExerciseId) is { } index)
+            {
+                State.Show(index);
+            }
+        });
+
+    private Task RemoveAddedAsync(string exerciseId) =>
+        RunExclusive(async () =>
+        {
+            var result = await Writer.ChangeAsync(WorkoutId, w => WorkoutEdits.RemoveAdded(w, exerciseId));
+            if (result is CommitResult.Committed)
+            {
+                State.Show(Math.Max(0, State.Current - 1));
+            }
+        });
 
     // ---- The primary action
 

@@ -35,7 +35,12 @@ public sealed record ExerciseRows(RowSpec Spec, IReadOnlyList<RowView> Items, Ro
 }
 
 /// <summary>An Exercise as shown: its rows, or the reason it has none (<see cref="Unavailable"/>).</summary>
-public sealed record ExerciseView(ExerciseInfo Info, HeaderText? Header, ExerciseRows? Rows, string? Unavailable, int? Rpe, SkipInfo? Skip = null);
+public sealed record ExerciseView(
+    ExerciseInfo Info, HeaderText? Header, ExerciseRows? Rows, string? Unavailable, int? Rpe, SkipInfo? Skip = null,
+    SwapInfo? Swap = null, bool Added = false, ExercisePickerChoices? Picker = null);
+
+/// <summary>The Exercise stands in for a planned one: the original planned Exercise (whose row Skip, Swap and Undo act on) and its name.</summary>
+public sealed record SwapInfo(string OriginalId, string OriginalName);
 
 /// <summary>An Exercise left undone on purpose: its Sets are hidden and the optional reason is shown.</summary>
 public sealed record SkipInfo(string? Reason);
@@ -53,9 +58,9 @@ public sealed record PrimaryButton(string Label, PrimaryAction Action, int? Jump
     public bool NeedsWrite => Action != PrimaryAction.Next;
 }
 
-public sealed record LogProgress(int ExerciseCount, int DoneCount, int PrCount, int SkippedCount = 0)
+public sealed record LogProgress(int ExerciseCount, int DoneCount, int PrCount, int SkippedCount = 0, int SwappedCount = 0)
 {
-    public bool AllDone => ExerciseCount > 0 && DoneCount + SkippedCount == ExerciseCount;
+    public bool AllDone => ExerciseCount > 0 && DoneCount + SkippedCount + SwappedCount == ExerciseCount;
 }
 
 public sealed record LogView(

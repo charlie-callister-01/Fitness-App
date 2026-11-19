@@ -1,0 +1,102 @@
+@* C-14 ExercisePicker: a sheet to pick one Exercise from the library, shared by Swap, Add an Exercise and (later) the Plan editor. A Similar group
+   first, then All Exercises; a search box only when the library is big; an optional confirm step (used when swapping would remove Sets).
+   It knows nothing about Workouts: the owner passes the choices and hears which Exercise was picked. *@
+<Sheet Open="Open" Title="@Title" Opener="Opener" OnClose="OnClose">
+    <ChildContent>
+        @if (_chosen is not null && ConfirmMessage is not null)
+        {
+            <p>@ConfirmMessage</p>
+        }
+        else
+        {
+            @if (Choices.ShowSearch)
+            {
+                <input type="search" class="fa-picker__search" aria-label="Search Exercises" placeholder="Search Exercises"
+                       value="@_search" @oninput="OnSearch" />
+            }
+            @if (Similar.Count == 0 && Others.Count == 0)
+            {
+                <div class="fa-picker__empty fa-muted">
+                    @(_search.Length > 0 ? "No match." : "No other Exercises in your library.")
+                    <button type="button" class="fa-btn fa-btn--secondary" disabled="disabled">Add a new Exercise</button>
+                    <span>Adding a new Exercise comes with the Exercise library.</span>
+                </div>
+            }
+            else
+            {
+                <ExercisePickerGroup Heading="Similar" Items="Similar" OnPick="Pick" />
+                <ExercisePickerGroup Heading="All Exercises" Items="Others" OnPick="Pick" />
+            }
+        }
+    </ChildContent>
+    <Actions>
+        @if (_chosen is not null && ConfirmMessage is not null)
+        {
+            <Button Variant="ButtonVariant.Primary" OnClick="Confirm">@ConfirmLabel</Button>
+        }
+        <Button Variant="ButtonVariant.Secondary" OnClick="OnClose">Cancel</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    private string _search = "";
+    private string? _chosen;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public ExercisePickerChoices Choices { get; set; } = new([], [], false);
+
+    [Parameter]
+    public ElementReference? Opener { get; set; }
+
+    /// <summary>When set, picking an Exercise first shows this message and waits for <see cref="ConfirmLabel"/>.</summary>
+    [Parameter]
+    public string? ConfirmMessage { get; set; }
+
+    [Parameter]
+    public string ConfirmLabel { get; set; } = "Continue";
+
+    /// <summary>The owner chose an Exercise (after the confirm step, when there is one). Passes its ID.</summary>
+    [Parameter]
+    public EventCallback<string> OnPick { get; set; }
+
+    /// <summary>Asks the owner of the sheet to close it, with nothing changed.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private IReadOnlyList<Core.Model.Exercise> Similar => Filter(Choices.Similar);
+
+    private IReadOnlyList<Core.Model.Exercise> Others => Filter(Choices.Others);
+
+    protected override void OnParametersSet()
+    {
+        if (!Open)
+        {
+            _search = "";
+            _chosen = null;
+        }
+    }
+
+    private IReadOnlyList<Core.Model.Exercise> Filter(IReadOnlyList<Core.Model.Exercise> items) =>
+        _search.Length == 0 ? items : [.. items.Where(e => e.Name.Contains(_search, StringComparison.OrdinalIgnoreCase))];
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString()?.Trim() ?? "";
+
+    private Task Pick(string id)
+    {
+        if (ConfirmMessage is null)
+        {
+            return OnPick.InvokeAsync(id);
+        }
+
+        _chosen = id;
+        return Task.CompletedTask;
+    }
+
+    private Task Confirm() => _chosen is { } id ? OnPick.InvokeAsync(id) : Task.CompletedTask;
+}

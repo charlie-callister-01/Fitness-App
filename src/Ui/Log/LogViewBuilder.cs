@@ -16,6 +16,9 @@ namespace Ui.Log;
 /// </summary>
 public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
 {
+    /// <summary>The picker gets a search box once the library is bigger than this.</summary>
+    private const int MaxLibraryWithoutSearch = 20;
+
     private readonly UnitConverter _units = new(snapshot.Settings);
 
     public Exercise? ExerciseOf(string id) => snapshot.Exercises.FirstOrDefault(e => e.Id == id);
@@ -23,24 +26,40 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
     /// <summary>The first Exercise still to log, else the last one: where a reopened Workout lands.</summary>
     public int FirstIncomplete(Workout workout)
     {
-        var index = workout.Planned.ToList().FindIndex(p => !IsHandled(workout, p));
-        return index < 0 ? Math.Max(0, workout.Planned.Count - 1) : index;
+        var slots = LogSlots.Of(workout);
+        var index = slots.ToList().FindIndex(s => !s.Added && !IsComplete(workout, s.Row) && SkipOf(workout, s.Row) is null);
+        return index < 0 ? Math.Max(0, slots.Count - 1) : index;
     }
 
     public LogView Build(Workout workout)
     {
-        var planned = workout.Planned;
+        var planned = LogSlots.Of(workout);
         var current = state.Current;
         var exercise = planned.Count == 0 ? null : ExerciseViewOf(workout, planned[current]);
         var session = snapshot.Plans.SelectMany(p => p.Sessions).FirstOrDefault(s => s.Id == workout.SessionId);
         return new LogView(
             session?.Name ?? "Workout",
-            new LogProgress(planned.Count, planned.Count(p => IsComplete(workout, p)), PrCount(workout), planned.Count(p => SkipOf(workout, p) is not null)),
+            ProgressOf(workout, planned),
             exercise,
             PrimaryOf(workout, exercise),
-            [.. planned.Select(p => new ExercisePager.Chip(NameOf(p), IsComplete(workout, p), SkipOf(workout, p) is not null))],
-            current < planned.Count - 1 ? NameOf(planned[current + 1]) : null);
+            [.. planned.Select(s => new ExercisePager.Chip(NameOf(s.Row), IsComplete(workout, s.Row), SkipOf(workout, s.Row) is not null, s.SwappedFromId is not null))],
+            current < planned.Count - 1 ? NameOf(planned[current + 1].Row) : null);
     }
+
+    /// <summary>Where the Exercise with this ID is in the pager, or null when it is not in the Workout.</summary>
+    public int? IndexOf(Workout workout, string exerciseId) =>
+        LogSlots.Of(workout).ToList().FindIndex(s => s.Row.ExerciseId == exerciseId) is var index and >= 0 ? index : null;
+
+    public int SlotCount(Workout workout) => LogSlots.Of(workout).Count;
+
+    // An added Exercise only counts once logged; a swapped one counts as handled, so neither holds the count or Finish back.
+    private LogProgress ProgressOf(Workout workout, IReadOnlyList<LogSlot> slots) =>
+        new(
+            slots.Count(s => !s.Added || IsComplete(workout, s.Row)),
+            slots.Count(s => IsComplete(workout, s.Row)),
+            PrCount(workout),
+            slots.Count(s => SkipOf(workout, s.Row) is not null),
+            slots.Count(s => s.SwappedFromId is not null && !IsComplete(workout, s.Row)));
 
     /// <summary>The toast for the Set just confirmed, or null when it is not a PR.</summary>
     public string? ToastFor(Workout workout, string exerciseId, int row)
@@ -73,8 +92,9 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
             ? new SkipInfo(entry.SkipReason)
             : null;
 
-    /// <summary>Complete or skipped: nothing more to do for this Exercise.</summary>
-    private bool IsHandled(Workout workout, SessionExercise planned) => IsComplete(workout, planned) || SkipOf(workout, planned) is not null;
+    /// <summary>Complete, skipped or swapped, or an optional added Exercise: nothing more is needed for this one.</summary>
+    private bool IsHandled(Workout workout, LogSlot slot) =>
+        slot.Added || slot.SwappedFromId is not null || IsComplete(workout, slot.Row) || SkipOf(workout, slot.Row) is not null;
 
     /// <summary>
     /// Where the log goes after an Exercise is skipped: the next Exercise (wrapping round) that is not complete or skipped, else the last
@@ -82,7 +102,7 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
     /// </summary>
     public int AfterSkip(Workout workout, int from)
     {
-        var planned = workout.Planned;
+        var planned = LogSlots.Of(workout);
         for (var step = 1; step < planned.Count; step++)
         {
             var index = (from + step) % planned.Count;
@@ -105,7 +125,7 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
     /// </summary>
     private PrimaryButton PrimaryOf(Workout workout, ExerciseView? exercise)
     {
-        var planned = workout.Planned;
+        var planned = LogSlots.Of(workout);
         if (exercise?.Rows?.CurrentRow is not null)
         {
             return new("Confirm Set", PrimaryAction.ConfirmSet);
@@ -113,18 +133,33 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
 
         if (state.Current < planned.Count - 1)
         {
-            return new($"Next: {NameOf(planned[state.Current + 1])}", PrimaryAction.Next, state.Current + 1);
+            return new($"Next: {NameOf(planned[state.Current + 1].Row)}", PrimaryAction.Next, state.Current + 1);
         }
 
-        var unlogged = planned.ToList().FindIndex(p => IsLoggable(p) && !IsHandled(workout, p));
+        var unlogged = planned.ToList().FindIndex(s => IsLoggable(s.Row) && !IsHandled(workout, s));
         return unlogged < 0
             ? new("Finish", PrimaryAction.Finish)
-            : new($"Next: {NameOf(planned[unlogged])}", PrimaryAction.Next, unlogged);
+            : new($"Next: {NameOf(planned[unlogged].Row)}", PrimaryAction.Next, unlogged);
     }
 
     // ---- One Exercise
 
-    private ExerciseView ExerciseViewOf(Workout workout, SessionExercise planned)
+    private ExerciseView ExerciseViewOf(Workout workout, LogSlot slot)
+    {
+        var view = CoreViewOf(workout, slot.Row);
+        var swap = slot.SwappedFromId is { } original ? new SwapInfo(original, ExerciseOf(original)?.Name ?? "Exercise") : null;
+        return view with { Swap = swap, Added = slot.Added, Picker = ExerciseOf(slot.Row.ExerciseId) is { } e ? PickerFor(workout, e) : null };
+    }
+
+    /// <summary>The Exercises the picker offers for an Exercise in hand: those sharing a tag with it first (the Core ranking), then the rest.</summary>
+    private ExercisePickerChoices PickerFor(Workout workout, Exercise current)
+    {
+        var ranked = SimilarExercises.Rank(current, snapshot.Exercises, workout);
+        var similar = ranked.Where(e => SimilarExercises.SharedTagCount(current, e) > 0).ToList();
+        return new ExercisePickerChoices(similar, [.. ranked.Except(similar)], snapshot.Exercises.Count > MaxLibraryWithoutSearch);
+    }
+
+    private ExerciseView CoreViewOf(Workout workout, SessionExercise planned)
     {
         if (ExerciseOf(planned.ExerciseId) is not { } exercise)
         {
@@ -231,7 +266,7 @@ public sealed class LogViewBuilder(DataSnapshot snapshot, LogEditState state)
     }
 
     private int PrCount(Workout workout) =>
-        workout.Planned.Select(p => p.ExerciseId).Distinct()
+        LogSlots.Of(workout).Select(s => s.Row.ExerciseId).Distinct()
             .Select(ExerciseOf).OfType<Exercise>()
             .Count(e => RowSpec.IsLoggable(e.LogKind) && PrOf(workout, e).Feedback.IsPr);
 }

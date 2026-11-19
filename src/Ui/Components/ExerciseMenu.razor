@@ -6,16 +6,24 @@
 
 <Sheet Open="_open" Title="@ExerciseName" Opener="_opener" OnClose="CloseMenu">
     <ChildContent>
-        <MenuItem Glyph="IconName.Swap" Label="Swap Exercise" Hint="Similar Exercises first" Disabled="true" />
+        <MenuItem Glyph="IconName.Swap" Label="Swap Exercise" Hint="Similar Exercises first" Disabled="@(!CanWrite || IsAdded || Picker is null)" OnClick="StartSwap" />
+        @if (IsSwapped)
+        {
+            <MenuItem Glyph="IconName.Undo" Label="Undo swap" Hint="@(HasSets ? "Not after a Set is logged" : "Back to the planned Exercise")" Disabled="@(!CanWrite || HasSets)" OnClick="UndoSwap" />
+        }
         @if (IsSkipped)
         {
             <MenuItem Glyph="IconName.Skip" Label="Un-skip Exercise" Hint="Back to not yet done" Disabled="@(!CanWrite)" OnClick="Unskip" />
         }
-        else
+        else if (!IsAdded)
         {
             <MenuItem Glyph="IconName.Skip" Label="Skip Exercise" Hint="Pick a reason (optional)" Disabled="@(!CanWrite)" OnClick="StartSkip" />
         }
-        <MenuItem Glyph="IconName.AddExercise" Label="Add an Exercise" Hint="Adds after this one" Disabled="true" />
+        <MenuItem Glyph="IconName.AddExercise" Label="Add an Exercise" Hint="Adds after this one" Disabled="@(!CanWrite || Picker is null)" OnClick="StartAdd" />
+        @if (IsAdded)
+        {
+            <MenuItem Glyph="IconName.Delete" Label="Remove Exercise" Hint="@(HasSets ? "Not after a Set is logged" : "Takes it out of this Workout")" Disabled="@(!CanWrite || HasSets)" OnClick="RemoveAdded" />
+        }
         <MenuItem Glyph="IconName.Benchmark" Label="@(IsBenchmark ? "Unmark as benchmark" : "Mark as benchmark")"
                   Hint="Results go to Progress › Benchmarks" Disabled="@(!CanWrite)" OnClick="OnToggleBenchmark" />
         <MenuItem Glyph="IconName.Guide" Label="View Guide" Hint="How to do it, cues, mistakes" Disabled="true" />
@@ -27,9 +35,25 @@
 
 <SkipSheet Open="_skipping" ExerciseName="@ExerciseName" HasSets="HasSets" Opener="_opener" OnClose="CloseSkip" OnSkip="Skip" />
 
+@if (Picker is { } choices)
+{
+    <ExercisePicker Open="_picking == PickerMode.Swap" Title="@($"Swap {ExerciseName}")" Choices="choices" Opener="_opener" OnClose="ClosePicker"
+                    ConfirmMessage="@(HasSets ? $"{ExerciseName} has confirmed Sets. The Sets will be removed if you swap it." : null)"
+                    ConfirmLabel="Remove Sets and swap" OnPick="Swap" />
+    <ExercisePicker Open="_picking == PickerMode.Add" Title="Add an Exercise" Choices="choices" Opener="_opener" OnClose="ClosePicker" OnPick="Add" />
+}
+
 @code {
+    private enum PickerMode
+    {
+        None,
+        Swap,
+        Add,
+    }
+
     private bool _open;
     private bool _skipping;
+    private PickerMode _picking;
     private ElementReference _opener;
 
     /// <summary>The Exercise is skipped: the menu offers Un-skip in place of Skip.</summary>
@@ -46,6 +70,32 @@
 
     [Parameter]
     public EventCallback OnUnskip { get; set; }
+
+    /// <summary>Another Exercise stands in for a planned one: the menu offers Undo swap.</summary>
+    [Parameter]
+    public bool IsSwapped { get; set; }
+
+    /// <summary>The Exercise was added during the Workout: the menu offers Remove in place of Skip.</summary>
+    [Parameter]
+    public bool IsAdded { get; set; }
+
+    /// <summary>What the picker offers for Swap and Add; null when there is nothing to pick from (both items are disabled).</summary>
+    [Parameter]
+    public ExercisePickerChoices? Picker { get; set; }
+
+    /// <summary>The owner picked the Exercise to swap in (its ID), after confirming when Sets would go.</summary>
+    [Parameter]
+    public EventCallback<string> OnSwap { get; set; }
+
+    [Parameter]
+    public EventCallback OnUndoSwap { get; set; }
+
+    /// <summary>The owner picked an Exercise to add after this one (its ID).</summary>
+    [Parameter]
+    public EventCallback<string> OnAdd { get; set; }
+
+    [Parameter]
+    public EventCallback OnRemoveAdded { get; set; }
 
     [Parameter, EditorRequired]
     public string ExerciseName { get; set; } = "";
@@ -76,6 +126,42 @@
     {
         _skipping = false;
         await OnSkip.InvokeAsync(reason);
+    }
+
+    private void StartSwap() => StartPicker(PickerMode.Swap);
+
+    private void StartAdd() => StartPicker(PickerMode.Add);
+
+    private void StartPicker(PickerMode mode)
+    {
+        _open = false;
+        _picking = mode;
+    }
+
+    private void ClosePicker() => _picking = PickerMode.None;
+
+    private async Task Swap(string exerciseId)
+    {
+        _picking = PickerMode.None;
+        await OnSwap.InvokeAsync(exerciseId);
+    }
+
+    private async Task Add(string exerciseId)
+    {
+        _picking = PickerMode.None;
+        await OnAdd.InvokeAsync(exerciseId);
+    }
+
+    private async Task UndoSwap()
+    {
+        _open = false;
+        await OnUndoSwap.InvokeAsync();
+    }
+
+    private async Task RemoveAdded()
+    {
+        _open = false;
+        await OnRemoveAdded.InvokeAsync();
     }
 
     private async Task Unskip()

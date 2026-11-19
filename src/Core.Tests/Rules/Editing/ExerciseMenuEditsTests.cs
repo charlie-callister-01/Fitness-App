@@ -231,4 +231,19 @@ public class ExerciseMenuEditsTests
         Assert.Equal(exercise with { IsBenchmark = true }, on);
         Assert.Equal(exercise, ExerciseEdits.WithBenchmark(on, false));
     }
+
+    // Logging into a swapped entry
+
+    [Fact]
+    public void Sets_are_logged_into_the_swapped_entry_rather_than_a_new_Done_entry()
+    {
+        var swapped = WorkoutEdits.Swap(Planned(), "squat", "legpress");
+
+        var logged = WorkoutEdits.WithRpe(swapped, "legpress", 8);
+
+        var entry = Assert.Single(logged.Entries);
+        Assert.Equal(EntryStatus.Swapped, entry.Status);
+        Assert.Equal(8, entry.Rpe);
+        Assert.Same(entry, WorkoutEdits.FindDoneEntry(logged, "legpress"));
+    }
 }

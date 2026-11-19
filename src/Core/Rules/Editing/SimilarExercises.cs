@@ -25,6 +25,9 @@ public static class SimilarExercises
             .ToList();
     }
 
+    /// <summary>How many tags two Exercises share; 0 when either has none. Above 0 means "similar" in the picker.</summary>
+    public static int SharedTagCount(Exercise a, Exercise b) => Shared(a.Tags, b.Tags);
+
     private static int Shared(ExerciseTags? a, ExerciseTags? b) =>
         a is null || b is null
             ? 0

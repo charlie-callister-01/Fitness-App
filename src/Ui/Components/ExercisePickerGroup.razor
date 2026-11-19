@@ -1,0 +1,47 @@
+@* One group of the ExercisePicker: a heading and a row per Exercise (an icon for its log kind, the name and its tags). Nothing when the group is empty. *@
+@using Core.Model
+@if (Items.Count > 0)
+{
+    <section class="fa-picker__section">
+        <h3 class="fa-label fa-picker__group">@Heading</h3>
+        @foreach (var exercise in Items)
+        {
+            var id = exercise.Id;
+            <button type="button" class="fa-picker__row" @onclick="() => OnPick.InvokeAsync(id)">
+                <span class="fa-picker__icon"><Icon Name="IconFor(exercise.LogKind)" /></span>
+                <span class="fa-picker__text">
+                    <span class="fa-picker__row-name">@exercise.Name</span>
+                    @if (TagsOf(exercise) is { Length: > 0 } tags)
+                    {
+                        <span class="fa-picker__tags fa-muted">@tags</span>
+                    }
+                </span>
+            </button>
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Heading { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Exercise> Items { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<string> OnPick { get; set; }
+
+    private static string TagsOf(Exercise exercise) =>
+        exercise.Tags is { } tags ? string.Join(" · ", tags.MuscleGroups.Concat(tags.Equipment).Concat(tags.MovementPatterns)) : "";
+
+    private static IconName IconFor(LogKind kind) => kind switch
+    {
+        LogKind.Load or LogKind.BodyweightLoad or LogKind.Carry => IconName.MaxSet,
+        LogKind.Seconds or LogKind.Minutes or LogKind.Time => IconName.Timer,
+        LogKind.DistanceKm or LogKind.DistanceM => IconName.Race,
+        LogKind.BodyMeasurementKg or LogKind.BodyMeasurementCm => IconName.Weight,
+        LogKind.Text => IconName.Note,
+        LogKind.TickOnly => IconName.Check,
+        _ => IconName.Plus,
+    };
+}

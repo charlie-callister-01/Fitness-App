@@ -10,9 +10,9 @@ namespace Core.Rules.Editing;
 /// </summary>
 public static class WorkoutEdits
 {
-    /// <summary>The entry holding the Sets done for an Exercise, or null before the first one.</summary>
+    /// <summary>The entry holding the Sets logged for an Exercise (done, or swapped in), or null before the first one.</summary>
     public static WorkoutEntry? FindDoneEntry(Workout workout, string exerciseId) =>
-        workout.Entries.FirstOrDefault(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done);
+        workout.Entries.FirstOrDefault(e => e.ExerciseId == exerciseId && IsLogged(e));
 
     /// <summary>The confirmed Sets of an Exercise, in order; empty before the first one.</summary>
     public static IReadOnlyList<WorkoutSet> ConfirmedSets(Workout workout, string exerciseId) =>
@@ -120,6 +120,9 @@ public static class WorkoutEdits
         return workout with { Entries = entries };
     }
 
+    // Sets are logged into a Done entry, or into a swapped entry (the replacement Exercise is logged like any other).
+    private static bool IsLogged(WorkoutEntry entry) => entry.Status is EntryStatus.Done or EntryStatus.Swapped;
+
     private static bool IsInWorkout(Workout workout, string exerciseId) =>
         workout.Planned.Any(p => p.ExerciseId == exerciseId) || workout.Entries.Any(e => e.ExerciseId == exerciseId);
 
@@ -153,7 +156,7 @@ public static class WorkoutEdits
     private static Workout Update(Workout workout, string exerciseId, Func<WorkoutEntry, WorkoutEntry> change)
     {
         var entries = workout.Entries.ToList();
-        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && e.Status == EntryStatus.Done);
+        var index = entries.FindIndex(e => e.ExerciseId == exerciseId && IsLogged(e));
         if (index < 0)
         {
             entries.Add(change(new WorkoutEntry(exerciseId, EntryStatus.Done, null, null, null, [])));

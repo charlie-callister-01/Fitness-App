@@ -77,4 +77,14 @@ public class SimilarExercisesTests
 
         Assert.Equal(["x", "y"], Ids(SimilarExercises.Rank(current, library, Empty)));
     }
+
+    [Fact]
+    public void SharedTagCount_counts_shared_tags_and_is_zero_when_either_Exercise_has_none()
+    {
+        var current = Ex("squat", "Squat", ["legs"], ["barbell"]);
+
+        Assert.Equal(2, SimilarExercises.SharedTagCount(current, Ex("a", "A", ["Legs"], ["barbell"])));
+        Assert.Equal(0, SimilarExercises.SharedTagCount(current, Ex("b", "B", ["arms"])));
+        Assert.Equal(0, SimilarExercises.SharedTagCount(current, Ex("c", "C")));
+    }
 }
