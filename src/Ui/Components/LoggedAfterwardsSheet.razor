@@ -1,0 +1,73 @@
+@* The Logged afterwards date sheet (design 8.6): one native date input, no earlier limit, nothing after today. Save date hands the date to the
+   owner of the sheet, which refuses a day after today in plain words; Cancel, Escape and a tap outside close it without changing anything.
+   The date starts on yesterday, the usual case. *@
+<Sheet Open="Open" Title="Logged afterwards" OnClose="OnCancel">
+    <ChildContent>
+        <p>Pick the day this Workout happened. It has no timers and no duration.</p>
+        <label class="fa-datefield">
+            <span class="fa-label">Date</span>
+            <input class="fa-datefield__control" type="date" max="@Format(Today)" value="@_value" @onchange="e => _value = (string?)e.Value" />
+        </label>
+        @if ((Message ?? _local) is { } message)
+        {
+            <p class="fa-well fa-datemessage" role="alert">@message</p>
+        }
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Primary" Disabled="Saving" OnClick="SaveAsync">Save date</Button>
+        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnCancel">Cancel</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    private const string DateFormat = "yyyy-MM-dd";
+
+    private string? _value;
+    private string? _local;
+    private bool _wasOpen;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    /// <summary>Today, which is the latest date the input offers.</summary>
+    [Parameter]
+    public DateOnly Today { get; set; }
+
+    [Parameter]
+    public bool Saving { get; set; }
+
+    /// <summary>Why the date was refused, in plain words.</summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public EventCallback<DateOnly> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Open && !_wasOpen)
+        {
+            _value = Format(Today.AddDays(-1));
+            _local = null;
+        }
+
+        _wasOpen = Open;
+    }
+
+    private static string Format(DateOnly date) => date.ToString(DateFormat, System.Globalization.CultureInfo.InvariantCulture);
+
+    private Task SaveAsync()
+    {
+        if (!DateOnly.TryParseExact(_value, DateFormat, out var date))
+        {
+            _local = "Choose the day this Workout happened.";
+            return Task.CompletedTask;
+        }
+
+        _local = null;
+        return OnSave.InvokeAsync(date);
+    }
+}

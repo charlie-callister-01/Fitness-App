@@ -31,7 +31,7 @@ public static class WorkoutSummaryBuilder
             doneCount,
             workout.Planned.Count,
             outcome.IsPartial,
-            Prs(workout, others, history.Exercises),
+            Prs(workout, others.Where(w => w.Date <= workout.Date).ToList(), history.Exercises),
             rows,
             PainCheckText(workout.PainCheck, history.Exercises),
             StreakLine(withThis, today),
@@ -41,7 +41,8 @@ public static class WorkoutSummaryBuilder
 
     private static bool CountsAsDone(WorkoutEntry e) => e.Status is EntryStatus.Done or EntryStatus.Swapped;
 
-    // One PR per Exercise: the Workout's PR from the per-Workout PR rule, with the best that stood before this Workout.
+    // One PR per Exercise: the Workout's PR from the per-Workout PR rule, with the best that stood before this Workout. "others" is the
+    // history on or before the Workout's own date, so a Workout logged afterwards is judged as of the day it happened.
     private static IReadOnlyList<SummaryPr> Prs(Workout workout, IReadOnlyList<Workout> others, IReadOnlyList<Exercise> exercises)
     {
         var prs = new List<SummaryPr>();

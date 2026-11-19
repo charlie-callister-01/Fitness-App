@@ -30,6 +30,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private bool _screenLocked;
     private RestCountdown _rest = default!;
     private FinishFlow _finish = default!;
+    private LoggedAfterwardsFlow _afterwards = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
 
@@ -94,18 +95,22 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _finish = new FinishFlow(Data, Notice, Clock, Ids);
         _finish.Changed += OnDataChanged;
         _finish.Finished += _rest.Stop;
+        _afterwards = new LoggedAfterwardsFlow(Data, Notice);
+        _afterwards.Changed += OnDataChanged;
+        _afterwards.Redated += _rest.Stop;
         RestSetting.Changed += OnRestSettingChanged;
     }
 
-    /// <summary>The screen stays on while a Workout is open, and is released the moment it finishes.</summary>
+    /// <summary>The screen stays on while a Workout with timers is open (not one logged afterwards), and is released the moment it finishes.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_screenLocked && OpenWorkout is not null)
+        var wantsScreenLock = OpenWorkout is { LoggedAfterwards: false };
+        if (!_screenLocked && wantsScreenLock)
         {
             _screenLocked = true;
             await WakeLock.AcquireAsync();
         }
-        else if (_screenLocked && OpenWorkout is null)
+        else if (_screenLocked && !wantsScreenLock)
         {
             _screenLocked = false;
             await WakeLock.ReleaseAsync();
@@ -117,6 +122,8 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         Data.Changed -= OnDataChanged;
         _finish.Changed -= OnDataChanged;
         _finish.Finished -= _rest.Stop;
+        _afterwards.Changed -= OnDataChanged;
+        _afterwards.Redated -= _rest.Stop;
         RestSetting.Changed -= OnRestSettingChanged;
         _rest.Dispose();
         if (_screenLocked)
@@ -144,6 +151,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
         _landedFor = WorkoutId;
         _finish.Reset();
+        _afterwards.Reset();
         if (OpenWorkout is { } workout)
         {
             State.Reset(Builder.FirstIncomplete(workout), IsResumed(workout));
@@ -293,7 +301,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
                     if (result is CommitResult.Committed)
                     {
                         State.Confirmed(key);
-                        _rest.Start(RestSetting.Seconds);
+                        _rest.Start(OpenWorkout is { LoggedAfterwards: true } ? 0 : RestSetting.Seconds);
                         State.Toast = OpenWorkout is { } saved ? Builder.ToastFor(saved, info.ExerciseId, row.Index) : null;
                     }
                 });
@@ -307,6 +315,25 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private Task AnswerPainAsync(PainAnswer answer) => _finish.AnswerAsync(WorkoutId, answer, CanWrite);
 
     private Task ConfirmPartialAsync() => _finish.ConfirmPartialAsync(WorkoutId, CanWrite);
+
+    /// <summary>The Workout menu's Logged afterwards item: the date sheet, or the undo when the Workout already is one.</summary>
+    private Task LoggedAfterwardsAsync()
+    {
+        if (OpenWorkout is not { } workout)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!workout.LoggedAfterwards)
+        {
+            _afterwards.Begin();
+            return Task.CompletedTask;
+        }
+
+        return _afterwards.UndoAsync(WorkoutId, Today, CanWrite);
+    }
+
+    private Task SaveDateAsync(DateOnly date) => _afterwards.SaveAsync(WorkoutId, date, Today, CanWrite);
 
     private bool CanAct => !_busy && CanWrite;
 

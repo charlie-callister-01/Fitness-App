@@ -1,5 +1,6 @@
 @* The Workout menu (design 8.4), in the log's top bar: rest timer, Theme, Mode, Logged afterwards and Finish Workout. The rest timer choice
-   (remembered on this device), Theme and Mode work here; Finish Workout starts the finish flow; Logged afterwards is listed, disabled, for a later ticket. *@
+   (remembered on this device), Theme and Mode work here; Finish Workout starts the finish flow; Logged afterwards asks the page for a date (or,
+   when the Workout already is one, undoes it). *@
 @implements IDisposable
 @inject ThemeService Themes
 @inject RestTimerSetting RestTimer
@@ -13,8 +14,10 @@
         <MenuChoices Label="Rest timer" Choices="RestChoices" />
         <MenuChoices Label="Theme" Choices="ThemeChoices" />
         <MenuChoices Label="Mode" Choices="ModeChoices" />
-        <MenuItem Glyph="IconName.LoggedAfterwards" Label="Logged afterwards" Hint="For a gym visit without the phone" Disabled="true" />
-        <MenuItem Glyph="IconName.Check" Label="Finish Workout" Hint="@FinishHint" Disabled="!CanFinish" OnClick="FinishAsync" />
+        <MenuItem Glyph="IconName.LoggedAfterwards" Label="@(IsLoggedAfterwards ? "Undo Logged afterwards" : "Logged afterwards")"
+                  Hint="@(IsLoggedAfterwards ? "Back to today, with the timers" : "For a gym visit without the phone")"
+                  Disabled="!CanWrite" OnClick="LoggedAfterwardsAsync" />
+        <MenuItem Glyph="IconName.Check" Label="Finish Workout" Hint="@FinishHint" Disabled="!CanWrite" OnClick="FinishAsync" />
     </ChildContent>
     <Actions>
         <Button Variant="ButtonVariant.Secondary" OnClick="CloseMenu">Back to the Set</Button>
@@ -29,9 +32,23 @@
     [Parameter]
     public string? FinishHint { get; set; }
 
-    /// <summary>Finish Workout can be used (the window can save).</summary>
+    /// <summary>Finish Workout and Logged afterwards can be used (the window can save).</summary>
     [Parameter]
-    public bool CanFinish { get; set; }
+    public bool CanWrite { get; set; }
+
+    /// <summary>The Workout is already Logged afterwards: the item undoes it instead of asking for a date.</summary>
+    [Parameter]
+    public bool IsLoggedAfterwards { get; set; }
+
+    /// <summary>Logged afterwards was chosen; the menu has closed. The page asks for the date, or undoes it when the Workout already is one.</summary>
+    [Parameter]
+    public EventCallback OnLoggedAfterwards { get; set; }
+
+    private Task LoggedAfterwardsAsync()
+    {
+        _open = false;
+        return OnLoggedAfterwards.InvokeAsync();
+    }
 
     /// <summary>Finish Workout was chosen; the menu has closed.</summary>
     [Parameter]

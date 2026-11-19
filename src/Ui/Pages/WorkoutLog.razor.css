@@ -79,3 +79,11 @@
     outline: var(--border-thick) solid var(--focus);
     outline-offset: var(--outline-offset);
 }
+
+/* The Logged afterwards banner: glyph, words and the Workout's date, never colour alone. */
+.log__afterwards {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text);
+}

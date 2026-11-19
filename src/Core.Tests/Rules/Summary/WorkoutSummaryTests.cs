@@ -117,6 +117,30 @@ public class WorkoutSummaryTests
         Assert.Equal("w-old", Assert.Single(summary.Prs).PreviousBest!.WorkoutId);
     }
 
+    [Fact]
+    public void A_past_dated_workout_is_judged_against_history_up_to_its_own_date()
+    {
+        var before = Earlier("w-before", "2026-11-02", "squat", Set(kg: 20, reps: 8));
+        var after = Earlier("w-after", "2026-11-09", "squat", Set(kg: 30, reps: 8));
+        var pastDated = Make(entries: [Entry("squat", null, Set(kg: 22, reps: 8))], afterwards: true, date: new DateOnly(2026, 11, 5));
+
+        var summary = Build(pastDated, [before, after]);
+
+        var pr = Assert.Single(summary.Prs);
+        Assert.Equal(22, pr.Set.WeightKg);
+        Assert.Equal("w-before", pr.PreviousBest!.WorkoutId);
+    }
+
+    [Fact]
+    public void A_past_dated_workout_is_no_pr_when_it_does_not_beat_its_own_past_whatever_came_later()
+    {
+        var before = Earlier("w-before", "2026-11-02", "squat", Set(kg: 30, reps: 8));
+        var after = Earlier("w-after", "2026-11-09", "squat", Set(kg: 10, reps: 8));
+        var pastDated = Make(entries: [Entry("squat", null, Set(kg: 22, reps: 8))], afterwards: true, date: new DateOnly(2026, 11, 5));
+
+        Assert.Empty(Build(pastDated, [before, after]).Prs);
+    }
+
     // Outcomes
 
     [Fact]

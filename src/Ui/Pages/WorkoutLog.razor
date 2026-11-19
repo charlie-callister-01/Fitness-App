@@ -41,11 +41,19 @@ else
                 <p class="fa-muted log__progress" aria-live="polite">@progress.DoneCount of @progress.ExerciseCount done · @progress.PrCount @(progress.PrCount == 1 ? "PR" : "PRs")</p>
             </div>
             <WorkoutMenu FinishHint="@($"{progress.DoneCount} of {progress.ExerciseCount} Exercises done")"
-                         CanFinish="CanWrite" OnFinish="FinishAsync" />
+                         CanWrite="CanWrite" OnFinish="FinishAsync"
+                         IsLoggedAfterwards="workout.LoggedAfterwards" OnLoggedAfterwards="LoggedAfterwardsAsync" />
         </header>
 
         <div class="log__body">
             <ExercisePager Chips="view.Chips" Current="State.Current" OnJump="State.Show" />
+            @if (workout.LoggedAfterwards)
+            {
+                <p class="fa-well log__notice log__afterwards" role="status">
+                    <Icon Name="IconName.LoggedAfterwards" />
+                    <span>@LoggedAfterwardsFlow.BannerText(workout.Date)</span>
+                </p>
+            }
             @if (State.Resumed)
             {
                 <p class="fa-well log__notice" role="status">Resumed where you left off</p>
@@ -151,9 +159,11 @@ else
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@_rest.Label"Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
+        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@(workout.LoggedAfterwards ? null : _rest.Label)" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
                     StepAmount="@view.Exercise?.Rows?.Tools.StepAmount" StepUnit="@(view.Exercise?.Rows?.Tools.Step?.Unit ?? "")" OnStep="Step" />
     </div>
+    <LoggedAfterwardsSheet Open="_afterwards.Open" Today="Today" Saving="_afterwards.Saving" Message="@_afterwards.Message"
+                           OnSave="SaveDateAsync" OnCancel="_afterwards.Cancel" />
     <PartialPrompt Open="_finish.Phase == FinishPhase.PartialPrompt" Done="_finish.PartialCounts.Done" Planned="_finish.PartialCounts.Planned"
                    Saving="_finish.Saving" OnFinish="ConfirmPartialAsync" OnKeepGoing="_finish.KeepGoing" />
 }

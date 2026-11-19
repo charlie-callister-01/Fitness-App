@@ -39,11 +39,17 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
 
     private static IElement Reps(IRenderedComponent<WorkoutLog> cut, int set) => cut.Find($"input[aria-label='Reps, Set {set}']");
 
+    /// <summary>
+    /// Confirms the Set and waits until the page shows it done. Confirm saves first and only then starts the countdown, and a click
+    /// returns before that save has finished, so a test that read the screen straight after the click could see the previous render
+    /// (the flaky "Rest 1:00" this used to give under load). The done row appears in the render that follows the countdown start.
+    /// </summary>
     private static void ConfirmSet(IRenderedComponent<WorkoutLog> cut, int set)
     {
         Weight(cut, set).Input("50");
         Reps(cut, set).Input("8");
         cut.Find(".fa-confirmbar .fa-btn--primary").Click();
+        cut.WaitForState(() => cut.FindAll(".fa-setrow--done").Count == set);
     }
 
     private static void OpenGuide(IRenderedComponent<WorkoutLog> cut)
