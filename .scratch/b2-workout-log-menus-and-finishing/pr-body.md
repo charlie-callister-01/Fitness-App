@@ -98,5 +98,3 @@ No data model, exchange format, storage or ADR change. Workouts saved with B2 us
 - **Still open from B1:** the Distance + time kind, Text Exercises, and `12:30` for Minutes (see `docs/build-plan.md`).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-https://claude.ai/code/session_016NV3mrbPnEsidtPTUeRyTp
