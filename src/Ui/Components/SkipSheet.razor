@@ -1,0 +1,77 @@
+@using Core.Rules.Editing
+@* The skip sheet (design 8.4): optional reason chips and a plain Skip button. An Exercise that already has confirmed Sets asks first, because
+   skipping removes them; Cancel at either step changes nothing. Picking Pain here is only a reason: it never starts a Pain check. *@
+<Sheet Open="Open" Title="@($"Skip {ExerciseName}")" Opener="Opener" OnClose="OnCancel">
+    <ChildContent>
+        @if (_confirming)
+        {
+            <p>@ExerciseName has confirmed Sets. The Sets will be removed if you skip it.</p>
+        }
+        else
+        {
+            <MenuChoices Label="Reason" Choices="ReasonChoices" />
+        }
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Primary" OnClick="Skip">@(_confirming ? "Remove Sets and skip" : "Skip")</Button>
+        <Button Variant="ButtonVariant.Secondary" OnClick="OnCancel">Cancel</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    private string? _reason;
+    private bool _confirming;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ExerciseName { get; set; } = "";
+
+    /// <summary>The Exercise has confirmed Sets, so skipping asks first.</summary>
+    [Parameter]
+    public bool HasSets { get; set; }
+
+    [Parameter]
+    public ElementReference? Opener { get; set; }
+
+    /// <summary>Asks the owner of the sheet to close it, with nothing changed.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>The owner chose to skip, with the reason or null.</summary>
+    [Parameter]
+    public EventCallback<string?> OnSkip { get; set; }
+
+    private IReadOnlyList<MenuChoices.Choice> ReasonChoices =>
+        [.. SkipReasons.All.Select(r => new MenuChoices.Choice(r, _reason == r, () => Toggle(r)))];
+
+    protected override void OnParametersSet()
+    {
+        if (!Open)
+        {
+            _reason = null;
+            _confirming = false;
+        }
+    }
+
+    private Task Toggle(string reason)
+    {
+        _reason = _reason == reason ? null : reason;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task Skip()
+    {
+        if (HasSets && !_confirming)
+        {
+            _confirming = true;
+            return Task.CompletedTask;
+        }
+
+        return OnSkip.InvokeAsync(_reason);
+    }
+
+    private Task OnCancel() => OnClose.InvokeAsync();
+}

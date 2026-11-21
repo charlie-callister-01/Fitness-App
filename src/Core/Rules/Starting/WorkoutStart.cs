@@ -19,6 +19,14 @@ public static class WorkoutStart
         new(ids.NewId(), date, session.Id, false, clock.UtcNow, null,
             [.. PhaseRules.ExerciseRows(plan, session.Id, date)], [], null);
 
+    /// <summary>
+    /// A new Workout logged afterwards for <paramref name="date"/>: the flag set, no start or end time (so no duration), and
+    /// <see cref="Workout.Planned"/> as for <see cref="Create"/>. With no <paramref name="session"/> it is a Custom workout with an empty plan.
+    /// </summary>
+    public static Workout CreatePastDated(Plan? plan, Session? session, DateOnly date, IIdGenerator ids) =>
+        new(ids.NewId(), date, session?.Id, true, null, null,
+            plan is null || session is null ? [] : [.. PhaseRules.ExerciseRows(plan, session.Id, date)], [], null);
+
     /// <summary>The Workout with no end time, or null. There is at most one; if data ever holds more, the first is returned.</summary>
     public static Workout? InProgress(IEnumerable<Workout> workouts) => workouts.FirstOrDefault(w => w.EndedAt is null);
 

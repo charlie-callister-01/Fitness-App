@@ -1,0 +1,135 @@
+@using Core.Rules.Editing
+@using Ui.Log
+@* The Exercise menu (design 8.4): an icon button beside the Exercise name that opens a sheet of what can be done to this Exercise. Which
+   items show and which can be used is the Core rule (ExerciseMenuAvailability); every choice goes out as one ExerciseAction. *@
+@{
+    var items = State.Items;
+    var facts = State.Facts;
+    var name = State.ExerciseName;
+}
+<button type="button" class="fa-btn fa-btn--icon" aria-label="@($"Menu for {name}")" aria-haspopup="dialog" @ref="_opener" @onclick="OpenMenu">
+    <Icon Name="IconName.MenuMore" />
+</button>
+
+<Sheet Open="_open" Title="@name" Opener="_opener" OnClose="CloseMenu">
+    <ChildContent>
+        <MenuItem Glyph="IconName.Swap" Label="Swap Exercise" Hint="Similar Exercises first" Disabled="Off(items.Swap)" OnClick="StartSwap" />
+        @if (Shown(items.UndoSwap))
+        {
+            <MenuItem Glyph="IconName.Undo" Label="Undo swap" Hint="@(facts.HasSets ? "Not after a Set is logged" : "Back to the planned Exercise")"
+                      Disabled="Off(items.UndoSwap)" OnClick="() => Raise(new ExerciseAction.UndoSwap(State.RowId))" />
+        }
+        @if (Shown(items.Unskip))
+        {
+            <MenuItem Glyph="IconName.Skip" Label="Un-skip Exercise" Hint="Back to not yet done" Disabled="Off(items.Unskip)"
+                      OnClick="() => Raise(new ExerciseAction.Unskip(State.RowId))" />
+        }
+        @if (Shown(items.Skip))
+        {
+            <MenuItem Glyph="IconName.Skip" Label="Skip Exercise" Hint="Pick a reason (optional)" Disabled="Off(items.Skip)" OnClick="StartSkip" />
+        }
+        <MenuItem Glyph="IconName.AddExercise" Label="Add an Exercise" Hint="Adds after this one" Disabled="Off(items.Add)" OnClick="StartAdd" />
+        @if (Shown(items.Remove))
+        {
+            <MenuItem Glyph="IconName.Delete" Label="Remove Exercise" Hint="@(facts.HasSets ? "Not after a Set is logged" : "Takes it out of this Workout")"
+                      Disabled="Off(items.Remove)" OnClick="() => Raise(new ExerciseAction.Remove(State.ExerciseId))" />
+        }
+        <MenuItem Glyph="IconName.Benchmark" Label="@(facts.IsBenchmark ? "Unmark as benchmark" : "Mark as benchmark")"
+                  Hint="Results go to Progress › Benchmarks" Disabled="Off(items.Benchmark)"
+                  OnClick="() => OnAction.InvokeAsync(new ExerciseAction.ToggleBenchmark(State.ExerciseId, !facts.IsBenchmark))" />
+        <MenuItem Glyph="IconName.Guide" Label="View Guide" Hint="How to do it, cues, mistakes" OnClick="StartGuide" />
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Secondary" OnClick="CloseMenu">Cancel</Button>
+    </Actions>
+</Sheet>
+
+<GuideSheet Open="_guiding" ExerciseName="@name" Opener="_opener" OnClose="CloseGuide">
+    <GuideContent Guide="State.Guide" ExerciseName="@name" />
+</GuideSheet>
+
+<SkipSheet Open="_skipping" ExerciseName="@name" HasSets="facts.HasSets" Opener="_opener" OnClose="CloseSkip"
+           OnSkip="Skipped" />
+
+@if (State.Picker is { } choices)
+{
+    <ExercisePicker Open="_picking == PickerMode.Swap" Title="@($"Swap {name}")" Choices="choices" Opener="_opener" OnClose="ClosePicker"
+                    ConfirmMessage="@(facts.HasSets ? $"{name} has confirmed Sets. The Sets will be removed if you swap it." : null)"
+                    ConfirmLabel="Remove Sets and swap" OnPick="id => Picked(new ExerciseAction.Swap(State.RowId, id))" />
+    <ExercisePicker Open="_picking == PickerMode.Add" Title="Add an Exercise" Choices="choices" Opener="_opener" OnClose="ClosePicker"
+                    OnPick="id => Picked(new ExerciseAction.Add(State.ExerciseId, id))" />
+}
+
+@code {
+    private enum PickerMode
+    {
+        None,
+        Swap,
+        Add,
+    }
+
+    private bool _open;
+    private bool _skipping;
+    private bool _guiding;
+    private PickerMode _picking;
+    private ElementReference _opener;
+
+    [Parameter, EditorRequired]
+    public ExerciseMenuState State { get; set; } = default!;
+
+    /// <summary>The owner chose something that changes the Workout or the Exercise; the sheet that asked has closed.</summary>
+    [Parameter]
+    public EventCallback<ExerciseAction> OnAction { get; set; }
+
+    private static bool Shown(MenuItemAvailability item) => item != MenuItemAvailability.Hidden;
+
+    private static bool Off(MenuItemAvailability item) => item != MenuItemAvailability.Enabled;
+
+    private void OpenMenu() => _open = true;
+
+    private void CloseMenu() => _open = false;
+
+    private void StartGuide() => Open(ref _guiding);
+
+    private void CloseGuide() => _guiding = false;
+
+    private void StartSkip() => Open(ref _skipping);
+
+    private void CloseSkip() => _skipping = false;
+
+    private void StartSwap() => StartPicker(PickerMode.Swap);
+
+    private void StartAdd() => StartPicker(PickerMode.Add);
+
+    private void StartPicker(PickerMode mode)
+    {
+        _open = false;
+        _picking = mode;
+    }
+
+    private void ClosePicker() => _picking = PickerMode.None;
+
+    private void Open(ref bool sheet)
+    {
+        _open = false;
+        sheet = true;
+    }
+
+    private Task Skipped(string? reason)
+    {
+        _skipping = false;
+        return OnAction.InvokeAsync(new ExerciseAction.Skip(State.RowId, reason));
+    }
+
+    private Task Picked(ExerciseAction action)
+    {
+        _picking = PickerMode.None;
+        return OnAction.InvokeAsync(action);
+    }
+
+    private Task Raise(ExerciseAction action)
+    {
+        _open = false;
+        return OnAction.InvokeAsync(action);
+    }
+}

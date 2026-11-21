@@ -1,0 +1,22 @@
+.fa-picker__search {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--r-control);
+    background: var(--input-bg);
+    color: var(--input-text);
+    font: inherit;
+}
+
+.fa-picker__search:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}
+
+.fa-picker__empty {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}

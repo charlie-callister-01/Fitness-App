@@ -1,0 +1,9 @@
+.fa-guide__heading,
+.fa-guide__text {
+    margin: 0;
+}
+
+.fa-guide__list {
+    margin: 0;
+    padding-inline-start: var(--space-4);
+}

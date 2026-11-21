@@ -4,7 +4,7 @@ A standalone fitness tracking app replacing the owner's Obsidian/Dataview system
 
 ## Where things are
 
-The grilling session is complete. Start any new session by reading `docs/README.md` (index), then `GLOSSARY.md`. Product: `docs/product-brief.md`. Stack and structure: `docs/technical-brief.md`. Stages and next step: `docs/build-plan.md`. Decisions: `docs/adr/`. Every question and answer: `docs/grilling-log.md`. Use the glossary's terms exactly (Session vs Workout, and so on).
+The grilling session is complete. Start any new session by reading `docs/README.md` (index), then `GLOSSARY.md`. Product: `docs/product-brief.md`. Stack and structure: `docs/technical-brief.md`. Stages and next step: `docs/build-plan.md`. Decisions: `docs/adr/`. Every question and answer: `docs/grilling-log.md`. Use the glossary's terms exactly (Session vs Workout, and so on). If a stage handoff exists at `.scratch/<stage>/HANDOFF.md` (the status section of the build plan names the current one), read it after the docs above.
 
 ## Build workflow
 

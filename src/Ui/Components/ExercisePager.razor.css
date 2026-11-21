@@ -34,3 +34,11 @@
 .pager__done {
     color: var(--done-text);
 }
+
+.pager__skipped {
+    color: var(--state-skipped);
+}
+
+.pager__swapped {
+    color: var(--state-swapped);
+}

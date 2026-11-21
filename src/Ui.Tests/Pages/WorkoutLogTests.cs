@@ -435,13 +435,22 @@ public sealed class WorkoutLogTests : BunitContext
     }
 
     [Fact]
-    public async Task A_finished_workout_is_not_opened_for_logging()
+    public async Task A_finished_workout_is_not_opened_for_logging_its_summary_is_shown_instead()
     {
         var finished = InProgress("w-done") with { EndedAt = Now.AddHours(1) };
         var cut = await OpenLogAsync(id: "w-done", workout: finished);
 
-        Assert.Contains("Workout not found", cut.Find("h1").TextContent);
+        Assert.Single(cut.FindAll(".fa-summary"));
         Assert.Empty(cut.FindAll(".fa-setrow"));
+    }
+
+    [Fact]
+    public async Task A_Workout_that_does_not_exist_shows_not_found()
+    {
+        var cut = await OpenLogAsync(id: "w-nothing", workout: InProgress("w-other"));
+
+        Assert.Contains("Workout not found", cut.Find("h1").TextContent);
+        Assert.Empty(cut.FindAll(".fa-summary"));
     }
 
     // ---- Merging into the latest Workout

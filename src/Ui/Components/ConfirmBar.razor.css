@@ -5,6 +5,14 @@
     gap: var(--space-3);
 }
 
+/* The rest countdown stays at the right edge even with nothing on the left. */
+.fa-confirmbar__rest {
+    margin-inline-start: auto;
+    color: var(--text-label);
+    font-family: var(--font-label);
+    font-weight: var(--w-label);
+}
+
 /* The bar sits above the phone's gesture area. */
 .fa-confirmbar {
     padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));

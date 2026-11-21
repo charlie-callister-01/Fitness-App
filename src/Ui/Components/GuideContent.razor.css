@@ -1,0 +1,19 @@
+.fa-guide {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-guide__video {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: var(--underline-offset);
+}
+
+.fa-guide__video:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}

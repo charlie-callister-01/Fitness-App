@@ -6,6 +6,22 @@ namespace Core.Tests.Rules.Outcomes;
 public class WorkoutOutcomesTests
 {
     [Fact]
+    public void Each_row_carries_the_entry_it_matched_and_unrecorded_rows_carry_none()
+    {
+        var workout = new WorkoutBuilder()
+            .Plan("squat", "row", "curl")
+            .Done("squat")
+            .Swapped("row", "cable-row")
+            .Build();
+
+        var result = WorkoutOutcomes.Of(workout);
+
+        Assert.Equal("squat", result.Rows[0].Entry!.ExerciseId);
+        Assert.Equal("cable-row", result.Rows[1].Entry!.ExerciseId);
+        Assert.Null(result.Rows[2].Entry);
+    }
+
+    [Fact]
     public void Mixed_workout_reports_each_planned_row_exactly()
     {
         var workout = new WorkoutBuilder()

@@ -1,6 +1,7 @@
 using System.Globalization;
 using Core.Model;
 using Core.Rules.LogKinds;
+using Core.Rules.Units;
 
 namespace Core.Rules.Performance;
 
@@ -14,7 +15,7 @@ internal static class TargetRules
     private const int HoldRpe = 9;
     private const int EasyRpe = 6;
 
-    public static SuggestedTarget? For(LogKind kind, LastResult? last, BestResult? best, Plan plan, SessionExercise? row)
+    public static SuggestedTarget? For(LogKind kind, LastResult? last, BestResult? best, Plan plan, SessionExercise? row, UnitConverter units)
     {
         if (last is null) return null;
         var rpe = last.Rpe;
@@ -24,9 +25,9 @@ internal static class TargetRules
         return kind switch
         {
             LogKind.Load or LogKind.BodyweightLoad when last.BestSet is { Reps: { } reps } s
-                => Load(kind, s, reps, rpe, hold, steps, plan.WeightIncrementKg, row),
+                => Load(kind, s, reps, rpe, hold, steps, plan.WeightIncrementKg, row, units),
             LogKind.Carry when last.BestSet is { DistanceM: { } distance } s
-                => Carry(s, distance, rpe, hold, steps, plan.WeightIncrementKg),
+                => Carry(s, distance, rpe, hold, steps, plan.WeightIncrementKg, units),
             LogKind.Time when best?.Set.DurationSeconds is { } bestSeconds
                 => Time(bestSeconds, last, rpe, hold, steps),
             _ when LogKindRules.For(kind).Scalar is { } scalar && best is not null
@@ -36,7 +37,7 @@ internal static class TargetRules
         };
     }
 
-    private static SuggestedTarget Load(LogKind kind, WorkoutSet s, int reps, int? rpe, bool hold, int steps, double increment, SessionExercise? row)
+    private static SuggestedTarget Load(LogKind kind, WorkoutSet s, int reps, int? rpe, bool hold, int steps, double increment, SessionExercise? row, UnitConverter units)
     {
         var top = row?.RepsMax ?? row?.Reps;
         var weight = s.WeightKg ?? 0;
@@ -63,15 +64,15 @@ internal static class TargetRules
 
         var bodyweightOnly = kind == LogKind.BodyweightLoad && w == 0;
         var change = w > weight
-            ? $"add {Num(w - weight)} kg, back to {r} reps"
+            ? $"add {Weight(units, w - weight)}, back to {r} reps"
             : $"add {Plural(r - reps, "rep")}";
         return new(bodyweightOnly ? s.WeightKg : w, r, null, null, null, $"{did}: {Easy(steps)}{change}");
     }
 
-    private static SuggestedTarget Carry(WorkoutSet s, double distance, int? rpe, bool hold, int steps, double increment)
+    private static SuggestedTarget Carry(WorkoutSet s, double distance, int? rpe, bool hold, int steps, double increment, UnitConverter units)
     {
         var weight = s.WeightKg ?? 0;
-        var did = $"Carried {(weight > 0 ? $"{Num(weight)} kg for " : "")}{Num(distance)} m{AtRpe(rpe)}";
+        var did = $"Carried {(weight > 0 ? $"{Weight(units, weight)} for " : "")}{Num(distance)} m{AtRpe(rpe)}";
 
         if (hold)
         {
@@ -85,7 +86,7 @@ internal static class TargetRules
         }
 
         var change = w > weight
-            ? $"add {Num(w - weight)} kg, back to {Num(d)} m"
+            ? $"add {Weight(units, w - weight)}, back to {Num(d)} m"
             : $"add {Num(d - distance)} m";
         return new(w > 0 ? w : null, null, d, null, null, $"{did}: {Easy(steps)}{change}");
     }
@@ -135,6 +136,10 @@ internal static class TargetRules
         seconds >= 3600
             ? $"{seconds / 3600}:{seconds % 3600 / 60:00}:{seconds % 60:00}"
             : $"{seconds / 60}:{seconds % 60:00}";
+
+    /// <summary>A weight in the display unit with its label. A kg user reads the exact value, as before; a lb user reads it converted and rounded.</summary>
+    private static string Weight(UnitConverter units, double kg) =>
+        units.WeightLabel == "kg" ? $"{Num(kg)} kg" : $"{Num(units.DisplayWeight(kg))} {units.WeightLabel}";
 
     private static string AtRpe(int? rpe) => rpe is { } r ? $" at RPE {r}" : "";
 

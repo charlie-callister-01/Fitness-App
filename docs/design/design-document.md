@@ -218,6 +218,8 @@ Keep maps every component radius (`--r-control`, `--r-card`, `--r-sheet`) to 0. 
 | `border-thin` | `2px` | Inputs, outlines, chips. |
 | `border-thick` | `3px` | Current Set outline, focus ring. |
 | `outline-offset` | `2px` | Gap between a focus ring or the current-Set outline and its control. |
+| `underline-offset` | `3px` | Gap between link text and its underline. |
+| `sheet-max-height` | `90dvh` | Tallest a bottom sheet grows before it scrolls. |
 
 | Token | Value | Use |
 |---|---|---|

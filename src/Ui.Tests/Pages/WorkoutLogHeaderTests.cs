@@ -67,6 +67,28 @@ public sealed class WorkoutLogHeaderTests : BunitContext
     }
 
     [Fact]
+    public async Task The_suggested_target_reason_reads_in_pounds_for_an_lb_owner()
+    {
+        var (_, cut) = await OpenAsync(
+            async d => await d.CommitAsync(Change.Put(d.Snapshot.Settings with { DisplayWeightUnit = WeightUnit.Lb })),
+            Finished("w-old", Today.AddDays(-7), Set("o1", 20, 8), Set("o2", 20, 8), Set("o3", 20, 8)));
+
+        var target = cut.Find(".fa-well.fa-target span").TextContent;
+        Assert.Contains("lb", target);
+        Assert.DoesNotContain("kg", target);
+    }
+
+    [Fact]
+    public async Task The_suggested_target_reason_reads_in_kilograms_for_a_kg_owner()
+    {
+        var (_, cut) = await OpenAsync(null, Finished("w-old", Today.AddDays(-7), Set("o1", 20, 8), Set("o2", 20, 8), Set("o3", 20, 8)));
+
+        var target = cut.Find(".fa-well.fa-target span").TextContent;
+        Assert.Contains("kg", target);
+        Assert.DoesNotContain("lb", target);
+    }
+
+    [Fact]
     public async Task The_header_ignores_the_workout_in_progress()
     {
         var (_, cut) = await OpenAsync();

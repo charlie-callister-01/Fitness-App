@@ -1,0 +1,24 @@
+@* C-07 StateChip: a glyph, a word and a colour, never colour alone. The colours are the fa-chip classes in components.css, which read the
+   state tokens. The glyph is decorative (hidden from screen readers) because the word says the same. *@
+<span class="fa-chip fa-chip--@_css"><span class="fa-chip__glyph" aria-hidden="true">@_glyph</span><span class="fa-chip__word">@_word</span></span>
+
+@code {
+    [Parameter, EditorRequired]
+    public StateChipKind Kind { get; set; }
+
+    private string _css = "";
+    private string _glyph = "";
+    private string _word = "";
+
+    protected override void OnParametersSet() =>
+        (_css, _glyph, _word) = Kind switch
+        {
+            StateChipKind.Pr => ("pr", "▲", "PR"),
+            StateChipKind.Done => ("done", "✓", "Done"),
+            StateChipKind.Partial => ("partial", "◐", "Partial"),
+            StateChipKind.Skipped => ("skipped", "—", "Skipped"),
+            StateChipKind.Swapped => ("swapped", "⇄", "Swapped"),
+            StateChipKind.Pain => ("pain", "✚", "Pain"),
+            _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "Unknown state."),
+        };
+}

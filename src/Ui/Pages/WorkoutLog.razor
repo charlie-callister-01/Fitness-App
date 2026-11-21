@@ -8,7 +8,11 @@
 @if (OpenWorkout is not { } workout)
 {
     <div class="log">
-        @if (ReadOnlyMessage is { } unreadable && !Data.Health.CanWrite)
+        @if (FinishedWorkout is { } finished)
+        {
+            <FinishSummary Workout="finished" Data="Data.Snapshot" Today="Today" />
+        }
+        else if (ReadOnlyMessage is { } unreadable && !Data.Health.CanWrite)
         {
             <p class="fa-well log__notice" role="status">@unreadable</p>
         }
@@ -17,8 +21,13 @@
             <h1 class="fa-title fa-title--l">Workout not found</h1>
             <p class="fa-muted">This Workout is not in progress, so there is nothing to log here.</p>
         }
-        <Button Variant="ButtonVariant.Primary" Href="./">Back to Home</Button>
+        @if (FinishedWorkout is null)
+        {
+            <Button Variant="ButtonVariant.Primary" Href="./">Back to Home</Button>
+        }
     </div>
+    <PainCheckSheet Open="_finish.Phase == FinishPhase.PainCheck" Saving="_finish.Saving" CanWrite="CanWrite" Message="@_finish.PainMessage"
+                    Exercises="_builder.PainExercises(FinishedWorkout)" OnAnswer="AnswerPainAsync" />
 }
 else
 {
@@ -31,10 +40,20 @@ else
                 <h1 class="fa-title fa-title--m log__session">@view.SessionName</h1>
                 <p class="fa-muted log__progress" aria-live="polite">@progress.DoneCount of @progress.ExerciseCount done · @progress.PrCount @(progress.PrCount == 1 ? "PR" : "PRs")</p>
             </div>
+            <WorkoutMenu FinishHint="@($"{progress.DoneCount} of {progress.ExerciseCount} Exercises done")"
+                         CanWrite="CanWrite" OnFinish="FinishAsync"
+                         IsLoggedAfterwards="workout.LoggedAfterwards" OnLoggedAfterwards="LoggedAfterwardsAsync" />
         </header>
 
         <div class="log__body">
             <ExercisePager Chips="view.Chips" Current="State.Current" OnJump="State.Show" />
+            @if (workout.LoggedAfterwards)
+            {
+                <p class="fa-well log__notice log__afterwards" role="status">
+                    <Icon Name="IconName.LoggedAfterwards" />
+                    <span>@LogText.LoggedAfterwardsBanner(workout.Date)</span>
+                </p>
+            }
             @if (State.Resumed)
             {
                 <p class="fa-well log__notice" role="status">Resumed where you left off</p>
@@ -42,6 +61,10 @@ else
             @if (ReadOnlyMessage is { } readOnly)
             {
                 <p class="fa-well log__notice" role="status">@readOnly</p>
+            }
+            @if (_finish.Message is { } refusal)
+            {
+                <p class="fa-well log__notice" role="status">@refusal</p>
             }
 
             @if (view.Exercise is not { } shown)
@@ -53,7 +76,27 @@ else
                 var id = shown.Info.ExerciseId;
                 <ExerciseHeader Name="@shown.Info.Name" Planned="@shown.Info.PlannedText" Cue="@shown.Info.Cue"
                                 Last="@shown.Header?.Last" Best="@shown.Header?.Best"
-                                Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" />
+                                Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" Benchmark="shown.Info.IsBenchmark">
+                    <Actions>
+                        <ExerciseMenu State="ExerciseMenuState.For(shown, Data.Snapshot.Guides.FirstOrDefault(g => g.ExerciseId == id), CanWrite)"
+                                      OnAction="_actions.ApplyAsync" />
+                    </Actions>
+                </ExerciseHeader>
+
+                @if (shown.Swap is { } swap)
+                {
+                    <SwappedNotice WasName="@swap.OriginalName" />
+                }
+
+                @if (shown.Added)
+                {
+                    <AddedMarker />
+                }
+
+                @if (shown.Skip is { } skip)
+                {
+                    <SkippedNotice Reason="@skip.Reason" />
+                }
 
                 @if (shown.Unavailable is { } unavailable)
                 {
@@ -101,15 +144,20 @@ else
                         }
                         @if (rows.Tools.MaxTarget is { } target)
                         {
-                            <button type="button" class="log__link" @onclick="() => ToggleMaxAsync(shown)">@(rows.Items[target].Marks.IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
+                            <button type="button" class="log__link" @onclick="() => _actions.ToggleMaxAsync(shown)">@(rows.Items[target].Marks.IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
                         }
                     </div>
-                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => SetRpeAsync(id, rpe)" />
+                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => _actions.SetRpeAsync(id, rpe)" />
                 }
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
+        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@(workout.LoggedAfterwards ? null : _session.Rest.Label)" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
                     StepAmount="@view.Exercise?.Rows?.Tools.StepAmount" StepUnit="@(view.Exercise?.Rows?.Tools.Step?.Unit ?? "")" OnStep="Step" />
     </div>
+    <LoggedAfterwardsSheet Open="_afterwards.Open" Today="Today" Saving="_afterwards.Saving" CanWrite="CanWrite" Message="@_afterwards.Message"
+                           OnSave="SaveDateAsync" OnCancel="_afterwards.Cancel" />
+    <PartialPrompt Open="_finish.Phase == FinishPhase.PartialPrompt" Done="_finish.PartialCounts.Done" Planned="_finish.PartialCounts.Planned"
+                   Saving="_finish.Saving" CanWrite="CanWrite" OnFinish="ConfirmPartialAsync" OnKeepGoing="_finish.KeepGoing" />
+}
 }

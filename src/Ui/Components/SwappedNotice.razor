@@ -1,0 +1,10 @@
+@* The Swapped state of an Exercise (C-07): the chip and which planned Exercise it stands in for, as "Swapped · was X". *@
+<div class="fa-swapped">
+    <StateChip Kind="StateChipKind.Swapped" />
+    <span class="fa-muted">· was @WasName</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string WasName { get; set; } = "";
+}
