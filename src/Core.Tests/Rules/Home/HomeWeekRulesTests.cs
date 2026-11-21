@@ -37,7 +37,7 @@ public class HomeWeekRulesTests
             var date = Mon.AddDays(i);
             Assert.Equal(date, tiles[i].Date);
             Assert.Equal(expectedDays[i], tiles[i].Weekday);
-            Assert.Equal(expectedDays[i], tiles[i].WeekdayLabel);
+            Assert.Equal(expectedDays[i], tiles[i].Weekday);
             Assert.Equal(date == wednesday, tiles[i].IsToday);
         }
     }

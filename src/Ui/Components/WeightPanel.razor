@@ -30,9 +30,6 @@
     public UnitConverter Converter { get; set; } = default!;
 
     [Parameter]
-    public DateOnly Today { get; set; }
-
-    [Parameter]
     public EventCallback OnLogWeight { get; set; }
 
     private string Show(double kg) => $"{Value(kg)} {Converter.WeightLabel}";

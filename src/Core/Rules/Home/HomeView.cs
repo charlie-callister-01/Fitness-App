@@ -19,5 +19,4 @@ public sealed record HomeView(
     WeightPanel Weight,
     bool ShowAlternatives,
     bool ShowLogPastWorkout,
-    bool ShowNudges,
-    bool ShowLogWeight);
+    bool ShowNudges);

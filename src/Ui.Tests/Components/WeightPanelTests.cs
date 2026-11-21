@@ -13,7 +13,7 @@ public sealed class WeightPanelTests : BunitContext
     private IRenderedComponent<Ui.Components.WeightPanel> Show(PanelModel panel, Action<ComponentParameterCollectionBuilder<Ui.Components.WeightPanel>>? more = null) =>
         Render<Ui.Components.WeightPanel>(p =>
         {
-            p.Add(c => c.Panel, panel).Add(c => c.Converter, new UnitConverter(Settings.Default)).Add(c => c.Today, new DateOnly(2026, 11, 18));
+            p.Add(c => c.Panel, panel).Add(c => c.Converter, new UnitConverter(Settings.Default));
             more?.Invoke(p);
         });
 

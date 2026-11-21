@@ -47,10 +47,7 @@ public sealed partial class CustomWorkoutDraft : IDisposable
 
     private bool CanWrite => Data.Health.CanWrite;
 
-    private string? ReadOnlyMessage =>
-        CanWrite ? null
-        : Data.Health.AnotherWindowOpen ? "Another window of the app is open and is the one that saves. This page is read-only here."
-        : "This window cannot save right now, so nothing can be started from here.";
+    private string? ReadOnlyMessage => ReadOnlyWording.For(Data, "page");
 
     private ExercisePickerChoices PickerChoices
     {

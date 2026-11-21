@@ -39,8 +39,7 @@ public static class HomeViewBuilder
             WeightPanelRules.Compute(snapshot.WeighIns, today),
             hasAlternatives,
             hasAlternatives,
-            showNudges,
-            true);
+            showNudges);
     }
 
     private static string Greeting(int localHour) => localHour switch

@@ -84,7 +84,6 @@ public class HomeViewBuilderTests
         Assert.False(view.ShowAlternatives);
         Assert.False(view.ShowLogPastWorkout);
         Assert.False(view.ShowNudges);
-        Assert.True(view.ShowLogWeight);
     }
 
     [Fact]
@@ -100,7 +99,6 @@ public class HomeViewBuilderTests
         Assert.False(view.ShowNudges);
         Assert.Empty(view.Nudges);
         Assert.True(view.Orbs!.Streak.OnBreak);
-        Assert.True(view.ShowLogWeight);
     }
 
     [Fact]

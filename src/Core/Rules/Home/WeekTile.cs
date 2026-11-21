@@ -21,7 +21,6 @@ public sealed record WeekTile(
     SessionType? SessionType,
     TileState State)
 {
-    public string WeekdayLabel => Weekday;
     public TileState TileState => State;
     public DayOfWeek DayOfWeek => Date.DayOfWeek;
 }

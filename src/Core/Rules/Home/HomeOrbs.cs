@@ -8,7 +8,6 @@ namespace Core.Rules.Home;
 public sealed record StreakOrb(int Current, int ThisWeekCount, int Minimum, bool OnBreak)
 {
     public double Fraction => Minimum == 0 ? 0.0 : Math.Min((double)ThisWeekCount / Minimum, 1.0);
-    public double RingFraction => Fraction;
 }
 
 public sealed record PhaseOrb(int WeekInPhase, int PhaseLengthWeeks)

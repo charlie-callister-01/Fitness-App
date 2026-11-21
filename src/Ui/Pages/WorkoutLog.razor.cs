@@ -65,12 +65,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private bool CanWrite => Data.Health.CanWrite;
 
     /// <summary>Plain wording for why this window cannot save, or null when it can.</summary>
-    private string? ReadOnlyMessage =>
-        CanWrite ? null
-        : Data.Health.AnotherWindowOpen ? "Another window of the app is open and is the one that saves. This log is read-only here."
-        : Data.Startup.State is StartupState.CannotRead or StartupState.StorageFailed
-            ? "Your saved data could not be read, so nothing can be shown or saved here. Your data is untouched."
-            : "This window cannot save right now, so the log is read-only.";
+    private string? ReadOnlyMessage => ReadOnlyWording.For(Data, "log");
 
     protected override void OnInitialized()
     {
