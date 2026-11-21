@@ -58,11 +58,11 @@ public class HomeWeekRulesTests
         var plan = PlanFixture.Make(Mon, sessions: [sMon, sTue, sWed, sThu, sFri]);
 
         // Mon done: full workout
-        var wMon = new Workout("w-mon", Mon, sMon.Id, false, null, null, [row],
+        var wMon = new Workout("w-mon", Mon, sMon.Id, false, null, DateTimeOffset.UnixEpoch, [row],
             [new WorkoutEntry("ex1", EntryStatus.Done, null, null, null, [HistoryBuilder.Set(10, 10)])], null);
 
         // Tue partial: 2 planned rows, 1 skipped
-        var wTue = new Workout("w-tue", Mon.AddDays(1), sTue.Id, false, null, null, [row, row2],
+        var wTue = new Workout("w-tue", Mon.AddDays(1), sTue.Id, false, null, DateTimeOffset.UnixEpoch, [row, row2],
             [
                 new WorkoutEntry("ex1", EntryStatus.Done, null, null, null, [HistoryBuilder.Set(10, 10)]),
                 new WorkoutEntry("ex2", EntryStatus.Skipped, "tired", null, null, []),

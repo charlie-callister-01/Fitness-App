@@ -49,7 +49,7 @@ public static class HomeWeekRules
             var type = session.Type;
 
             var matchingWorkouts = workoutsThisWeek
-                .Where(w => w.SessionId == session.Id)
+                .Where(w => w.SessionId == session.Id && w.EndedAt is not null)
                 .ToList();
 
             TileState state;

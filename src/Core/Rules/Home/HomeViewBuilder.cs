@@ -23,7 +23,7 @@ public static class HomeViewBuilder
             : NudgeRules.Compute(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, lastBackup, today);
 
         var hasAlternatives = plan is not null
-            && card.Kind is not (TodayKind.Break or TodayKind.InProgress or TodayKind.NoPlan);
+            && card.Kind is not (TodayKind.Break or TodayKind.InProgress or TodayKind.NoPlan or TodayKind.PlanFinished or TodayKind.NotStarted);
         var showNudges = card.Kind is not (TodayKind.Break or TodayKind.NoPlan);
 
         return new HomeView(

@@ -51,7 +51,6 @@ public static class HomeNudges
         NudgeKind.MissedSession => NudgeAction.MakeUp,
         NudgeKind.OneShortOfTarget => NudgeAction.DifferentSession,
         NudgeKind.NoRecentBackup => NudgeAction.BackUp,
-        NudgeKind.RepeatedPain => NudgeAction.None,
         _ => NudgeAction.None,
     };
 }

@@ -11,7 +11,7 @@
     justify-content: space-between;
     gap: var(--space-1);
     min-width: var(--tap-min);
-    min-height: var(--space-8);
+    min-height: var(--tap-min);
     padding: var(--space-1);
     font: inherit;
     color: var(--text);
