@@ -19,11 +19,7 @@ public sealed record WeekTile(
     Session? Session,
     string? Code,
     SessionType? SessionType,
-    TileState State)
-{
-    public TileState TileState => State;
-    public DayOfWeek DayOfWeek => Date.DayOfWeek;
-}
+    TileState State);
 
 public sealed record WeekLine(
     int Done,

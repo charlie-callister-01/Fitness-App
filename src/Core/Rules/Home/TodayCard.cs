@@ -17,6 +17,7 @@ public enum TodayKind
 
 /// <summary>Summary metrics for a Workout completed today.</summary>
 public sealed record TodayDoneSummary(
+    string WorkoutId,
     TimeSpan? Duration,
     int SetCount,
     int PrCount,
@@ -35,12 +36,6 @@ public sealed record TodayCard(
     DateOnly? NextDate = null,
     DateOnly? PlanStartDate = null)
 {
-    public Workout? Workout => InProgressWorkout;
-    public TimeSpan? Duration => DoneSummary?.Duration;
-    public int? SetCount => DoneSummary?.SetCount;
-    public int? PrCount => DoneSummary?.PrCount;
-    public bool? IsPartial => DoneSummary?.IsPartial;
-
     public static TodayCard NoPlan() => new(TodayKind.NoPlan);
     public static TodayCard Break() => new(TodayKind.Break);
     public static TodayCard InProgress(Workout workout, int doneCount, int plannedCount, TimeSpan? elapsed) =>

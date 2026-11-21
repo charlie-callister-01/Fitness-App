@@ -116,20 +116,21 @@ else
     {
         get
         {
+            var summary = Card.DoneSummary;
             var parts = new List<string>();
-            if (Card.Duration is { } duration)
+            if (summary?.Duration is { } duration)
             {
                 parts.Add($"{Minutes(duration)} min");
             }
 
-            var sets = Card.SetCount ?? 0;
+            var sets = summary?.SetCount ?? 0;
             parts.Add($"{sets} {(sets == 1 ? "Set" : "Sets")}");
-            if (Card.PrCount is > 0 and var prs)
+            if (summary?.PrCount is > 0 and var prs)
             {
                 parts.Add($"{prs} {(prs == 1 ? "PR" : "PRs")}");
             }
 
-            if (Card.IsPartial == true)
+            if (summary?.IsPartial == true)
             {
                 parts.Add("Partial");
             }

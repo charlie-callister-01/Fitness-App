@@ -19,12 +19,16 @@
             @if (_view.ShowAlternatives)
             {
                 <div class="fa-home__alts">
-                    <Button Variant="ButtonVariant.Secondary" OnClick="OnDifferentSessionAsync">Do a different Session</Button>
+                    <Button Variant="ButtonVariant.Secondary" Disabled="!CanWrite" OnClick="OnDifferentSessionAsync">Do a different Session</Button>
                     <Button Variant="ButtonVariant.Secondary" OnClick="OnBuildCustom">Build a Custom workout</Button>
                 </div>
                 @if (_view.ShowLogPastWorkout)
                 {
-                    <button type="button" class="fa-home__link" @onclick="OnLogPastWorkout">Log a past Workout</button>
+                    <button type="button" class="fa-home__link" disabled="@(!CanWrite)" @onclick="OnLogPastWorkout">Log a past Workout</button>
+                }
+                @if (!CanWrite && ReadOnlyMessage is { } reason)
+                {
+                    <p class="fa-muted">@reason</p>
                 }
             }
 

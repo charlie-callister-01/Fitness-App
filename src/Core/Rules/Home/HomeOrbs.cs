@@ -20,12 +20,8 @@ public sealed record RaceOrb(int DaysToGo, double ElapsedShare)
     public double Fraction => ElapsedShare;
 }
 
-public sealed record HomeOrbs(StreakOrb StreakOrb, PhaseOrb? PhaseOrb, RaceOrb? RaceOrb)
+public sealed record HomeOrbs(StreakOrb Streak, PhaseOrb? Phase, RaceOrb? Race)
 {
-    public StreakOrb Streak => StreakOrb;
-    public PhaseOrb? Phase => PhaseOrb;
-    public RaceOrb? Race => RaceOrb;
-
     public static HomeOrbs? Compute(DataSnapshot snapshot, DateOnly today)
     {
         var plan = snapshot.Plans.FirstOrDefault(p => p.IsActive);

@@ -93,6 +93,7 @@ public sealed class CustomWorkoutDraftTests : BunitContext
         AddExercise(cut, "Plank");
 
         StartButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
         var workout = Assert.Single(data.Snapshot.Workouts);
         Assert.Null(workout.SessionId);
@@ -111,6 +112,7 @@ public sealed class CustomWorkoutDraftTests : BunitContext
         var start = StartButton(cut);
         start.Click();
         start.Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
         Assert.Single(data.Snapshot.Workouts);
     }
@@ -128,6 +130,7 @@ public sealed class CustomWorkoutDraftTests : BunitContext
         AddExercise(cut, "Plank");
         cut.WaitForAssertion(() => Assert.Equal(["Goblet squat", "Plank"], DraftNames(cut)));
         StartButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
         var workout = Assert.Single(data.Snapshot.Workouts);
         Assert.Null(workout.SessionId);
@@ -156,6 +159,7 @@ public sealed class CustomWorkoutDraftTests : BunitContext
         Assert.Single(WeekScheduleRules.MissedInWeek(plan, [], [], data.Snapshot.Workouts, wednesday, wednesday));
 
         StartButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
         var missed = WeekScheduleRules.MissedInWeek(plan, [], [], data.Snapshot.Workouts, wednesday, wednesday);
         Assert.Equal("lower", Assert.Single(missed).SessionId);
@@ -183,6 +187,7 @@ public sealed class CustomWorkoutDraftTests : BunitContext
         store.FailAllWrites(StoreFailureKind.StorageFull);
 
         StartButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Contains("out of storage", _notice.Message));
 
         Assert.Empty(data.Snapshot.Workouts);
         Assert.Contains("out of storage", _notice.Message);

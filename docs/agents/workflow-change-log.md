@@ -30,12 +30,12 @@ After it is merged: `git log --grep "Agent workflow trial"` to find the commit (
 2. Revert the revert later (`git revert <revert-sha>`) to restore everything exactly, or cherry-pick the original commit onto a fresh branch and edit.
 3. Parts that are independent of each other, if you only want some of it: the sizing change (80k) is two lines in `CLAUDE.md` and `docs/build-plan.md`; the templates in `docs/agents/` stand alone; `AGENTS.md` can be used without the ADR.
 
-## Trial notes (fill in during B3)
+## Trial notes (B3)
 
-- Tool used and version:
-- Did worktree subagents read `AGENTS.md`?
-- Tickets that were too big at 80k:
-- Blocked or failed tickets, and why:
-- Planner takeovers:
-- Cost or time compared with B2:
-- Verdict (keep, adjust, revert):
+- Tool used and version: Antigravity CLI (version not recorded).
+- Did worktree subagents read `AGENTS.md`? Not checked; wave 1 reports are the only evidence.
+- Tickets that were too big at 80k: none identified.
+- Blocked or failed tickets, and why: the implementer stopped on its usage limit after wave 1 (tickets 01 to 05, merged by the planner). Tickets 06 to 14 never ran.
+- Planner takeovers: tickets 06 to 14 were implemented by the planner (this session) on the owner's instruction, then reviewed, so the trial only covers wave 1.
+- Cost or time compared with B2: not measured.
+- Verdict (keep, adjust, revert): not enough data. The split was not exercised past wave 1; decide after a full stage runs.

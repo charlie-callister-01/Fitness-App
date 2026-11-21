@@ -91,13 +91,9 @@ public sealed partial class Home : IDisposable
 
     private void OnOpenSummary()
     {
-        var finished = Data.Snapshot.Workouts
-            .Where(w => w.Date == Today && w.EndedAt is not null)
-            .OrderByDescending(w => w.EndedAt)
-            .FirstOrDefault();
-        if (finished is not null)
+        if (_view.Today.DoneSummary is { } done)
         {
-            Navigation.NavigateTo($"log/{finished.Id}");
+            Navigation.NavigateTo($"log/{done.WorkoutId}");
         }
     }
 

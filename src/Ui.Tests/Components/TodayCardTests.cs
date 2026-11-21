@@ -123,7 +123,7 @@ public sealed class TodayCardTests : BunitContext
     public void Done_today_shows_duration_sets_prs_and_View_summary()
     {
         var raised = false;
-        var cut = Show(TodayCardModel.DoneToday(new TodayDoneSummary(TimeSpan.FromMinutes(45), 12, 2, false)),
+        var cut = Show(TodayCardModel.DoneToday(new TodayDoneSummary("w", TimeSpan.FromMinutes(45), 12, 2, false)),
             p => p.Add(c => c.OnOpenSummary, () => raised = true));
 
         Assert.Contains("Done today", cut.Markup);
@@ -136,8 +136,8 @@ public sealed class TodayCardTests : BunitContext
     [Fact]
     public void Done_today_uses_singular_wording_omits_zero_prs_and_shows_Partial()
     {
-        var one = Show(TodayCardModel.DoneToday(new TodayDoneSummary(null, 1, 1, true)));
-        var none = Show(TodayCardModel.DoneToday(new TodayDoneSummary(TimeSpan.FromMinutes(30), 3, 0, false)));
+        var one = Show(TodayCardModel.DoneToday(new TodayDoneSummary("w", null, 1, 1, true)));
+        var none = Show(TodayCardModel.DoneToday(new TodayDoneSummary("w", TimeSpan.FromMinutes(30), 3, 0, false)));
 
         Assert.Contains("1 Set · 1 PR · Partial", one.Markup);
         Assert.DoesNotContain("min", one.Find(".fa-todaycard__body").TextContent);

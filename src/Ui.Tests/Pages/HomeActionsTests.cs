@@ -56,6 +56,7 @@ public sealed class HomeActionsTests : BunitContext
         var rows = cut.FindAll(".fa-sessionrow");
         Assert.Equal(2, rows.Count);
         rows.Single(r => r.TextContent.Contains("Lower")).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
         var workout = Assert.Single(data.Snapshot.Workouts);
         Assert.Equal("lower", workout.SessionId);
@@ -97,6 +98,7 @@ public sealed class HomeActionsTests : BunitContext
         ClickButton(cut, "Log a past Workout");
         cut.Find("input[type='date']").Change("2026-11-14");
         cut.FindAll(".fa-pastrow").Single(r => r.TextContent.Contains("Lower")).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
         var workout = Assert.Single(data.Snapshot.Workouts);
         Assert.True(workout.LoggedAfterwards);
@@ -113,6 +115,7 @@ public sealed class HomeActionsTests : BunitContext
 
         ClickButton(cut, "Log a past Workout");
         cut.FindAll(".fa-pastrow").Single(r => r.TextContent.Contains("Custom workout")).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
         Assert.Null(Assert.Single(data.Snapshot.Workouts).SessionId);
     }
@@ -126,6 +129,7 @@ public sealed class HomeActionsTests : BunitContext
         ClickButton(cut, "Log a past Workout");
         cut.Find("input[type='date']").Change("2026-11-20");
         cut.FindAll(".fa-pastrow").First().Click();
+        cut.WaitForAssertion(() => Assert.Contains("That day hasn't happened yet.", cut.Markup));
 
         Assert.Contains("That day hasn't happened yet.", cut.Markup);
         Assert.Empty(data.Snapshot.Workouts);
@@ -142,6 +146,7 @@ public sealed class HomeActionsTests : BunitContext
         store.FailAllWrites(StoreFailureKind.StorageFull);
 
         cut.FindAll(".fa-pastrow").First().Click();
+        cut.WaitForAssertion(() => Assert.Contains("out of storage", _notice.Message));
 
         Assert.Empty(data.Snapshot.Workouts);
         Assert.Contains("out of storage", _notice.Message);

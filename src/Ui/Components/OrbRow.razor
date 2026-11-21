@@ -8,7 +8,7 @@
     @if (Orbs.Phase is { } phase)
     {
         <button type="button" class="fa-orbrow__orb" @onclick="() => OnOpenProgress.InvokeAsync()">
-            <StatusOrb Value="@phase.WeekInPhase.ToString()" Fraction="phase.Fraction" Caption="@($"Phase week of {phase.PhaseLengthWeeks}")"
+            <StatusOrb Value="@phase.WeekInPhase.ToString()" Fraction="phase.Fraction" Caption="@($"week {phase.WeekInPhase} of {phase.PhaseLengthWeeks}")"
                        AccessibleName="@($"Phase week {phase.WeekInPhase} of {phase.PhaseLengthWeeks}")" />
         </button>
     }

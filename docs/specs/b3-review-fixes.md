@@ -53,3 +53,4 @@ A small fix stage on the B3 branch, before the B3 PR: close the rule breaks, cor
 - The Streak orb "On a Break" caption was reported missing but is correct: `StatusOrb` swaps its caption when greyed.
 - Open choices for the owner: week line wording, and whether to widen the shell column for every page or only Home.
 - Not published to GitHub Issues yet; the file is the spec until the owner says otherwise.
+- Built with defaults for the open choices: week line wording unchanged, desktop widening scoped to Home (a `:has(.fa-home)` rule in `ui.css`, token `--column-wide`).

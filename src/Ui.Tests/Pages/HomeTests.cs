@@ -78,6 +78,7 @@ public sealed class HomeTests : BunitContext
         Assert.Contains("Lower", cut.Markup);
         cut.Find("button.fa-btn--primary").Click();
 
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
         var workout = Assert.Single(data.Snapshot.Workouts);
         Assert.Null(workout.EndedAt);
         Assert.Equal(Now, workout.StartedAt);
@@ -85,7 +86,7 @@ public sealed class HomeTests : BunitContext
         Assert.Equal("lower", workout.SessionId);
         Assert.Equal([Squat, Lunge], workout.Planned.Select(p => p.ExerciseId));
         Assert.Empty(workout.Entries);
-        Assert.Equal($"log/{workout.Id}", CurrentPath);
+        cut.WaitForAssertion(() => Assert.Equal($"log/{workout.Id}", CurrentPath));
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public sealed class HomeTests : BunitContext
         start.Click();
         start.Click();
 
-        Assert.Single(data.Snapshot.Workouts);
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public sealed class HomeTests : BunitContext
         Assert.False(continueButton.HasAttribute("disabled"));
         continueButton.Click();
 
-        Assert.Equal("log/w-now", CurrentPath);
+        cut.WaitForAssertion(() => Assert.Equal("log/w-now", CurrentPath));
         Assert.Single(data.Snapshot.Workouts);
     }
 
@@ -140,8 +141,8 @@ public sealed class HomeTests : BunitContext
 
         cut.Find("button.fa-btn--primary").Click();
 
+        cut.WaitForAssertion(() => Assert.Contains("out of storage", _notice.Message));
         Assert.Empty(data.Snapshot.Workouts);
-        Assert.Contains("out of storage", _notice.Message);
         Assert.Equal("", CurrentPath);
         Assert.True(Has(cut, "Start"));
     }
@@ -178,7 +179,23 @@ public sealed class HomeTests : BunitContext
         Assert.Contains("Done today", cut.Markup);
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "View summary").Click();
 
-        Assert.Equal("log/w-done", CurrentPath);
+        cut.WaitForAssertion(() => Assert.Equal("log/w-done", CurrentPath));
+    }
+
+    [Fact]
+    public async Task A_read_only_window_disables_the_alternatives_and_says_why()
+    {
+        var store = new InMemoryDataStore();
+        await OpenSeededAsync(store, Plan());
+        var locked = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
+        var cut = await RenderHomeAsync(locked);
+
+        var different = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Do a different Session");
+        var past = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Log a past Workout");
+
+        Assert.True(different.HasAttribute("disabled"));
+        Assert.True(past.HasAttribute("disabled"));
+        Assert.Contains("read-only", cut.Find(".fa-home__main > p.fa-muted").TextContent);
     }
 
     [Fact]

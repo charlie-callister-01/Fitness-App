@@ -41,6 +41,7 @@ public static class HomeTodayRules
             var history = BadgeHistories.For(snapshot, finishedToday);
             var summary = WorkoutSummaryBuilder.Build(finishedToday, history, snapshot.Badges, today);
             return TodayCard.DoneToday(new TodayDoneSummary(
+                finishedToday.Id,
                 summary.Duration,
                 summary.SetCount,
                 summary.PrCount,

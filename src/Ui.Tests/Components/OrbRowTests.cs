@@ -21,7 +21,7 @@ public sealed class OrbRowTests : BunitContext
 
         Assert.Equal(["Streak: 4 weeks", "Phase week 5 of 8", "120 days to race"], Names(cut));
         Assert.Contains("Streak (weeks)", cut.Markup);
-        Assert.Contains("Phase week of 8", cut.Markup);
+        Assert.Contains("week 5 of 8", cut.Markup);
         Assert.Contains("Days to race", cut.Markup);
     }
 

@@ -112,7 +112,7 @@ public class HomeTodayRulesTests
 
         Assert.Equal(TodayKind.InProgress, card.Kind);
         Assert.Same(inProgress, card.InProgressWorkout);
-        Assert.Same(inProgress, card.Workout);
+        Assert.Same(inProgress, card.InProgressWorkout);
         Assert.Equal(1, card.DoneCount); // squat is Done
         Assert.Equal(2, card.PlannedCount); // squat + lunge
         Assert.Equal(TimeSpan.FromMinutes(45), card.Elapsed);
@@ -135,9 +135,9 @@ public class HomeTodayRulesTests
 
         Assert.Equal(TodayKind.DoneToday, card.Kind);
         Assert.NotNull(card.DoneSummary);
-        Assert.Equal(TimeSpan.FromMinutes(50), card.Duration);
-        Assert.Equal(1, card.SetCount);
-        Assert.False(card.IsPartial);
+        Assert.Equal(TimeSpan.FromMinutes(50), card.DoneSummary!.Duration);
+        Assert.Equal(1, card.DoneSummary!.SetCount);
+        Assert.False(card.DoneSummary!.IsPartial);
     }
 
     [Fact]
@@ -453,7 +453,7 @@ public class HomeTodayRulesTests
         var card = HomeTodayRules.Compute(snapshot, Now, Mon);
 
         Assert.Equal(TodayKind.DoneToday, card.Kind);
-        Assert.Equal(TimeSpan.FromMinutes(30), card.Duration); // from later workout
+        Assert.Equal(TimeSpan.FromMinutes(30), card.DoneSummary!.Duration); // from later workout
     }
 
     // =========================================================================
