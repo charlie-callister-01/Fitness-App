@@ -1,0 +1,31 @@
+@using Core.Rules.Home
+@* C-08 Nudge: one calm message with at most one action and a Dismiss. Styled by the shared fa-nudge classes. *@
+<div class="fa-nudge" role="status">
+    <span><span class="fa-nudge__lead">Nudge</span> @Item.Nudge.Message</span>
+    <div class="fa-nudge__actions">
+        @if (ActionLabel is { } label)
+        {
+            <Button Variant="ButtonVariant.Secondary" OnClick="() => OnAction.InvokeAsync(Item)">@label</Button>
+        }
+        <button type="button" class="fa-nudge__dismiss" aria-label="@($"Dismiss: {Item.Nudge.Message}")" @onclick="() => OnDismiss.InvokeAsync(Item)">Dismiss</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public HomeNudge Item { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<HomeNudge> OnAction { get; set; }
+
+    [Parameter]
+    public EventCallback<HomeNudge> OnDismiss { get; set; }
+
+    private string? ActionLabel => Item.Action switch
+    {
+        NudgeAction.MakeUp => "Make up",
+        NudgeAction.DifferentSession => "Pick a Session",
+        NudgeAction.BackUp => "Back up",
+        _ => null,
+    };
+}

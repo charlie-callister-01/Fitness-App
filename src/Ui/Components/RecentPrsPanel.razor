@@ -1,0 +1,47 @@
+@using System.Globalization
+@using Core.Model
+@using Core.Rules.Home
+@using Core.Rules.LogKinds
+@using Core.Rules.Units
+@* The Recent PRs panel on Home. Set text comes from the same Core formatter the finish summary uses. *@
+<section class="fa-prpanel" aria-label="Recent PRs">
+    <h2 class="fa-title fa-title--m">Recent PRs</h2>
+    @if (Prs.Count == 0)
+    {
+        <p class="fa-muted">No PRs yet. Your first one will show here.</p>
+    }
+    else
+    {
+        <ul class="fa-prpanel__rows">
+            @foreach (var pr in Prs)
+            {
+                <li class="fa-prpanel__row">
+                    <span class="fa-prpanel__name">@pr.ExerciseName</span>
+                    <span>@ResultText(pr, pr.Set)</span>
+                    @if (pr.PreviousBest is { } previous)
+                    {
+                        <span class="fa-muted">was @ResultText(pr, previous.Set)</span>
+                    }
+                    <span class="fa-muted">@pr.WorkoutDate.ToString("ddd d MMM", CultureInfo.InvariantCulture)</span>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<RecentPr> Prs { get; set; } = [];
+
+    /// <summary>The Exercise library, for each PR's log kind.</summary>
+    [Parameter]
+    public IReadOnlyList<Exercise> Exercises { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public UnitConverter Converter { get; set; } = default!;
+
+    private string ResultText(RecentPr pr, WorkoutSet set) =>
+        Exercises.FirstOrDefault(e => e.Id == pr.ExerciseId) is { } exercise
+            ? SetText.Result(exercise.LogKind, set, Converter)
+            : "";
+}

@@ -1,0 +1,73 @@
+@* The Log weight sheet (design S-08). It only collects the text; the caller validates it and answers through Message. *@
+<Sheet Open="Open" Title="Log weight" OnClose="OnClose">
+    <ChildContent>
+        <label class="fa-weightfield">
+            <span class="fa-label">Weight (@UnitLabel)</span>
+            <input class="fa-weightfield__control" type="text" inputmode="decimal" value="@_value" @oninput="e => _value = e.Value?.ToString()" />
+        </label>
+        @if (LastText is { Length: > 0 })
+        {
+            <p class="fa-muted">@LastText</p>
+        }
+        @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
+        {
+            <p class="fa-well" role="status">@ReadOnlyMessage</p>
+        }
+        @if (Message is { Length: > 0 })
+        {
+            <p class="fa-well" role="alert">@Message</p>
+        }
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Primary" Disabled="Saving || !CanWrite" OnClick="() => OnSave.InvokeAsync(_value ?? string.Empty)">Save</Button>
+        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnClose">Cancel</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    private string? _value;
+    private bool _wasOpen;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    /// <summary>The prefilled text, already in the display unit. May be empty.</summary>
+    [Parameter]
+    public string? InitialText { get; set; }
+
+    /// <summary>For example "Last: 86.3 kg on Sun 15 Nov". May be empty.</summary>
+    [Parameter]
+    public string? LastText { get; set; }
+
+    [Parameter]
+    public string UnitLabel { get; set; } = "kg";
+
+    [Parameter]
+    public bool Saving { get; set; }
+
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
+
+    [Parameter]
+    public string? ReadOnlyMessage { get; set; }
+
+    /// <summary>The caller's validation message, shown as an alert.</summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Open && !_wasOpen)
+        {
+            _value = InitialText;
+        }
+
+        _wasOpen = Open;
+    }
+}
