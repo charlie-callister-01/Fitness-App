@@ -14,7 +14,8 @@ Start here in a new session. The grilling session (usage, then practical, then t
 | [`design/design-document.md`](design/design-document.md) | The design document (v1.0, complete): Themes, tokens, components, screens, flows; assets in `design/assets/` (manifest in `design/assets/README.md`) |
 | [`pwa-manual-checks.md`](pwa-manual-checks.md) | How the PWA caches and updates, and the manual phone checks (install, airplane mode, update, the storage checks, and the Theme, shell and Workout log checks) |
 | [`grilling-log.md`](grilling-log.md) | The essence of every question and answer (Q1 to Q78) |
-| [`adr/`](adr/) | Hard-to-reverse decisions: 0001 data foundation, 0002 stack, 0003 storage, 0004 .NET 10 LTS pinned, 0005 single writer, quarantine and two storage versions, 0006 two Themes (Keep and Clean) |
-| [`agents/`](agents/) | Skill config: GitHub issues, triage labels, domain docs layout |
+| [`adr/`](adr/) | Hard-to-reverse decisions: 0001 data foundation, 0002 stack, 0003 storage, 0004 .NET 10 LTS pinned, 0005 single writer, quarantine and two storage versions, 0006 two Themes (Keep and Clean), 0007 planner and implementer split with file-based dispatch (trial) |
+| [`agents/`](agents/) | Skill config: GitHub issues, triage labels, domain docs layout; and the agent workflow trial (ticket and RUN.md templates, `workflow-change-log.md`) |
+| [`../AGENTS.md`](../AGENTS.md) | Instructions for implementer and orchestrator agents (the lighter agent that does the coding; not for planning sessions) |
 
 Source material from the old system (not yet in this repo): the pre-plan at `C:\Users\calli\Downloads\Fitness App - Pre-plan.md`, and the Obsidian vault folder `Beta/99 Life Planning/Exercise/` (`Fitness/Config.md`, `Fitness/_scripts/fitness/view.js`, `view.css`, `Fitness/Exercises/*.md`, `Fitness/How to use.md`, `Homepage.md`, `Plan/Tracking/Weight.md`).
