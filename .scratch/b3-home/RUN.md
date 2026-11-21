@@ -14,7 +14,7 @@ Ticket branches: `b3-home/NN-slug` (slug as in the ticket file name).
 | 1 | 04-core-weight-panel-and-weigh-in | Core: weight panel and Weigh-in creation | None | 4 | merged |
 | 1 | 05-core-custom-workout-creation | Core: Custom workout creation and start | None | 5 | merged |
 | 1 | 06-ui-start-sheets | Ui: Do a different Session and Log a past Workout sheets | None | 6 | todo |
-| 2 | 07-core-home-view-builder | Core: Home view builder | 01, 02, 03, 04 | 1 | todo |
+| 2 | 07-core-home-view-builder | Core: Home view builder | 01, 02, 03, 04 | 1 | merged |
 | 2 | 08-ui-today-card | Ui: TodayCard component | 01 | 2 | todo |
 | 2 | 09-ui-week-strip-line-and-orbs | Ui: WeekStrip, week line and orb row | 02 | 3 | todo |
 | 2 | 10-ui-nudge-and-dismissals | Ui: Nudge component and dismissal store | 03 | 4 | todo |
