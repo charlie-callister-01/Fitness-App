@@ -1,0 +1,113 @@
+@using System.Globalization
+@using Core.Model
+@using Core.Rules.Home
+@* The Log a past Workout sheet: a day (never after today, yesterday to begin with) and then which Session it was, or a Custom workout.
+   It raises events only; Home starts the Logged afterwards Workout. *@
+<Sheet Open="Open" Title="Log a past Workout" OnClose="OnClose">
+    <ChildContent>
+        <label class="fa-datefield">
+            <span class="fa-label">Date</span>
+            <input class="fa-datefield__control" type="date" max="@Format(Today)" value="@_value" @onchange="e => _value = (string?)e.Value" />
+        </label>
+
+        @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
+        {
+            <p class="fa-well" role="alert">@ReadOnlyMessage</p>
+        }
+
+        @if ((Message ?? _local) is { } message)
+        {
+            <p class="fa-well fa-pastmessage" role="alert">@message</p>
+        }
+
+        <ul class="fa-pastrows">
+            @foreach (var session in Sessions)
+            {
+                var picked = session;
+                <li>
+                    <button type="button" class="fa-pastrow" disabled="@(Saving || !CanWrite)" @onclick="() => StartAsync(picked)">
+                        <span class="fa-pastrow__code">@HomeWeekRules.SessionCode(session)</span>
+                        <span class="fa-pastrow__name">@session.Name</span>
+                    </button>
+                </li>
+            }
+            <li>
+                <button type="button" class="fa-pastrow" disabled="@(Saving || !CanWrite)" @onclick="() => StartAsync(null)">
+                    <span class="fa-pastrow__name">Custom workout</span>
+                </button>
+            </li>
+        </ul>
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnClose">Cancel</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    private const string DateFormat = "yyyy-MM-dd";
+
+    private string? _value;
+    private string? _local;
+    private bool _wasOpen;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter]
+    public DateOnly Today { get; set; }
+
+    /// <summary>All Sessions of the active Plan.</summary>
+    [Parameter]
+    public IReadOnlyList<Session> Sessions { get; set; } = [];
+
+    [Parameter]
+    public bool Saving { get; set; }
+
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
+
+    [Parameter]
+    public string? ReadOnlyMessage { get; set; }
+
+    /// <summary>A refusal from the owner of the sheet, in plain words.</summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    /// <summary>The day and the chosen Session; a null Session is a Custom workout.</summary>
+    [Parameter]
+    public EventCallback<(DateOnly Date, Session? Session)> OnStart { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Open && !_wasOpen)
+        {
+            _value = Format(Today.AddDays(-1));
+            _local = null;
+        }
+
+        _wasOpen = Open;
+    }
+
+    private static string Format(DateOnly date) => date.ToString(DateFormat, CultureInfo.InvariantCulture);
+
+    private Task StartAsync(Session? session)
+    {
+        if (!DateOnly.TryParseExact(_value, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            _local = "Pick the day it happened.";
+            return Task.CompletedTask;
+        }
+
+        if (date > Today)
+        {
+            _local = "That day hasn't happened yet.";
+            return Task.CompletedTask;
+        }
+
+        _local = null;
+        return OnStart.InvokeAsync((date, session));
+    }
+}
