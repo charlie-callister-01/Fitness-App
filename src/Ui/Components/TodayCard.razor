@@ -1,0 +1,140 @@
+@using System.Globalization
+@using Core.Model
+@using Core.Rules.Home
+@using Core.Rules.Weeks
+@* C-09 TodayCard: Home's hero card in every state. Presentational: it raises events and starts nothing itself. *@
+@if (Card.Kind == TodayKind.NoPlan)
+{
+    <section aria-label="Today">
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No active Plan" Message="Make a Plan active and today's Session will start from here." />
+    </section>
+}
+else
+{
+    <section class="fa-today fa-todaycard" aria-label="Today">
+        <svg class="fa-today__band" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="0" y="0" width="120" height="10" />
+            <polyline points="0,8 10,2 20,8 30,2 40,8 50,2 60,8 70,2 80,8 90,2 100,8 110,2 120,8" fill="none" stroke-width="1.5" />
+        </svg>
+        <div class="fa-todaycard__body">
+            @switch (Card.Kind)
+            {
+                case TodayKind.Start when Card.Session is { } session:
+                    <h2 class="fa-title fa-title--m">@session.Name</h2>
+                    <p class="fa-muted">@session.Type · @session.Exercises.Count @(session.Exercises.Count == 1 ? "Exercise" : "Exercises")</p>
+                    @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
+                    {
+                        <p class="fa-well" role="status">@ReadOnlyMessage</p>
+                    }
+                    <Button Variant="ButtonVariant.Primary" Disabled="Starting || !CanWrite" OnClick="() => OnStart.InvokeAsync(session)">Start</Button>
+                    break;
+
+                case TodayKind.InProgress when Card.InProgressWorkout is { } workout:
+                    <h2 class="fa-title fa-title--m">In progress</h2>
+                    <p class="fa-muted">@Card.DoneCount of @Card.PlannedCount done@(Card.Elapsed is { } elapsed ? $" · {Minutes(elapsed)} min" : "")</p>
+                    <Button Variant="ButtonVariant.Primary" OnClick="() => OnContinue.InvokeAsync(workout)">Continue</Button>
+                    break;
+
+                case TodayKind.RestDay:
+                    <h2 class="fa-title fa-title--m">Rest day</h2>
+                    @if (NextLine is { } next)
+                    {
+                        <p class="fa-muted">@next</p>
+                    }
+                    break;
+
+                case TodayKind.DoneToday:
+                    <h2 class="fa-title fa-title--m">Done today</h2>
+                    <p class="fa-muted">@DoneLine</p>
+                    <Button Variant="ButtonVariant.Secondary" OnClick="() => OnOpenSummary.InvokeAsync()">View summary</Button>
+                    break;
+
+                case TodayKind.Break:
+                    <h2 class="fa-title fa-title--m">On a Break</h2>
+                    <p class="fa-muted">Rest up. Your Plan picks up when the Break ends.</p>
+                    break;
+
+                case TodayKind.PlanFinished:
+                    <h2 class="fa-title fa-title--m">Your Plan has finished</h2>
+                    <p class="fa-muted">Start a new Plan to keep going.</p>
+                    break;
+
+                case TodayKind.NotStarted when Card.PlanStartDate is { } startDate:
+                    <h2 class="fa-title fa-title--m">Your Plan starts on @startDate.ToString("ddd d MMM", CultureInfo.InvariantCulture)</h2>
+                    break;
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Core.Rules.Home.TodayCard Card { get; set; } = default!;
+
+    /// <summary>The day the card is read for: decides whether the next Session is later this week or next week.</summary>
+    [Parameter]
+    public DateOnly Today { get; set; }
+
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
+
+    [Parameter]
+    public string? ReadOnlyMessage { get; set; }
+
+    /// <summary>A Start is saving: further taps do nothing.</summary>
+    [Parameter]
+    public bool Starting { get; set; }
+
+    [Parameter]
+    public EventCallback<Session> OnStart { get; set; }
+
+    [Parameter]
+    public EventCallback<Workout> OnContinue { get; set; }
+
+    /// <summary>View summary was tapped on the Done card. The page knows which Workout finished today.</summary>
+    [Parameter]
+    public EventCallback OnOpenSummary { get; set; }
+
+    private static int Minutes(TimeSpan span) => (int)Math.Round(span.TotalMinutes, MidpointRounding.AwayFromZero);
+
+    private string? NextLine
+    {
+        get
+        {
+            if (Card.NextSession is not { } next || Card.NextDate is not { } date)
+            {
+                return null;
+            }
+
+            var weekday = date.DayOfWeek.ToString();
+            var laterWeek = WeekCalendar.MondayOf(date) > WeekCalendar.MondayOf(Today);
+            return $"Next is {next.Name} on {weekday}{(laterWeek ? " next week" : "")}";
+        }
+    }
+
+    private string DoneLine
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (Card.Duration is { } duration)
+            {
+                parts.Add($"{Minutes(duration)} min");
+            }
+
+            var sets = Card.SetCount ?? 0;
+            parts.Add($"{sets} {(sets == 1 ? "Set" : "Sets")}");
+            if (Card.PrCount is > 0 and var prs)
+            {
+                parts.Add($"{prs} {(prs == 1 ? "PR" : "PRs")}");
+            }
+
+            if (Card.IsPartial == true)
+            {
+                parts.Add("Partial");
+            }
+
+            return string.Join(" · ", parts);
+        }
+    }
+}

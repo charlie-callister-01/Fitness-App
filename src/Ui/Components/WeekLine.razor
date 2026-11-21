@@ -1,0 +1,7 @@
+@* The one-line summary under the week strip. *@
+<p class="fa-muted fa-weekline">This week @Line.Done of @Line.Scheduled · target @Line.Target@(Line.MissedCodes.Count > 0 ? $" · Missed: {string.Join(", ", Line.MissedCodes)}" : "")</p>
+
+@code {
+    [Parameter, EditorRequired]
+    public Core.Rules.Home.WeekLine Line { get; set; } = default!;
+}

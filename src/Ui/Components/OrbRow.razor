@@ -1,0 +1,33 @@
+@using Core.Rules.Home
+@* The three orbs on Home: Streak always, Phase and Race when the Plan has them. Each is a button that opens Progress. *@
+<div class="fa-orbrow">
+    <button type="button" class="fa-orbrow__orb" @onclick="() => OnOpenProgress.InvokeAsync()">
+        <StatusOrb Value="@Orbs.Streak.Current.ToString()" Fraction="Orbs.Streak.Fraction" Caption="Streak (weeks)"
+                   AccessibleName="@StreakName" Greyed="Orbs.Streak.OnBreak" />
+    </button>
+    @if (Orbs.Phase is { } phase)
+    {
+        <button type="button" class="fa-orbrow__orb" @onclick="() => OnOpenProgress.InvokeAsync()">
+            <StatusOrb Value="@phase.WeekInPhase.ToString()" Fraction="phase.Fraction" Caption="@($"Phase week of {phase.PhaseLengthWeeks}")"
+                       AccessibleName="@($"Phase week {phase.WeekInPhase} of {phase.PhaseLengthWeeks}")" />
+        </button>
+    }
+    @if (Orbs.Race is { } race)
+    {
+        <button type="button" class="fa-orbrow__orb" @onclick="() => OnOpenProgress.InvokeAsync()">
+            <StatusOrb Value="@race.DaysToGo.ToString()" Fraction="race.Fraction" Caption="Days to race" Tone="OrbTone.Ochre"
+                       AccessibleName="@($"{race.DaysToGo} days to race")" />
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public HomeOrbs Orbs { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnOpenProgress { get; set; }
+
+    private string StreakName =>
+        $"Streak: {Orbs.Streak.Current} weeks{(Orbs.Streak.OnBreak ? ", on a Break" : "")}";
+}

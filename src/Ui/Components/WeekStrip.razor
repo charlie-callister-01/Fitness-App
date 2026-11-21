@@ -1,0 +1,59 @@
+@using Core.Model
+@using Core.Rules.Home
+@* C-24 WeekStrip: this week's seven days as tappable tiles. The glyph is never the only signal: every tile's label says the state in words. *@
+<div class="fa-weekstrip" role="group" aria-label="This week">
+    @foreach (var tile in Tiles)
+    {
+        var day = tile.Date;
+        <button type="button" class="fa-weekstrip__tile @(tile.IsToday ? "fa-weekstrip__tile--today" : "")" aria-label="@LabelOf(tile)" @onclick="() => OnOpenDay.InvokeAsync(day)">
+            <span class="fa-weekstrip__day">@tile.Weekday</span>
+            <span class="fa-weekstrip__code @CodeClass(tile)">@tile.Code</span>
+            <span class="fa-weekstrip__glyph" aria-hidden="true">@GlyphOf(tile.State)</span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<WeekTile> Tiles { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<DateOnly> OnOpenDay { get; set; }
+
+    private static string GlyphOf(TileState state) => state switch
+    {
+        TileState.Done => "✓",
+        TileState.Missed => "○",
+        TileState.Partial => "◐",
+        TileState.BreakDay => "–",
+        _ => "",
+    };
+
+    private static string StateWords(TileState state) => state switch
+    {
+        TileState.Done => "done",
+        TileState.Missed => "missed",
+        TileState.Partial => "partial",
+        TileState.BreakDay => "Break day",
+        TileState.Upcoming => "upcoming",
+        _ => "rest day",
+    };
+
+    private static string CodeClass(WeekTile tile) => tile.SessionType switch
+    {
+        SessionType.Strength => "fa-weekstrip__code--strength",
+        SessionType.Cardio => "fa-weekstrip__code--cardio",
+        SessionType.Body => "fa-weekstrip__code--body",
+        SessionType.Test => "fa-weekstrip__code--test",
+        _ => "",
+    };
+
+    private static string LabelOf(WeekTile tile)
+    {
+        var name = tile.Date.DayOfWeek.ToString();
+        var lead = tile.IsToday ? $"Today, {name}" : name;
+        return tile.Session is null || tile.Code is null
+            ? $"{lead}, {StateWords(tile.State)}"
+            : $"{lead}, Session {tile.Code}, {StateWords(tile.State)}";
+    }
+}
