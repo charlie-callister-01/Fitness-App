@@ -15,11 +15,11 @@ Ticket branches: `b3-home/NN-slug` (slug as in the ticket file name).
 | 1 | 05-core-custom-workout-creation | Core: Custom workout creation and start | None | 5 | merged |
 | 1 | 06-ui-start-sheets | Ui: Do a different Session and Log a past Workout sheets | None | 6 | merged |
 | 2 | 07-core-home-view-builder | Core: Home view builder | 01, 02, 03, 04 | 1 | merged |
-| 2 | 08-ui-today-card | Ui: TodayCard component | 01 | 2 | todo |
-| 2 | 09-ui-week-strip-line-and-orbs | Ui: WeekStrip, week line and orb row | 02 | 3 | todo |
-| 2 | 10-ui-nudge-and-dismissals | Ui: Nudge component and dismissal store | 03 | 4 | todo |
-| 2 | 11-ui-recent-prs-weight-panels-and-sheet | Ui: Recent PRs, Weight panel and Log weight sheet | 03, 04 | 5 | todo |
-| 2 | 12-ui-custom-workout-draft-page | Ui: Custom workout draft page | 05 | 6 | todo |
+| 2 | 08-ui-today-card | Ui: TodayCard component | 01 | 2 | merged |
+| 2 | 09-ui-week-strip-line-and-orbs | Ui: WeekStrip, week line and orb row | 02 | 3 | merged |
+| 2 | 10-ui-nudge-and-dismissals | Ui: Nudge component and dismissal store | 03 | 4 | merged |
+| 2 | 11-ui-recent-prs-weight-panels-and-sheet | Ui: Recent PRs, Weight panel and Log weight sheet | 03, 04 | 5 | merged |
+| 2 | 12-ui-custom-workout-draft-page | Ui: Custom workout draft page | 05 | 6 | merged |
 | 3 | 13-ui-home-page | Ui: Home page | 06, 07, 08, 09, 10, 11, 12 | 1 | todo |
 | 4 | 14-ui-home-wiring | Ui: Home wiring | 13 | 1 | todo |
 
