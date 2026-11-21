@@ -3,8 +3,8 @@
 ## Workflow (every stage; also in `../CLAUDE.md`)
 
 1. **`/to-spec`**: write the spec for the stage.
-2. **`/to-tickets`**: break the spec into tickets. Each ticket must fit one agent in roughly **80k tokens** of context (reading, writing, tests and fixes). Split anything bigger. Tickets use `agents/ticket-template.md` and the stage gets a `RUN.md` from `agents/run-template.md` (agent workflow trial, [ADR 0007](adr/0007-planner-and-implementer-split-with-file-based-dispatch.md); trial starts with B3).
-3. **Implement** the tickets: handed to the implementer agent via `RUN.md` and `../AGENTS.md` (test-first; each ticket includes its tests), then independently re-verified by the planner. Revert instructions: `agents/workflow-change-log.md`.
+2. **`/to-tickets`**: break the spec into tickets. Each ticket must fit one agent in roughly **150-200k tokens** of context (reading, writing, tests and fixes). Split anything bigger.
+3. **Implement** the tickets (test-first; each ticket includes its tests).
 4. **`/mattpocock-skills:code-review`**: review of the stage's changes. Always this skill, not the built-in `/code-review`.
 5. **`/thermo-nuclear-code-quality-review`**: strict maintainability review (`../.claude/skills/thermo-nuclear-code-quality-review/SKILL.md`). User-invoked only; if it can't be run as a skill, read the file and apply it. Its rules are TypeScript-flavoured; apply the same intent to C# (nullable abuse, `object`, casts, files over 1k lines, ad-hoc branching).
 6. **Apply the fixes** from both reviews.
