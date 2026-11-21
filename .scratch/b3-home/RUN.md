@@ -8,11 +8,11 @@ Ticket branches: `b3-home/NN-slug` (slug as in the ticket file name).
 
 | Wave | Ticket | Title | Blocked by | Merge order | Status |
 |---|---|---|---|---|---|
-| 1 | 01-core-today-card | Core: TodayCard state | None | 1 | todo |
-| 1 | 02-core-week-strip-and-orbs | Core: week strip, week line and orbs | None | 2 | todo |
-| 1 | 03-core-nudge-selection-and-recent-prs | Core: Nudge selection and Recent PRs | None | 3 | todo |
-| 1 | 04-core-weight-panel-and-weigh-in | Core: weight panel and Weigh-in creation | None | 4 | todo |
-| 1 | 05-core-custom-workout-creation | Core: Custom workout creation and start | None | 5 | todo |
+| 1 | 01-core-today-card | Core: TodayCard state | None | 1 | merged |
+| 1 | 02-core-week-strip-and-orbs | Core: week strip, week line and orbs | None | 2 | merged |
+| 1 | 03-core-nudge-selection-and-recent-prs | Core: Nudge selection and Recent PRs | None | 3 | merged |
+| 1 | 04-core-weight-panel-and-weigh-in | Core: weight panel and Weigh-in creation | None | 4 | merged |
+| 1 | 05-core-custom-workout-creation | Core: Custom workout creation and start | None | 5 | merged |
 | 1 | 06-ui-start-sheets | Ui: Do a different Session and Log a past Workout sheets | None | 6 | todo |
 | 2 | 07-core-home-view-builder | Core: Home view builder | 01, 02, 03, 04 | 1 | todo |
 | 2 | 08-ui-today-card | Ui: TodayCard component | 01 | 2 | todo |
@@ -37,4 +37,5 @@ Waves run in order. Within a wave all tickets run in parallel. A wave starts onl
 After wave 4 is merged and green: independent re-verification (`dotnet build`, `dotnet test`, read the reports, check each ticket's acceptance), B3's manual-checks section in `docs/pwa-manual-checks.md`, the status update in `docs/build-plan.md` and `docs/README.md`, the two reviews, the fix pass and the PR body. The trial notes in `docs/agents/workflow-change-log.md` are filled in then.
 
 ## Notes
-<Orchestrator: blockers copied from reports, tool limitations such as "ran sequentially", anything for the planner.>
+- Wave 1 run stopped when the implementer tool hit its usage limit. Tickets 01 to 05 were left finished in their worktrees (01, 02 and 03 uncommitted, 04 without a report; only 05 wrote a report). The planner committed 01 to 03 to their ticket branches, merged 01 to 05 into the stage branch in merge order, and confirmed `dotnet build` clean (0 warnings) and `dotnet test` green: Core 1152 (baseline 1048 + 104 new), Ui 358, Web 39. Tests-first (the red run) is unverified for 01 to 04 because they have no reports.
+- Ticket 06 (Ui start sheets) had no work in its worktree: still todo. Wave 2 cannot start until 06 is merged only for ticket 13; tickets 07 to 12 depend only on 01 to 05 and can start now.
