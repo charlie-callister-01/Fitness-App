@@ -20,8 +20,8 @@ Ticket branches: `b3-home/NN-slug` (slug as in the ticket file name).
 | 2 | 10-ui-nudge-and-dismissals | Ui: Nudge component and dismissal store | 03 | 4 | merged |
 | 2 | 11-ui-recent-prs-weight-panels-and-sheet | Ui: Recent PRs, Weight panel and Log weight sheet | 03, 04 | 5 | merged |
 | 2 | 12-ui-custom-workout-draft-page | Ui: Custom workout draft page | 05 | 6 | merged |
-| 3 | 13-ui-home-page | Ui: Home page | 06, 07, 08, 09, 10, 11, 12 | 1 | todo |
-| 4 | 14-ui-home-wiring | Ui: Home wiring | 13 | 1 | todo |
+| 3 | 13-ui-home-page | Ui: Home page | 06, 07, 08, 09, 10, 11, 12 | 1 | merged |
+| 4 | 14-ui-home-wiring | Ui: Home wiring | 13 | 1 | merged |
 
 Waves run in order. Within a wave all tickets run in parallel. A wave starts only when every ticket it depends on is `merged`.
 

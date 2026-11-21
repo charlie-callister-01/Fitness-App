@@ -1,0 +1,52 @@
+.fa-home__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.fa-home__header h1,
+.fa-home__date {
+    margin: 0;
+}
+
+.fa-home__columns,
+.fa-home__main,
+.fa-home__side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-home__alts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+}
+
+.fa-home__link {
+    align-self: flex-start;
+    min-height: var(--tap-min);
+    padding: 0 var(--space-2);
+    font: inherit;
+    color: var(--text);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    text-underline-offset: var(--underline-offset);
+}
+
+.fa-home__link:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}
+
+/* From 900 px: the Today side on the left, the rest on the right. */
+@media (min-width: 900px) {
+    .fa-home__columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: var(--space-4);
+    }
+}

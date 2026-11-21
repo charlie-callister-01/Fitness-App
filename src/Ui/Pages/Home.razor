@@ -1,87 +1,68 @@
 @page "/"
-@using Core.Ids
-@using Core.Model
-@using Core.Rules.Starting
-@using Core.Storage
-@using Core.Time
-@implements IDisposable
-@inject AppData Data
-@inject IClock Clock
-@inject IIdGenerator Ids
-@inject SaveFailureNotice Notice
-@inject NavigationManager Navigation
+@using Core.Rules.Home
+@* Home (S-01): the Today card, the week at a glance, Nudges, Recent PRs and Weight. Everything shown comes from HomeViewBuilder; this page
+   renders it and starts things. *@
+<div class="fa-root fa-home">
+    <header class="fa-home__header">
+        <div>
+            <p class="fa-muted fa-home__date">@DateText</p>
+            <h1 class="fa-title fa-title--l">@_view.Header.Greeting</h1>
+        </div>
+        <Button Variant="ButtonVariant.Secondary" OnClick="OnLogWeight">Log weight</Button>
+    </header>
 
-@* Placeholder (B0): the real Home (S-01) arrives in a later stage.
-   TEMPORARY (B1): the Start and Continue button below is the only way into the Workout log until B3 replaces this page with the
-   real Home (TodayCard, Do a different Session, Make up a Missed session). Keep it plain. *@
-<div class="fa-root">
-    <h1 class="fa-title fa-title--l">Fitness App</h1>
-    @if (WorkoutStart.InProgress(Data.Snapshot.Workouts) is { } inProgress)
-    {
-        <p class="fa-muted">A Workout is in progress.</p>
-        <Button Variant="ButtonVariant.Primary" Href="@($"log/{inProgress.Id}")">Continue</Button>
-    }
-    else if (ActivePlan is null)
-    {
-        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No active Plan" Message="Make a Plan active and today's Session will start from here." />
-    }
-    else if (ActivePlan.Sessions.Count == 0)
-    {
-        <EmptyState Kind="EmptyStateKind.NoPlan" Title="Your Plan has no Sessions" Message="Add a Session to the active Plan to start a Workout." />
-    }
-    else if (Next is { } next)
-    {
-        <p class="fa-muted">Next up: @next.Session.Name</p>
-        <Button Variant="ButtonVariant.Primary" Disabled="@(!Data.Health.CanWrite)" OnClick="() => StartAsync(next.Session)">Start</Button>
-    }
-    else
-    {
-        <EmptyState Kind="EmptyStateKind.FirstRun" Title="All done this week" Message="Every Session of this week has a Workout." />
-    }
+    <div class="fa-home__columns">
+        <div class="fa-home__main">
+            <TodayCard Card="_view.Today" Today="Today" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Starting="_saving"
+                       OnStart="StartAsync" OnContinue="OnContinue" OnOpenSummary="OnOpenSummary" />
+
+            @if (_view.ShowAlternatives)
+            {
+                <div class="fa-home__alts">
+                    <Button Variant="ButtonVariant.Secondary" OnClick="OnDifferentSessionAsync">Do a different Session</Button>
+                    <Button Variant="ButtonVariant.Secondary" OnClick="OnBuildCustom">Build a Custom workout</Button>
+                </div>
+                @if (_view.ShowLogPastWorkout)
+                {
+                    <button type="button" class="fa-home__link" @onclick="OnLogPastWorkout">Log a past Workout</button>
+                }
+            }
+
+            @if (_view.Strip.Count > 0)
+            {
+                <WeekStrip Tiles="_view.Strip" OnOpenDay="OnOpenDay" />
+            }
+
+            @if (_view.Line is { } line)
+            {
+                <WeekLine Line="line" />
+            }
+        </div>
+
+        <div class="fa-home__side">
+            @if (_view.Orbs is { } orbs)
+            {
+                <OrbRow Orbs="orbs" OnOpenProgress="OnOpenProgress" />
+            }
+
+            @if (_view.ShowNudges)
+            {
+                @foreach (var nudge in _view.Nudges)
+                {
+                    <NudgeCard Item="nudge" OnAction="OnNudgeAction" OnDismiss="OnNudgeDismiss" />
+                }
+            }
+
+            <RecentPrsPanel Prs="_view.RecentPrs" Exercises="Data.Snapshot.Exercises" Converter="Converter" />
+            <WeightPanel Panel="_view.Weight" Converter="Converter" Today="Today" OnLogWeight="OnLogWeight" />
+        </div>
+    </div>
+
+    <DifferentSessionSheet Open="_differentOpen" Sessions="UndoneSessions" Saving="_saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
+                           OnPick="PickDifferentAsync" OnBuildCustom="BuildCustomFromSheet" OnClose="CloseDifferent" />
+    <LogPastWorkoutSheet Open="_pastOpen" Today="Today" Sessions="PlanSessions" Saving="_saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
+                         Message="@_pastMessage" OnStart="StartPastAsync" OnClose="ClosePast" />
+    <LogWeightSheet Open="_weightOpen" InitialText="@LatestWeightText" LastText="@LastWeightText" UnitLabel="@Converter.WeightLabel"
+                    Saving="_saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Message="@_weightMessage"
+                    OnSave="SaveWeightAsync" OnClose="CloseWeight" />
 </div>
-
-@code {
-    private bool _starting;
-
-    private Plan? ActivePlan => Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
-
-    private Core.Rules.Schedule.ScheduledSession? Next =>
-        WorkoutStart.NextToStart(
-            ActivePlan, Data.Snapshot.WeekSchedules, Data.Snapshot.Breaks, Data.Snapshot.Workouts, Today);
-
-    private DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.ToLocalTime().DateTime);
-
-    protected override void OnInitialized() => Data.Changed += OnDataChanged;
-
-    public void Dispose() => Data.Changed -= OnDataChanged;
-
-    private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
-
-    private async Task StartAsync(Session session)
-    {
-        // A second tap while the first is saving must not start another Workout.
-        if (_starting || ActivePlan is not { } plan)
-        {
-            return;
-        }
-
-        _starting = true;
-        try
-        {
-            var outcome = await new WorkoutStarter(Data, Ids, Clock).StartAsync(plan, session, Today);
-            if (outcome.Commit is { } commit)
-            {
-                Notice.Report(commit);
-            }
-
-            if (outcome.Workout is { } workout)
-            {
-                Navigation.NavigateTo($"log/{workout.Id}");
-            }
-        }
-        finally
-        {
-            _starting = false;
-        }
-    }
-}
