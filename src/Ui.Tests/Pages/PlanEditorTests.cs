@@ -16,7 +16,7 @@ public sealed class PlanEditorTests : BunitContext
 
     private static Phase Ph(string id, string focus, int start, int end) => new(id, focus, start, end, [], []);
 
-    private static Plan PlanWithPhases() => Plan() with { Phases = [Ph("p1", "Foundation", 1, 4), Ph("p2", "Build", 5, 8)] };
+    private static Plan PlanWithPhases() => WithMainPhases(Plan(), [Ph("p1", "Foundation", 1, 4), Ph("p2", "Build", 5, 8)]);
 
     private IRenderedComponent<PlanEditor> RenderEditor(AppData data, string planId = "plan")
     {
@@ -85,13 +85,14 @@ public sealed class PlanEditorTests : BunitContext
         Assert.False(SaveButton(cut).HasAttribute("disabled"));
         SaveButton(cut).Click();
 
-        cut.WaitForAssertion(() => Assert.Equal(5, data.Snapshot.Plans.Single().WeeklyTarget));
+        cut.WaitForAssertion(() => Assert.Equal(5, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget));
         var saved = data.Snapshot.Plans.Single();
+        var weekly = MainWeekly(saved);
         Assert.Equal("HYROX London", saved.Goal);
         Assert.Equal(new DateOnly(2027, 4, 24), saved.GoalDate);
-        Assert.Equal(3, saved.StreakMinWorkoutsPerWeek);
+        Assert.Equal(3, weekly.StreakMinWorkoutsPerWeek);
         Assert.Equal(new DateOnly(2026, 11, 9), saved.StartDate);
-        Assert.True(saved.StreakCountsCustomWorkouts);
+        Assert.True(weekly.StreakCountsCustomWorkouts);
         Assert.Equal(1.25, saved.WeightIncrementKg);
         cut.WaitForAssertion(() => Assert.True(SaveButton(cut).HasAttribute("disabled")));
         Assert.Contains("Saved.", cut.Markup);
@@ -144,7 +145,7 @@ public sealed class PlanEditorTests : BunitContext
         var cut = RenderEditor(data);
         Field(cut, "Weekly target (Workouts)").Input("5");
         SaveButton(cut).Click();
-        cut.WaitForAssertion(() => Assert.Equal(5, data.Snapshot.Plans.Single().WeeklyTarget));
+        cut.WaitForAssertion(() => Assert.Equal(5, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget));
 
         var home = Render<Home>();
 
@@ -186,8 +187,8 @@ public sealed class PlanEditorTests : BunitContext
         Assert.False(SaveButton(cut).HasAttribute("disabled"));
         SaveButton(cut).Click();
 
-        cut.WaitForAssertion(() => Assert.Equal("Base", data.Snapshot.Plans.Single().Phases[0].Focus));
-        var phases = data.Snapshot.Plans.Single().Phases;
+        cut.WaitForAssertion(() => Assert.Equal("Base", data.Snapshot.Plans.Single().Tracks[0].Phases[0].Focus));
+        var phases = data.Snapshot.Plans.Single().Tracks[0].Phases;
         Assert.Equal((1, 6), (phases[0].StartWeek, phases[0].EndWeek));
         Assert.Equal((7, 8), (phases[1].StartWeek, phases[1].EndWeek));
     }
@@ -235,8 +236,8 @@ public sealed class PlanEditorTests : BunitContext
         Field(cut, "Goal Exercise").Change(Lunge);
         SaveButton(cut).Click();
 
-        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Plans.Single().Phases[0].Goals));
-        Assert.Equal(new PhaseGoal(Lunge, 40, 8), data.Snapshot.Plans.Single().Phases[0].Goals[0]);
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Plans.Single().Tracks[0].Phases[0].Goals));
+        Assert.Equal(new PhaseGoal(Lunge, 40, 8), data.Snapshot.Plans.Single().Tracks[0].Phases[0].Goals[0]);
     }
 
     [Fact]
@@ -264,12 +265,12 @@ public sealed class PlanEditorTests : BunitContext
         Assert.Equal(3, cut.FindAll(".fa-phase").Count);
         Assert.Contains("Weeks 9 to 12", cut.FindAll(".fa-phase")[2].TextContent);
         SaveButton(cut).Click();
-        cut.WaitForAssertion(() => Assert.Equal(3, data.Snapshot.Plans.Single().Phases.Count));
+        cut.WaitForAssertion(() => Assert.Equal(3, data.Snapshot.Plans.Single().Tracks[0].Phases.Count));
 
         Button(cut, "Remove Phase").Click();
         SaveButton(cut).Click();
 
-        cut.WaitForAssertion(() => Assert.Equal(2, data.Snapshot.Plans.Single().Phases.Count));
+        cut.WaitForAssertion(() => Assert.Equal(2, data.Snapshot.Plans.Single().Tracks[0].Phases.Count));
     }
 
     [Fact]
@@ -297,7 +298,7 @@ public sealed class PlanEditorTests : BunitContext
     [Fact]
     public async Task Sessions_show_their_rows_with_a_hidden_drag_handle_name_and_summary()
     {
-        var plan = Plan([new Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+        var plan = Plan([Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
         [
             new SessionExercise(Squat, 3, 8, null, "Chest up"),
             new SessionExercise(Lunge, 3, 8, 12, null),
@@ -437,7 +438,7 @@ public sealed class PlanEditorTests : BunitContext
         SaveButton(cut).Click();
         cut.WaitForAssertion(() => Assert.Equal("Legs", data.Snapshot.Plans.Single().Sessions[0].Name));
         var session = data.Snapshot.Plans.Single().Sessions[0];
-        Assert.Equal((DayOfWeek.Friday, SessionType.Body), (session.DefaultDay, session.Type));
+        Assert.Equal((DefaultDay.Friday, SessionType.Body), (session.DefaultDay, session.Type));
         Assert.Equal(2, session.Exercises.Count);
     }
 
@@ -470,7 +471,7 @@ public sealed class PlanEditorTests : BunitContext
         SaveButton(cut).Click();
         cut.WaitForAssertion(() => Assert.Equal(2, data.Snapshot.Plans.Single().Sessions.Count));
         var run = data.Snapshot.Plans.Single().Sessions[1];
-        Assert.Equal(("Run", DayOfWeek.Saturday, SessionType.Cardio), (run.Name, run.DefaultDay, run.Type));
+        Assert.Equal(("Run", DefaultDay.Saturday, SessionType.Cardio), (run.Name, run.DefaultDay, run.Type));
         Assert.Empty(run.Exercises);
     }
 
@@ -692,7 +693,7 @@ public sealed class PlanEditorTests : BunitContext
         cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Discard").Click();
 
         cut.WaitForAssertion(() => Assert.Equal("plans", CurrentPath));
-        Assert.Equal(3, data.Snapshot.Plans.Single().WeeklyTarget);
+        Assert.Equal(3, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget);
     }
 
     [Fact]
@@ -713,7 +714,7 @@ public sealed class PlanEditorTests : BunitContext
         var cut = RenderEditor(data);
         Field(cut, "Weekly target (Workouts)").Input("5");
         SaveButton(cut).Click();
-        cut.WaitForAssertion(() => Assert.Equal(5, data.Snapshot.Plans.Single().WeeklyTarget));
+        cut.WaitForAssertion(() => Assert.Equal(5, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget));
 
         Services.GetRequiredService<NavigationManager>().NavigateTo("plans");
 
@@ -752,7 +753,7 @@ public sealed class PlanEditorTests : BunitContext
         SaveButton(cut).Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(_notice.Message));
-        Assert.Equal(3, data.Snapshot.Plans.Single().WeeklyTarget);
+        Assert.Equal(3, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget);
         Assert.Equal("5", Field(cut, "Weekly target (Workouts)").GetAttribute("value"));
         Assert.False(SaveButton(cut).HasAttribute("disabled"));
         Assert.DoesNotContain("Saved.", cut.Markup);
@@ -771,7 +772,7 @@ public sealed class PlanEditorTests : BunitContext
         save.Click();
         save.Click();
 
-        cut.WaitForAssertion(() => Assert.Equal(5, data.Snapshot.Plans.Single().WeeklyTarget));
+        cut.WaitForAssertion(() => Assert.Equal(5, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget));
         Assert.Equal(1, saves);
     }
 }

@@ -11,9 +11,10 @@
 
 **Blocked by:** 04, 06.
 
-**Status:** ready-for-agent
+**Status:** resolved
+**Notes:** Implemented qualified Badge metrics (`streak:<id>`, `days:<id>`, `bestweek:<id>`) and per-weekly-Track Nudges with Track-scoped dismissal keys. Note: `HomeNudges.Select` caps at 2 (`b3-home.md`), left unchanged.
 
-- [ ] Tests: each qualified metric on a weekly Track and a daily Track; `bestweek:<id>` on a daily Track is not measurable; an unknown and an empty Track ID are not measurable; case-insensitive Track ID; unqualified metrics on a two-Track Plan equal the main Track's values (and not the other Track's); a Badge that names a Track keeps working after the Tracks are reordered.
-- [ ] Nudge tests: two weekly Tracks, one short, one on target gives one Nudge naming the short Track; a one-Track Plan's Nudge wording is unchanged; two Missed Sessions on different Tracks give two Nudges with distinct keys.
-- [ ] Existing Badge and Nudge tests pass unchanged for one-Track Plans.
-- [ ] `dotnet build` 0 warnings; all tests pass.
+- [x] Tests: each qualified metric on a weekly Track and a daily Track; `bestweek:<id>` on a daily Track is not measurable; an unknown and an empty Track ID are not measurable; case-insensitive Track ID; unqualified metrics on a two-Track Plan equal the main Track's values (and not the other Track's); a Badge that names a Track keeps working after the Tracks are reordered.
+- [x] Nudge tests: two weekly Tracks, one short, one on target gives one Nudge naming the short Track; a one-Track Plan's Nudge wording is unchanged; two Missed Sessions on different Tracks give two Nudges with distinct keys.
+- [x] Existing Badge and Nudge tests pass unchanged for one-Track Plans.
+- [x] `dotnet build` 0 warnings; all tests pass.

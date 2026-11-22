@@ -13,11 +13,21 @@ public sealed class HomeInsightNavigationTests : BunitContext
 {
     private static readonly DateTimeOffset Sunday = new(2026, 11, 22, 9, 0, 0, TimeSpan.Zero);
 
+    private static Plan PlanWithPhase()
+    {
+        var plan = Plan();
+        return plan with
+        {
+            Tracks = [plan.Tracks[0] with { Phases = [new Phase("p", "Foundation", 1, 8, [], [])] }, .. plan.Tracks.Skip(1)],
+            GoalDate = Today.AddDays(100),
+        };
+    }
+
     private string CurrentPath => Services.GetRequiredService<NavigationManager>().Uri[Services.GetRequiredService<NavigationManager>().BaseUri.Length..];
 
     private async Task<IRenderedComponent<Home>> RenderAsync(DateTimeOffset? now = null, params WeighIn[] weighIns)
     {
-        var plan = Plan() with { Phases = [new Phase("p", "Foundation", 1, 8, [], [])], GoalDate = Today.AddDays(100) };
+        var plan = PlanWithPhase();
         var data = await OpenSeededAsync(plan: plan);
         if (weighIns.Length > 0)
         {

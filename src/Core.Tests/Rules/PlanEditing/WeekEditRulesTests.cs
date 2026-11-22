@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.Schedule;
 using Core.Rules.PlanEditing;
+using Core.Rules.Tracks;
 using Core.Tests.Ids;
 using Core.Tests.Rules.TestData;
 using static Core.Tests.Rules.TestData.Dates;
@@ -37,10 +38,10 @@ public class WeekEditRulesTests
     {
         var schedule = Valid(WeekEditRules.MoveThisWeek(Standard, [], "push", Mon, Mon.AddDays(4)));
 
-        var layout = WeekScheduleRules.Layout(Standard, [schedule], [], Mon);
+        var layout = WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [], Mon);
         Assert.Equal(Mon, schedule.WeekStart);
         Assert.Equal(Mon.AddDays(4), layout.Sessions.Single(s => s.SessionId == "push").Date);
-        Assert.Equal(Mon.AddDays(8), WeekScheduleRules.Layout(Standard, [schedule], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
+        Assert.Equal(Mon.AddDays(8), WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
     }
 
     [Fact]
@@ -79,18 +80,18 @@ public class WeekEditRulesTests
     {
         var schedule = Valid(WeekEditRules.MoveThisWeek(Standard, [], "push", Mon, Mon));
 
-        var layout = WeekScheduleRules.Layout(Standard, [schedule], [], Mon);
+        var layout = WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [], Mon);
         Assert.Equal(2, layout.Sessions.Count(s => s.Date == Mon));
     }
 
     [Fact]
     public void Making_a_day_the_default_changes_the_Session_in_the_Plan_for_every_week()
     {
-        var plan = Valid(WeekEditRules.MakeDefaultDay(Standard, "push", DayOfWeek.Friday));
+        var plan = Valid(WeekEditRules.MakeDefaultDay(Standard, "push", DefaultDay.Friday));
 
-        Assert.Equal(DayOfWeek.Friday, plan.Sessions.Single(s => s.Id == "push").DefaultDay);
-        Assert.Equal(Mon.AddDays(11), WeekScheduleRules.Layout(plan, [], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
-        Assert.Contains("no longer", Reason(WeekEditRules.MakeDefaultDay(Standard, "gone", DayOfWeek.Friday)));
+        Assert.Equal(DefaultDay.Friday, plan.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Equal(Mon.AddDays(11), WeekScheduleRules.Layout(plan, TrackRules.Main(plan), [], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
+        Assert.Contains("no longer", Reason(WeekEditRules.MakeDefaultDay(Standard, "gone", DefaultDay.Friday)));
     }
 
     // Breaks
@@ -181,7 +182,7 @@ public class WeekEditRulesTests
 
         var schedule = draft.Apply(Standard, []);
 
-        var layout = WeekScheduleRules.Layout(Standard, [schedule], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], Mon);
+        var layout = WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], Mon);
         foreach (var row in draft.Rows)
         {
             Assert.Equal(row.FinalDate, layout.Sessions.Single(s => s.SessionId == row.SessionId).Date);
@@ -238,7 +239,7 @@ public class WeekEditRulesTests
     {
         var draft = Draft();
 
-        var missed = WeekScheduleRules.MissedInWeek(Standard, [draft.Apply(Standard, [])], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], [Logged(Mon, "legsA")], Mon, Mon.AddDays(1));
+        var missed = WeekScheduleRules.MissedInWeek(Standard, TrackRules.Main(Standard), [draft.Apply(Standard, [])], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], [Logged(Mon, "legsA")], Mon, Mon.AddDays(1));
 
         Assert.Empty(missed);
     }
@@ -259,7 +260,7 @@ public class WeekEditRulesTests
     {
         var changes = Valid(WeekEditRules.MoveSession(Standard, [], "push", Mon, Mon.AddDays(4), makeDefaultDay: true));
 
-        Assert.Equal(DayOfWeek.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Equal(DefaultDay.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
         Assert.Null(changes.ChangedSchedule);
     }
 
@@ -270,7 +271,7 @@ public class WeekEditRulesTests
 
         var changes = Valid(WeekEditRules.MoveSession(Standard, [existing], "push", Mon, Mon.AddDays(4), makeDefaultDay: true));
 
-        Assert.Equal(DayOfWeek.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Equal(DefaultDay.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
         Assert.Equal(new WeekSchedule(Mon, [new SessionMove("pull", Mon.AddDays(4))]), changes.ChangedSchedule, ScheduleComparer);
         Assert.Equal(2, changes.ToChanges().Count);
     }
@@ -281,6 +282,20 @@ public class WeekEditRulesTests
         Assert.Equal("That Session is no longer in the Plan.", Reason(WeekEditRules.MoveSession(Standard, [], "gone", Mon, Mon, false)));
         Assert.Equal("That Session is no longer in the Plan.", Reason(WeekEditRules.MoveSession(Standard, [], "gone", Mon, Mon, true)));
         Assert.Equal("Pick a day in this week.", Reason(WeekEditRules.MoveSession(Standard, [], "push", Mon, Mon.AddDays(8), false)));
+    }
+
+    [Fact]
+    public void Moving_a_daily_Session_or_changing_its_default_day_is_refused()
+    {
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(75), []);
+        var stretch = PlanFixture.Session("stretch", DefaultDay.Daily, SessionType.Mobility, trackId: "mob");
+        var plan = Standard with { Tracks = [Standard.Tracks[0], mobility], Sessions = [.. Standard.Sessions, stretch] };
+
+        Assert.Contains("daily", Reason(WeekEditRules.MoveThisWeek(plan, [], "stretch", Mon, Mon.AddDays(2))));
+        Assert.Contains("daily", Reason(WeekEditRules.MakeDefaultDay(plan, "stretch", DefaultDay.Tuesday)));
+        Assert.Contains("daily", Reason(WeekEditRules.MoveSession(plan, [], "stretch", Mon, Mon.AddDays(2), makeDefaultDay: false)));
+        Assert.Contains("daily", Reason(WeekEditRules.MoveSession(plan, [], "stretch", Mon, Mon.AddDays(2), makeDefaultDay: true)));
+        Assert.Contains("daily", Reason(WeekEditRules.MakeDefaultDay(plan, "push", DefaultDay.Daily)));
     }
 
     // WeekSchedule holds a list, so it compares by reference; compare its week and moves.

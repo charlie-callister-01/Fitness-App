@@ -51,4 +51,18 @@ public class PlanProgressTests
         Assert.Equal("Active · starts 16 Nov 2026", PlanProgress.ActiveLabel(plan, Mon.AddDays(-1)));
         Assert.Equal("Active · finished after week 2", PlanProgress.ActiveLabel(plan, Mon.AddDays(14)));
     }
+
+    [Fact]
+    public void Total_weeks_and_active_label_read_only_the_main_Tracks_Phases()
+    {
+        var main = new Track("main", "Main", new TrackRhythm.Weekly(3, 2, false), [Ph(1, 8)]);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(75), [Ph(1, 20)]);
+        var plan = PlanFixture.Make(start: Mon, tracks: [main, mobility]);
+        var noMainPhases = PlanFixture.Make(start: Mon, tracks: [main with { Phases = [] }, mobility]);
+
+        Assert.Equal(8, PlanProgress.TotalWeeks(plan));
+        Assert.Equal("Active · week 5 of 8", PlanProgress.ActiveLabel(plan, Mon.AddDays(7 * 4)));
+        Assert.Null(PlanProgress.TotalWeeks(noMainPhases));
+        Assert.Equal("Active · week 5", PlanProgress.ActiveLabel(noMainPhases, Mon.AddDays(7 * 4)));
+    }
 }

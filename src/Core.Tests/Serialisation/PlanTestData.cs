@@ -24,32 +24,37 @@ internal static class PlanTestData
                 StartDate: new DateOnly(2026, 10, 19),
                 Goal: "HYROX London Doubles",
                 GoalDate: new DateOnly(2027, 4, 24),
-                WeeklyTarget: 5,
-                StreakMinWorkoutsPerWeek: 4,
-                StreakCountsCustomWorkouts: false,
                 WeightIncrementKg: 2,
-                Phases:
+                Tracks:
                 [
-                    new Phase("foundation", "Foundation", 1, 8,
-                        [new PhaseGoal("goblet-squat", 24, 10)],
-                        []),
-                    new Phase("build", "Build", 9, 19, [],
-                        [new SessionOverride("a-lower", [new SessionExercise("rdl", 4, 6, null, "Hinge, don't squat")])]),
-                    new Phase("hyrox-prep", "HYROX prep", 20, 27, [], []),
+                    new Track(
+                        Id: "hyrox-2027-main",
+                        Name: "Main",
+                        Rhythm: new TrackRhythm.Weekly(5, 4, false),
+                        Phases:
+                        [
+                            new Phase("foundation", "Foundation", 1, 8,
+                                [new PhaseGoal("goblet-squat", 24, 10)],
+                                []),
+                            new Phase("build", "Build", 9, 19, [],
+                                [new SessionOverride("a-lower", [new SessionExercise("rdl", 4, 6, null, "Hinge, don't squat")])]),
+                            new Phase("hyrox-prep", "HYROX prep", 20, 27, [], []),
+                        ]),
                 ],
                 Sessions:
                 [
-                    new Session("a-lower", "A: Lower + core", DayOfWeek.Monday, SessionType.Strength, null,
+                    new Session("a-lower", "A: Lower + core", "hyrox-2027-main", DefaultDay.Monday, SessionType.Strength, null,
                     [
                         new SessionExercise("goblet-squat", 3, 8, 12, "Chest tall"),
                         new SessionExercise("farmers-carry", 3, null, null, null),
                     ]),
-                    new Session("c-engine", "C: Engine", DayOfWeek.Wednesday, SessionType.Cardio, null,
+                    new Session("c-engine", "C: Engine", "hyrox-2027-main", DefaultDay.Wednesday, SessionType.Cardio, null,
                         [new SessionExercise("5k-run", 1, null, null, "Easy pace")]),
-                    new Session("bench", "Benchmark test", DayOfWeek.Saturday, SessionType.Test, 4,
+                    new Session("bench", "Benchmark test", "hyrox-2027-main", DefaultDay.Saturday, SessionType.Test, 4,
                         [new SessionExercise("goblet-squat", 1, 5, null, null)]),
                 ]),
-            new Plan("old-plan", "Old plan", false, new DateOnly(2026, 1, 5), null, null, 3, 3, true, 2.5, [], []),
+            new Plan("old-plan", "Old plan", false, new DateOnly(2026, 1, 5), null, null, 2.5,
+                [new Track("old-plan-main", "Main", new TrackRhythm.Weekly(3, 3, true), [])], []),
         ]);
 
     public static string RichJson() => ExchangeFormat.Write(Rich());

@@ -15,11 +15,16 @@
 
 **Blocked by:** 01.
 
-**Status:** ready-for-agent
+**Status:** resolved
+**Notes:** Implemented Track-aware `WeekRules`, `PhaseRules`, `WeekScheduleRules`, `WeekRearrangement`, `CustomWorkoutOffer`, `WorkoutStart`, `CustomWorkoutStart`, `LibraryViewBuilder`, `BenchmarkWeeks`, and `BenchmarkRules`. Unknown/historical `SessionId`s (not present in `plan.Sessions`) fall back to counting on the main Track so existing 1-Track compatibility tests (including `NudgeRulesTests`) stay identical without loosening.
 
-- [ ] Two weekly Tracks are counted separately: a Workout counts only for its Session's Track; Streak, best week and consistency are per Track.
-- [ ] A Custom workout counts for the main Track only and only when its setting allows it.
-- [ ] A Track with its own Phases uses them; a Track with none has no current Phase; "week N of M", "move to next Phase" and goals follow the right list.
-- [ ] Rearrangement runs per weekly Track and never moves or marks Missed a daily Session.
-- [ ] A one-Track Plan gives results identical to before (the existing A2 and B3 tests pass unchanged).
-- [ ] `dotnet build` 0 warnings; Core tests green.
+- [x] Two weekly Tracks are counted separately: a Workout counts only for its Session's Track; Streak, best week and consistency are per Track.
+- [x] A Custom workout counts for the main Track only and only when its setting allows it.
+- [x] A Track with its own Phases uses them; a Track with none has no current Phase; "week N of M", "move to next Phase" and goals follow the right list.
+- [x] Rearrangement runs per weekly Track and never moves or marks Missed a daily Session.
+- [x] A one-Track Plan gives results identical to before (the existing A2 and B3 tests pass unchanged).
+- [x] `dotnet build` 0 warnings; Core tests green.
+
+## Comments
+- Updated callers in `Home`, `Week`, `Nudges`, `Badges`, `Guides`, `PlanEditing`, and `Summary` to pass `TrackRules.Main(plan)` until their own tickets.
+- Added multi-Track unit tests across `WeekRulesTests`, `PhaseRulesTests`, `WeekScheduleRulesTests`, `BenchmarkRulesTests`, `WeekRearrangementTests`, `CustomWorkoutOfferTests`, `WorkoutStartTests`, `CustomWorkoutStartTests`, and `LibraryViewBuilderTests`.

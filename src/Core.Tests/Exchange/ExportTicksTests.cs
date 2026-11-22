@@ -96,7 +96,7 @@ public class ExportTicksTests
         var plan = Assert.Single(document.Plans!);
         Assert.Equal("hyrox-2027", plan.Id);
         Assert.Equal(ExchangeTestData.Snapshot().Plans[0].Sessions.Select(s => s.Id), plan.Sessions.Select(s => s.Id));
-        Assert.Equal(3, plan.Phases.Count);
+        Assert.Equal(3, plan.Tracks[0].Phases.Count);
     }
 
     [Fact]
@@ -176,7 +176,8 @@ public class ExportTicksTests
     public void A_Workout_of_a_Plan_that_is_not_exported_loses_its_Session_link_so_the_file_stays_valid()
     {
         var snapshot = ExchangeTestData.Snapshot();
-        var oldPlan = snapshot.Plans.Single(p => !p.IsActive) with { Sessions = [new Session("old-s", "Old", DayOfWeek.Monday, SessionType.Cardio, null, [])] };
+        var old = snapshot.Plans.Single(p => !p.IsActive);
+        var oldPlan = old with { Sessions = [new Session("old-s", "Old", old.Tracks[0].Id, DefaultDay.Monday, SessionType.Cardio, null, [])] };
         var plans = snapshot.Plans.Select(p => p.IsActive ? p : oldPlan).ToList();
         var workouts = snapshot.Workouts.Select(w => w.Id == "w-3" ? w with { SessionId = "old-s", Planned = [] } : w).ToList();
 
@@ -204,5 +205,50 @@ public class ExportTicksTests
         Assert.Empty(document.Workouts!);
         Assert.Empty(document.Plans!);
         Assert.Empty(document.Exercises!);
+    }
+
+    [Fact]
+    public void Export_JSON_carries_tracks_trackId_daily_and_mobility_and_keeps_sessionId_when_plan_is_unticked()
+    {
+        var baseSnapshot = ExchangeTestData.Snapshot();
+        var active = baseSnapshot.Plans.Single(p => p.IsActive);
+        var twoTrack = active with
+        {
+            Tracks =
+            [
+                active.Tracks[0],
+                new Track("mobility", "Morning mobility", new TrackRhythm.Daily(75), [new Phase("mob-habit", "Habit", 1, 4, [], [])]),
+            ],
+            Sessions =
+            [
+                .. active.Sessions,
+                new Session("m-mobility", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [new SessionExercise("ex-tickonly", 1, null, null, null)]),
+            ],
+        };
+        var mobWorkout = new Workout(
+            "w-mob", new DateOnly(2026, 11, 16), "m-mobility", false, null, null,
+            [new SessionExercise("ex-tickonly", 1, null, null, null)],
+            [new WorkoutEntry("ex-tickonly", EntryStatus.Done, null, null, null, [])],
+            null);
+        var snapshot = baseSnapshot with
+        {
+            Plans = [.. baseSnapshot.Plans.Select(p => p.IsActive ? twoTrack : p)],
+            Workouts = [.. baseSnapshot.Workouts, mobWorkout],
+        };
+
+        var withPlanJson = Exporter.Export(snapshot, Everything(), "test", ExchangeTestData.Now).Text;
+        Assert.Contains("\"tracks\"", withPlanJson);
+        Assert.Contains("\"trackId\": \"mobility\"", withPlanJson);
+        Assert.Contains("\"defaultDay\": \"daily\"", withPlanJson);
+        Assert.Contains("\"type\": \"mobility\"", withPlanJson);
+        var withPlanDoc = ExchangeTestData.ReadBack(withPlanJson);
+        Assert.Equal("m-mobility", withPlanDoc.Workouts!.Single(w => w.Id == "w-mob").SessionId);
+
+        var withoutPlan = Export(Everything() with { Plan = false }, snapshot);
+        Assert.Null(withoutPlan.Plans);
+        Assert.Equal("m-mobility", withoutPlan.Workouts!.Single(w => w.Id == "w-mob").SessionId);
+
+        var withoutExercises = Export(Everything() with { Exercises = false }, snapshot);
+        Assert.Contains(withoutExercises.Exercises!, e => e.Id == "ex-tickonly");
     }
 }

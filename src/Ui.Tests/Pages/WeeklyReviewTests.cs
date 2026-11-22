@@ -13,6 +13,9 @@ public sealed class WeeklyReviewTests : BunitContext
 
     private static Plan EarlierPlan() => Plan() with { StartDate = Today.AddDays(-14) };
 
+    private static Plan WithRhythm(Plan plan, int target, int minPerWeek, bool customCounts) =>
+        plan with { Tracks = [plan.Tracks[0] with { Rhythm = new TrackRhythm.Weekly(target, minPerWeek, customCounts) }, .. plan.Tracks.Skip(1)] };
+
     private async Task<IRenderedComponent<WeeklyReview>> RenderAsync(Plan? plan, Workout[]? workouts = null, Change[]? extra = null)
     {
         var data = await OpenSeededAsync(null, plan, workouts ?? []);
@@ -53,7 +56,7 @@ public sealed class WeeklyReviewTests : BunitContext
     [Fact]
     public async Task Reaching_the_target_says_Target_hit()
     {
-        var plan = EarlierPlan() with { StreakCountsCustomWorkouts = true };
+        var plan = WithRhythm(EarlierPlan(), 3, 2, true);
         var cut = await RenderAsync(plan, [CustomDone("a", Today), CustomDone("b", Today), CustomDone("c", Today)]);
 
         Assert.Equal("Target hit", Verdict(cut));
@@ -86,7 +89,7 @@ public sealed class WeeklyReviewTests : BunitContext
     public async Task Target_out_of_reach_shows_when_the_days_left_cannot_cover_it()
     {
         // Nine a week cannot fit in the seven days left.
-        var plan = EarlierPlan() with { WeeklyTarget = 9 };
+        var plan = WithRhythm(EarlierPlan(), 9, 2, false);
         var cut = await RenderAsync(plan);
 
         Assert.Equal("Target out of reach", Verdict(cut));
@@ -95,7 +98,7 @@ public sealed class WeeklyReviewTests : BunitContext
     [Fact]
     public async Task Behind_shows_when_there_is_no_spare_day()
     {
-        var plan = EarlierPlan() with { WeeklyTarget = 7 };
+        var plan = WithRhythm(EarlierPlan(), 7, 2, false);
         var cut = await RenderAsync(plan);
 
         Assert.Equal("Behind", Verdict(cut));
@@ -104,7 +107,7 @@ public sealed class WeeklyReviewTests : BunitContext
     [Fact]
     public async Task Rows_show_PRs_the_weight_average_against_last_week_and_Pain_checks()
     {
-        var plan = EarlierPlan() with { StreakCountsCustomWorkouts = true };
+        var plan = WithRhythm(EarlierPlan(), 3, 2, true);
         var pain = new PainCheck("p", PainStatus.Reported, [BodyArea.Knee], PainSeverity.Mild, null, null);
         var cut = await RenderAsync(
             plan,
@@ -153,7 +156,7 @@ public sealed class WeeklyReviewTests : BunitContext
     [Fact]
     public async Task A_Break_week_that_also_reached_the_target_says_Target_hit()
     {
-        var plan = EarlierPlan() with { StreakCountsCustomWorkouts = true };
+        var plan = WithRhythm(EarlierPlan(), 3, 2, true);
         var cut = await RenderAsync(plan, [CustomDone("a", Today), CustomDone("b", Today), CustomDone("c", Today)],
             [Change.Put(new Break("b", Today, Today.AddDays(5), "Trip"))]);
 

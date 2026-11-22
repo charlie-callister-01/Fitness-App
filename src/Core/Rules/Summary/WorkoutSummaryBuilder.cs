@@ -3,6 +3,7 @@ using Core.Rules.Badges;
 using Core.Rules.Finishing;
 using Core.Rules.Outcomes;
 using Core.Rules.Performance;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Summary;
@@ -99,7 +100,7 @@ public static class WorkoutSummaryBuilder
 
     private static string? StreakLine(BadgeHistory history, DateOnly today)
     {
-        var current = WeekRules.Streak(history.Plan, history.Workouts, history.Breaks, today).Current;
+        var current = WeekRules.Streak(history.Plan, TrackRules.Main(history.Plan), history.Workouts, history.Breaks, today).Current;
         return current > 0 ? $"Week {current} of your Streak" : null;
     }
 

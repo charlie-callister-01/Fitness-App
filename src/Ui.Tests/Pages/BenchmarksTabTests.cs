@@ -14,8 +14,8 @@ public sealed class BenchmarksTabTests : BunitContext
 
     private static Plan BenchPlan() => Plan(
     [
-        new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)]),
-        new("test", "Test", DayOfWeek.Saturday, SessionType.Test, 4, []),
+        Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)]),
+        Session("test", "Test", DayOfWeek.Saturday, SessionType.Test, 4, []),
     ]);
 
     private static Workout Test(string id, DateOnly date, string exerciseId, WorkoutSet set) =>

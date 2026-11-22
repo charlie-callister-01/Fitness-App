@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Phases;
+using Core.Rules.Tracks;
 using Core.Tests.Rules.TestData;
 
 namespace Core.Tests.Rules.Phases;
@@ -26,7 +27,7 @@ public class PhaseRulesTests
     [Fact]
     public void Before_the_start_date_is_an_explicit_state()
     {
-        var p = PhaseRules.Position(TwoPhases, Start.AddDays(-1));
+        var p = PhaseRules.Position(TwoPhases, TrackRules.Main(TwoPhases), Start.AddDays(-1));
         Assert.Equal(PhaseState.BeforeStart, p.State);
         Assert.Null(p.Phase);
         Assert.Null(p.PlanWeek);
@@ -35,7 +36,7 @@ public class PhaseRulesTests
     [Fact]
     public void First_day_is_week_1_of_the_first_Phase()
     {
-        var p = PhaseRules.Position(TwoPhases, Start);
+        var p = PhaseRules.Position(TwoPhases, TrackRules.Main(TwoPhases), Start);
         Assert.Equal(PhaseState.InPhase, p.State);
         Assert.Equal("A", p.Phase!.Id);
         Assert.Equal((1, 1, 4), (p.PlanWeek, p.WeekInPhase, p.PhaseLengthWeeks));
@@ -47,7 +48,7 @@ public class PhaseRulesTests
     [InlineData(41, "B", 6, 2)] // Sunday of week 6
     public void Phase_boundaries_switch_on_the_Monday(int dayOffset, string phase, int planWeek, int weekInPhase)
     {
-        var p = PhaseRules.Position(TwoPhases, Start.AddDays(dayOffset));
+        var p = PhaseRules.Position(TwoPhases, TrackRules.Main(TwoPhases), Start.AddDays(dayOffset));
         Assert.Equal(PhaseState.InPhase, p.State);
         Assert.Equal(phase, p.Phase!.Id);
         Assert.Equal((planWeek, weekInPhase), (p.PlanWeek, p.WeekInPhase));
@@ -57,14 +58,14 @@ public class PhaseRulesTests
     public void Week_three_of_eleven()
     {
         var plan = MakePlan(PhaseOf("Long", 1, 11));
-        var p = PhaseRules.Position(plan, Start.AddDays(14));
+        var p = PhaseRules.Position(plan, TrackRules.Main(plan), Start.AddDays(14));
         Assert.Equal((3, 11), (p.WeekInPhase, p.PhaseLengthWeeks));
     }
 
     [Fact]
     public void After_the_last_Phase_is_an_explicit_state_and_keeps_the_plan_week()
     {
-        var p = PhaseRules.Position(TwoPhases, Start.AddDays(42));
+        var p = PhaseRules.Position(TwoPhases, TrackRules.Main(TwoPhases), Start.AddDays(42));
         Assert.Equal(PhaseState.AfterEnd, p.State);
         Assert.Null(p.Phase);
         Assert.Equal(7, p.PlanWeek);
@@ -74,7 +75,7 @@ public class PhaseRulesTests
     public void A_week_in_a_gap_between_Phases_has_no_Phase()
     {
         var plan = MakePlan(PhaseOf("A", 1, 2), PhaseOf("B", 4, 5));
-        var p = PhaseRules.Position(plan, Start.AddDays(14));
+        var p = PhaseRules.Position(plan, TrackRules.Main(plan), Start.AddDays(14));
         Assert.Equal(PhaseState.NoPhase, p.State);
         Assert.Equal(3, p.PlanWeek);
     }
@@ -82,7 +83,8 @@ public class PhaseRulesTests
     [Fact]
     public void A_Plan_with_no_Phases_has_no_Phase()
     {
-        Assert.Equal(PhaseState.NoPhase, PhaseRules.Position(MakePlan(), Start).State);
+        var plan = MakePlan();
+        Assert.Equal(PhaseState.NoPhase, PhaseRules.Position(plan, TrackRules.Main(plan), Start).State);
     }
 
     // ---- goal readiness
@@ -184,5 +186,59 @@ public class PhaseRulesTests
     public void Unknown_Session_has_no_rows()
     {
         Assert.Empty(PhaseRules.ExerciseRows(TwoPhases, "nope", Start));
+    }
+
+    // ---- per-Track Phases
+
+    [Fact]
+    public void Each_Track_uses_its_own_Phases_with_Plan_wide_week_numbering()
+    {
+        var gym = new Track("gym", "Gym", new TrackRhythm.Weekly(3, 2, false),
+            [PhaseOf("g1", 1, 10, overrides: [new SessionOverride("s-gym", [Row("front-squat")])])]);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(),
+            [PhaseOf("m1", 1, 4, overrides: [new SessionOverride("s-mob", [Row("hip-90-90")])]),
+             PhaseOf("m2", 5, 8)]);
+        var emptyTrack = new Track("run", "Run", new TrackRhythm.Weekly(2, 1, false), []);
+
+        var plan = PlanFixture.Make(start: Start, tracks: [gym, mobility, emptyTrack], sessions:
+        [
+            PlanFixture.Session("s-gym", DayOfWeek.Monday, trackId: "gym", exercises: [Row("squat")]),
+            PlanFixture.Session("s-mob", DefaultDay.Daily, SessionType.Mobility, trackId: "mob", exercises: [Row("stretch")]),
+            PlanFixture.Session("s-run", DayOfWeek.Wednesday, SessionType.Cardio, trackId: "run", exercises: [Row("jog")]),
+        ]);
+
+        var week3 = Start.AddDays(14); // Plan week 3
+        var gymPos = PhaseRules.Position(plan, gym, week3);
+        var mobPos = PhaseRules.Position(plan, mobility, week3);
+        var runPos = PhaseRules.Position(plan, emptyTrack, week3);
+
+        Assert.Equal(("g1", 3, 10), (gymPos.Phase!.Id, gymPos.WeekInPhase, gymPos.PhaseLengthWeeks));
+        Assert.Equal(("m1", 3, 4), (mobPos.Phase!.Id, mobPos.WeekInPhase, mobPos.PhaseLengthWeeks));
+        Assert.Equal(PhaseState.NoPhase, runPos.State);
+        Assert.Null(PhaseRules.CurrentPhase(plan, emptyTrack, week3));
+
+        // Week 5: mobility switches to m2 (no override -> default rows), gym stays in g1 (override active).
+        var week5 = Start.AddDays(28);
+        Assert.Equal("m2", PhaseRules.CurrentPhase(plan, mobility, week5)!.Id);
+        Assert.Equal(["front-squat"], PhaseRules.ExerciseRows(plan, "s-gym", week5).Select(r => r.ExerciseId));
+        Assert.Equal(["stretch"], PhaseRules.ExerciseRows(plan, "s-mob", week5).Select(r => r.ExerciseId));
+        Assert.Equal(["hip-90-90"], PhaseRules.ExerciseRows(plan, "s-mob", week3).Select(r => r.ExerciseId));
+    }
+
+    [Fact]
+    public void Goal_readiness_and_move_to_next_Phase_follow_the_Tracks_own_Phase_goals()
+    {
+        var main = new Track("main", "Main", new TrackRhythm.Weekly(3, 2, false),
+            [PhaseOf("m1", 1, 8, [new PhaseGoal("squat", 140, 5)])]);
+        var extra = new Track("extra", "Extra", new TrackRhythm.Weekly(2, 1, false),
+            [PhaseOf("e1", 1, 4, [new PhaseGoal("bench", 80, 5)])]);
+        var plan = PlanFixture.Make(start: Start, tracks: [main, extra], sessions: []);
+
+        var h = new HistoryBuilder().Done("w1", "2026-01-12", "bench", HistoryBuilder.Set(80, 5));
+
+        Assert.False(PhaseRules.GoalReadiness(PhaseRules.CurrentPhase(plan, main, Start)!, h.Workouts).AllMet);
+        var extraReady = PhaseRules.GoalReadiness(PhaseRules.CurrentPhase(plan, extra, Start)!, h.Workouts);
+        Assert.True(extraReady.AllMet);
+        Assert.Contains("move on", extraReady.Message);
     }
 }

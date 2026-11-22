@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.PlanEditing;
@@ -12,9 +13,10 @@ public static class PlanProgress
     /// </summary>
     public static int? TotalWeeks(Plan plan)
     {
-        if (plan.Phases.Count > 0)
+        var phases = TrackRules.Main(plan).Phases;
+        if (phases.Count > 0)
         {
-            return plan.Phases.Max(p => p.EndWeek);
+            return phases.Max(p => p.EndWeek);
         }
 
         return plan.GoalDate is { } goalDate && goalDate >= plan.StartDate

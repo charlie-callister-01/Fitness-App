@@ -13,8 +13,13 @@
 
 **Blocked by:** 04.
 
-**Status:** ready-for-agent
+**Status:** resolved
+Notes: Implemented `DailyTrackRules` and `DailyTrackStatus` in `src/Core/Rules/Tracks/DailyTrackRules.cs` with `Status`, `IsDayDone`, `IsWorkoutDone`, and `DonePercent`, plus unit tests in `src/Core.Tests/Rules/Tracks/DailyTrackRulesTests.cs`.
 
-- [ ] Tests: done at exactly 75%, just below, above, 100%; 1 of 10 rows is not done at 75%; today open does not break the run and today done adds to it; a Break day inside a run is neutral; a missed day ends the run; best run and total days; two Workouts on a date; a Workout from a weekly Track on the same date is ignored; days before the start date ignored; a daily Session is never reported Missed.
-- [ ] A custom `dayDonePercent` (for example 50) changes the result.
-- [ ] `dotnet build` 0 warnings; all tests pass.
+- [x] Tests: done at exactly 75%, just below, above, 100%; 1 of 10 rows is not done at 75%; today open does not break the run and today done adds to it; a Break day inside a run is neutral; a missed day ends the run; best run and total days; two Workouts on a date; a Workout from a weekly Track on the same date is ignored; days before the start date ignored; a daily Session is never reported Missed.
+- [x] A custom `dayDonePercent` (for example 50) changes the result.
+- [x] `dotnet build` 0 warnings; all tests pass.
+
+## Comments
+- `DailyTrackRules.IsWorkoutDone` uses integer arithmetic `done * 100 >= dayDonePercent * planned` with `WorkoutOutcomes.Of` counting `RowOutcomeKind.Done` only (so tick-only `Done` rows count while `Skipped`, `Swapped`, `Unrecorded`, and unplanned extras do not, and 0-planned-row Workouts never count).
+- `DailyTrackRules.Status` returns `DailyTrackStatus(Current, BestRun, DaysDone, TodayDone)` over `[plan.StartDate .. today]`, treating Break days as neutral for the Streak (`Current` and `BestRun`) while keeping all done days in `DaysDone` and `TodayDone`, matching `WeekRules.Streak` / `CountedWorkoutsByWeek` semantics.

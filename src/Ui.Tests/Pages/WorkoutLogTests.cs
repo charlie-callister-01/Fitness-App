@@ -748,7 +748,7 @@ public sealed class WorkoutLogTests : BunitContext
     {
         var plan = Plan(
         [
-            new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+            Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
             [
                 new SessionExercise("journal", 2, null, null, null),
                 new SessionExercise(Squat, 3, 8, null, null),
@@ -833,7 +833,7 @@ public sealed class WorkoutLogTests : BunitContext
     [Fact]
     public async Task An_exercise_that_cannot_be_logged_never_holds_Finish_back()
     {
-        var plan = Plan([new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+        var plan = Plan([Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
             [new SessionExercise("journal", 1, null, null, null), new SessionExercise(Squat, 1, 8, null, null)])]);
         var workout = Core.Rules.Starting.WorkoutStart.Create(plan, plan.Sessions[0], Today, new CountingIds(), new FixedClock(Now)) with { Id = "w-now" };
         var cut = await OpenLogAsync(await OpenSeededAsync(plan: plan, workouts: workout));
@@ -847,7 +847,7 @@ public sealed class WorkoutLogTests : BunitContext
     [Fact]
     public async Task A_bodyweight_row_hints_that_bw_or_an_added_weight_goes_in_the_first_field()
     {
-        var plan = Plan([new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("pullup", 2, 8, null, null)])]);
+        var plan = Plan([Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("pullup", 2, 8, null, null)])]);
         var workout = Core.Rules.Starting.WorkoutStart.Create(plan, plan.Sessions[0], Today, new CountingIds(), new FixedClock(Now)) with { Id = "w-now" };
         var data = await OpenSeededAsync(plan: plan, workouts: workout);
         var cut = await OpenLogAsync(data);

@@ -65,7 +65,7 @@ public static class TrophyViewBuilder
         DateOnly today,
         UnitConverter units)
     {
-        plan ??= new Plan("none", "No Plan", false, today, null, null, 0, 1, false, 2.5, [], []);
+        plan ??= new Plan("none", "No Plan", false, today, null, null, 2.5, [new Track("main", "Main", new TrackRhythm.Weekly(0, 1, false), [])], []);
         var history = new BadgeHistory(plan, exercises, workouts, breaks, weighIns);
         var all = badges.Select(b => Make(b, history, today, units)).ToList();
 

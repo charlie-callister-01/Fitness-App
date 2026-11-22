@@ -2,6 +2,7 @@ using Core.Ids;
 using Core.Model;
 using Core.Rules.Library;
 using Core.Rules.PlanEditing;
+using Core.Rules.Tracks;
 using Core.Storage;
 using Microsoft.AspNetCore.Components;
 
@@ -14,7 +15,7 @@ public sealed class SessionSheetDraft
 
     public string Name { get; set; } = "";
 
-    public DayOfWeek Day { get; set; } = DayOfWeek.Monday;
+    public DefaultDay Day { get; set; } = DefaultDay.Monday;
 
     public SessionType Type { get; set; } = SessionType.Strength;
 
@@ -24,8 +25,8 @@ public sealed class SessionSheetDraft
 
 public sealed partial class PlanSessionsTab
 {
-    private static readonly DayOfWeek[] Days =
-        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+    private static readonly DefaultDay[] Days =
+        [DefaultDay.Monday, DefaultDay.Tuesday, DefaultDay.Wednesday, DefaultDay.Thursday, DefaultDay.Friday, DefaultDay.Saturday, DefaultDay.Sunday];
 
     private IReadOnlyList<Exercise>? _libraryList;
     private Dictionary<string, Exercise> _library = [];
@@ -164,7 +165,7 @@ public sealed partial class PlanSessionsTab
     {
         var result = _sheet.EditingSessionId is { } id
             ? SessionRowRules.EditSession(State.Draft, id, _sheet.Name, _sheet.Day, _sheet.Type)
-            : SessionRowRules.AddSession(State.Draft, _sheet.Name, _sheet.Day, _sheet.Type, Ids);
+            : SessionRowRules.AddSession(State.Draft, TrackRules.Main(State.Draft).Id, _sheet.Name, _sheet.Day, _sheet.Type, Ids);
         if (!result.TryGet(out var changed, out var reason))
         {
             _sheet.Message = reason;

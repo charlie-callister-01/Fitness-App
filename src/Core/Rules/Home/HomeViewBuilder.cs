@@ -1,6 +1,7 @@
 using Core.Rules.PlanEditing;
 using Core.Rules.Nudges;
 using Core.Rules.Phases;
+using Core.Rules.Tracks;
 using Core.Storage;
 
 namespace Core.Rules.Home;
@@ -40,7 +41,9 @@ public static class HomeViewBuilder
             WeightPanelRules.Compute(snapshot.WeighIns, today),
             hasAlternatives,
             hasAlternatives,
-            showNudges);
+            showNudges,
+            HomeTrackRules.DailyCards(snapshot, today),
+            HomeTrackRules.ExtraWeekLines(snapshot, today));
     }
 
     private static string Greeting(int localHour) => localHour switch
@@ -53,7 +56,7 @@ public static class HomeViewBuilder
     private static string PhaseLabel(Core.Model.Plan? plan, DateOnly today)
     {
         if (plan is null) return string.Empty;
-        var position = PhaseRules.Position(plan, today);
+        var position = PhaseRules.Position(plan, TrackRules.Main(plan), today);
         return position is { State: PhaseState.InPhase, Phase: { } phase, WeekInPhase: { } week, PhaseLengthWeeks: { } length }
             ? $"{phase.Focus} week {week} of {length}"
             : string.Empty;

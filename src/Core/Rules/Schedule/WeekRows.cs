@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Schedule;
@@ -32,8 +33,9 @@ public static class WeekRows
     public static IReadOnlyList<WeekRow> Build(
         Plan plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks, IReadOnlyList<Workout> workouts, DateOnly today)
     {
-        var layout = WeekScheduleRules.Layout(plan, schedules, breaks, today);
-        var missed = WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today).Select(m => m.SessionId).ToHashSet();
+        var main = TrackRules.Main(plan);
+        var layout = WeekScheduleRules.Layout(plan, main, schedules, breaks, today);
+        var missed = WeekScheduleRules.MissedInWeek(plan, main, schedules, breaks, workouts, today, today).Select(m => m.SessionId).ToHashSet();
         var done = workouts
             .Where(w => w.EndedAt is not null && WeekCalendar.InWeek(layout.Monday, w.Date))
             .Select(w => w.SessionId).OfType<string>().ToHashSet();

@@ -34,17 +34,17 @@ public class ParseThenValidateTests
     [Fact]
     public void Phase_with_a_bad_range_is_reported_once_with_no_neighbour_gap()
     {
-        var errors = Errors(r => PlanTestData.Plan0(r)["phases"]![1]!["endWeek"] = 5);
+        var errors = Errors(r => PlanTestData.Plan0(r)["tracks"]![0]!["phases"]![1]!["endWeek"] = 5);
 
-        Assert.Equal(("plans[0].phases[1].endWeek", "out_of_range"), Only(errors));
+        Assert.Equal(("plans[0].tracks[0].phases[1].endWeek", "out_of_range"), Only(errors));
     }
 
     [Fact]
     public void Phase_with_an_unreadable_start_week_is_reported_once_with_no_neighbour_gap()
     {
-        var errors = Errors(r => PlanTestData.Plan0(r)["phases"]![1]!["startWeek"] = "nine");
+        var errors = Errors(r => PlanTestData.Plan0(r)["tracks"]![0]!["phases"]![1]!["startWeek"] = "nine");
 
-        Assert.Equal(("plans[0].phases[1].startWeek", "wrong_type"), Only(errors));
+        Assert.Equal(("plans[0].tracks[0].phases[1].startWeek", "wrong_type"), Only(errors));
     }
 
     [Fact]
@@ -52,13 +52,13 @@ public class ParseThenValidateTests
     {
         var errors = Errors(r =>
         {
-            var phases = PlanTestData.Plan0(r)["phases"]!.AsArray();
+            var phases = PlanTestData.Plan0(r)["tracks"]![0]!["phases"]!.AsArray();
             phases[2]!["startWeek"] = 21;
             phases.Add(new JsonObject { ["id"] = "extra", ["focus"] = "Extra", ["startWeek"] = 30, ["endWeek"] = 25 });
         });
 
         Assert.Equal(
-            [("plans[0].phases[2].startWeek", "phase_gap"), ("plans[0].phases[3].endWeek", "out_of_range")],
+            [("plans[0].tracks[0].phases[2].startWeek", "phase_gap"), ("plans[0].tracks[0].phases[3].endWeek", "out_of_range")],
             errors.Select(e => (e.Path, e.Code)).OrderBy(e => e.Path, StringComparer.Ordinal));
     }
 

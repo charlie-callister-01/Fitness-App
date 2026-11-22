@@ -174,11 +174,12 @@ public class ExerciseMatchingTests
         Assert.Equal("gs", m.IdMap["goblet-squat"]);
         var d = m.Document;
         var plan = d.Plans![0];
+        var mainTrack = plan.Tracks[0];
         Assert.Equal("gs", plan.Sessions[0].Exercises[0].ExerciseId);
         Assert.Equal("farmers-carry", plan.Sessions[0].Exercises[1].ExerciseId);
-        Assert.Equal("gs", plan.Phases[0].Goals[0].ExerciseId);
+        Assert.Equal("gs", mainTrack.Phases[0].Goals[0].ExerciseId);
         Assert.Equal("run", plan.Sessions[1].Exercises[0].ExerciseId);
-        Assert.Equal("rdl", plan.Phases[1].SessionOverrides[0].Exercises[0].ExerciseId);
+        Assert.Equal("rdl", mainTrack.Phases[1].SessionOverrides[0].Exercises[0].ExerciseId);
         var workout = d.Workouts![0];
         Assert.Equal("gs", workout.Planned[0].ExerciseId);
         Assert.Equal("gs", workout.Entries[0].ExerciseId);
@@ -235,5 +236,70 @@ public class ExerciseMatchingTests
 
         var paths = m.Findings.Where(f => f.Code == "unknown_session" && f.Kind == MatchFindingKind.Blocker).Select(f => f.Path).Order();
         Assert.Equal(["weekSchedules[0].moves[0].sessionId", "workouts[1].sessionId"], paths);
+    }
+
+    [Fact]
+    public void Exercise_references_and_unknown_paths_walk_all_tracks_sessions_and_phases()
+    {
+        var library = Library(Ex("gs", "Goblet squat"), Ex("cat-cow", "Cat-cow", LogKind.TickOnly));
+        var planWithRemap = new Plan(
+            "p1", "Two-track", true, new DateOnly(2026, 11, 2), null, null, 2.5,
+            [
+                new Track("main", "Main", new TrackRhythm.Weekly(3, 2, false), []),
+                new Track("mobility", "Morning mobility", new TrackRhythm.Daily(75),
+                [
+                    new Phase("mob-1", "Habit", 1, 4,
+                        [new PhaseGoal("cc", 10, 5)],
+                        [new SessionOverride("m-mob", [new SessionExercise("cc", 1, null, null, null)])]),
+                ]),
+            ],
+            [
+                new Session("s1", "Strength", "main", DefaultDay.Monday, SessionType.Strength, null, [new SessionExercise("goblet", 3, 5, null, null)]),
+                new Session("m-mob", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [new SessionExercise("cc", 1, null, null, null)]),
+            ]);
+        var remapped = Match(
+            library,
+            new ExchangeDocument(
+                ExchangeFormat.CurrentVersion, null, null,
+                [Ex("goblet", "Goblet squat"), Ex("cc", "cat-cow", LogKind.TickOnly)],
+                null,
+                Plans: [planWithRemap]));
+
+        Assert.Equal("gs", remapped.Document.Plans![0].Sessions[0].Exercises[0].ExerciseId);
+        Assert.Equal("cat-cow", remapped.Document.Plans![0].Sessions[1].Exercises[0].ExerciseId);
+        Assert.Equal("cat-cow", remapped.Document.Plans![0].Tracks[1].Phases[0].Goals[0].ExerciseId);
+        Assert.Equal("cat-cow", remapped.Document.Plans![0].Tracks[1].Phases[0].SessionOverrides[0].Exercises[0].ExerciseId);
+
+        var planWithUnknowns = planWithRemap with
+        {
+            Tracks =
+            [
+                planWithRemap.Tracks[0],
+                planWithRemap.Tracks[1] with
+                {
+                    Phases =
+                    [
+                        new Phase("mob-1", "Habit", 1, 4,
+                            [new PhaseGoal("missing-goal", 10, 5)],
+                            [new SessionOverride("m-mob", [new SessionExercise("missing-override", 1, null, null, null)])]),
+                    ],
+                },
+            ],
+            Sessions =
+            [
+                new Session("s1", "Strength", "main", DefaultDay.Monday, SessionType.Strength, null, [new SessionExercise("gs", 3, 5, null, null)]),
+                new Session("m-mob", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [new SessionExercise("missing-session-ex", 1, null, null, null)]),
+            ],
+        };
+        var m = Match(library, new ExchangeDocument(ExchangeFormat.CurrentVersion, null, null, null, null, Plans: [planWithUnknowns]));
+
+        var unknownPaths = m.Findings.Where(f => f.Code == "unknown_exercise").Select(f => f.Path).Order().ToList();
+        Assert.Equal(
+            [
+                "plans[0].sessions[1].exercises[0].exerciseId",
+                "plans[0].tracks[1].phases[0].goals[0].exerciseId",
+                "plans[0].tracks[1].phases[0].sessionOverrides[0].exercises[0].exerciseId",
+            ],
+            unknownPaths);
     }
 }

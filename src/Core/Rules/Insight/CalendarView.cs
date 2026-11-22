@@ -4,6 +4,7 @@ using Core.Model;
 using Core.Rules.Outcomes;
 using Core.Rules.Performance;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Insight;
@@ -60,7 +61,7 @@ public static class CalendarViewBuilder
         IReadOnlyList<Workout> workouts, IReadOnlyList<Exercise> exercises, DateOnly today)
     {
         var finished = workouts.Where(w => w.EndedAt is not null).ToList();
-        var missed = WeekScheduleRules.Missed(plan, schedules, breaks, workouts, today)
+        var missed = WeekScheduleRules.Missed(plan, TrackRules.Main(plan), schedules, breaks, workouts, today)
             .ToDictionary(m => m.Date, m => m);
         var prs = PrCounts(exercises, finished);
         var firstMonday = WeekCalendar.MondayOf(plan.StartDate);
@@ -75,7 +76,7 @@ public static class CalendarViewBuilder
             weeks.Add(new CalendarWeek(monday, WeekRules.PlanWeekNumber(plan, monday)!.Value, days));
         }
 
-        var phases = plan.Phases
+        var phases = TrackRules.Main(plan).Phases
             .OrderBy(p => p.StartWeek)
             .Select(p => new CalendarPhase(p.Focus, p.StartWeek, p.EndWeek))
             .ToList();
@@ -86,9 +87,9 @@ public static class CalendarViewBuilder
     {
         var last = WeekCalendar.MondayOf(today);
         if (plan.GoalDate is { } goal && WeekCalendar.MondayOf(goal) > last) last = WeekCalendar.MondayOf(goal);
-        if (plan.Phases.Count > 0)
+        if (TrackRules.Main(plan).Phases.Count > 0)
         {
-            var phaseEnd = WeekCalendar.AddWeeks(firstMonday, plan.Phases.Max(p => p.EndWeek) - 1);
+            var phaseEnd = WeekCalendar.AddWeeks(firstMonday, TrackRules.Main(plan).Phases.Max(p => p.EndWeek) - 1);
             if (phaseEnd > last) last = phaseEnd;
         }
 

@@ -178,7 +178,7 @@
         get
         {
             var today = _page.Today;
-            var plan = _page.ActivePlan ?? new Plan("none", "No Plan", false, today, null, null, 0, 1, false, 2.5, [], []);
+            var plan = _page.ActivePlan ?? new Plan("none", "No Plan", false, today, null, null, 2.5, [new Track("main", "Main", new TrackRhythm.Weekly(0, 1, false), [])], []);
             var snapshot = Data.Snapshot;
             var history = new BadgeHistory(plan, snapshot.Exercises, snapshot.Workouts, snapshot.Breaks, snapshot.WeighIns);
             return BadgeEditingText.LiveLine(Draft, history, today, Units);

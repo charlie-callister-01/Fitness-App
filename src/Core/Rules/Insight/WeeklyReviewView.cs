@@ -2,6 +2,7 @@ using Core.Model;
 using Core.Rules.Home;
 using Core.Rules.PlanEditing;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Units;
 using Core.Rules.Weeks;
 using Core.Storage;
@@ -66,32 +67,34 @@ public static class WeeklyReviewBuilder
                 monday, current, false, WeeklyVerdict.OnTrack, "", 0, 0, 0, [], [], weightAverage, lastWeekAverage, units.WeightLabel, pain, null, null);
         }
 
-        var counted = WeekRules.CountedWorkouts(plan, snapshot.Workouts, monday);
+        var main = TrackRules.Main(plan);
+        var target = main.Rhythm is TrackRhythm.Weekly weekly ? weekly.WeeklyTarget : 0;
+        var counted = WeekRules.CountedWorkouts(plan, main, snapshot.Workouts, monday);
         var asOf = current ? today : WeekCalendar.SundayOf(monday);
-        var streak = WeekRules.Streak(plan, snapshot.Workouts, snapshot.Breaks, asOf).Current;
-        var (verdict, message) = Verdict(plan, snapshot, monday, current, counted, today);
-        var missed = WeekScheduleRules.MissedInWeek(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, monday, today);
+        var streak = WeekRules.Streak(plan, main, snapshot.Workouts, snapshot.Breaks, asOf).Current;
+        var (verdict, message) = Verdict(plan, snapshot, monday, current, counted, target, today);
+        var missed = WeekScheduleRules.MissedInWeek(plan, main, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, monday, today);
         var prs = RecentPrs.Latest(snapshot, today, int.MaxValue).Where(p => WeekCalendar.InWeek(monday, p.WorkoutDate)).ToList();
 
         DateOnly? previous = monday > WeekCalendar.MondayOf(plan.StartDate) ? WeekCalendar.AddWeeks(monday, -1) : null;
         DateOnly? next = current ? null : WeekCalendar.AddWeeks(monday, 1);
 
         return new WeeklyReviewView(
-            monday, current, true, verdict, message, counted, plan.WeeklyTarget, streak, missed, prs,
+            monday, current, true, verdict, message, counted, target, streak, missed, prs,
             weightAverage, lastWeekAverage, units.WeightLabel, pain, previous, next);
     }
 
     private static (WeeklyVerdict, string) Verdict(
-        Plan plan, DataSnapshot snapshot, DateOnly monday, bool current, int counted, DateOnly today)
+        Plan plan, DataSnapshot snapshot, DateOnly monday, bool current, int counted, int target, DateOnly today)
     {
-        if (counted >= plan.WeeklyTarget)
-            return (WeeklyVerdict.TargetHit, $"Target hit: {counted} of {plan.WeeklyTarget} done.");
+        if (counted >= target)
+            return (WeeklyVerdict.TargetHit, $"Target hit: {counted} of {target} done.");
         if (BreakCalendar.TouchesWeek(snapshot.Breaks, monday))
             return (WeeklyVerdict.OnABreak, "On a Break: this week is not held against you.");
         if (!current)
-            return (WeeklyVerdict.Behind, $"Behind: {counted} of {plan.WeeklyTarget} done that week.");
+            return (WeeklyVerdict.Behind, $"Behind: {counted} of {target} done that week.");
 
-        var consistency = WeekRules.Consistency(plan, snapshot.Workouts, snapshot.Breaks, today);
+        var consistency = WeekRules.Consistency(plan, TrackRules.Main(plan), snapshot.Workouts, snapshot.Breaks, today);
         return (consistency.Kind switch
         {
             ConsistencyKind.TargetOutOfReach => WeeklyVerdict.TargetOutOfReach,

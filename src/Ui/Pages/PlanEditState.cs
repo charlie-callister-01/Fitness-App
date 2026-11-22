@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.PlanEditing;
+using Core.Rules.Tracks;
 
 namespace Ui.Pages;
 
@@ -82,7 +83,7 @@ public sealed class PlanEditState
     /// <summary>Something differs from what is saved.</summary>
     public bool IsDirty =>
         Form != PlanSettingsForm.From(Saved)
-        || !Draft.Phases.SequenceEqual(Saved.Phases)
+        || PlanSaveRules.TracksDiffer(Draft.Tracks, Saved.Tracks)
         || !Draft.Sessions.SequenceEqual(Saved.Sessions)
         || _benchmarks.Count > 0
         || Inputs.Any;
@@ -100,7 +101,9 @@ public sealed class PlanEditState
     private PlanEditSnapshot Read()
     {
         var settings = Form.Read(Draft);
-        var phasesProblem = PlanPhaseRules.ValidatePhases(Draft.Phases);
+        var mainTrack = TrackRules.Main(Draft);
+        var mainPhases = mainTrack.Phases;
+        var phasesProblem = PlanPhaseRules.ValidatePhases(Draft, mainTrack.Id, mainPhases);
         var sessionsProblem = Draft.Sessions
             .Select(s => s.Exercises.Select(r => RowProblem(s.Id, r)).FirstOrDefault(p => p is not null) is { } reason ? $"{s.Name}: {reason}" : null)
             .FirstOrDefault(p => p is not null);
@@ -110,11 +113,12 @@ public sealed class PlanEditState
             return new PlanEditSnapshot(settingsProblem, phasesProblem, sessionsProblem, null, Draft);
         }
 
-        var preview = Draft with { StartDate = read.StartDate };
+        var preview = Draft with { StartDate = read.Plan.StartDate };
         Plan? composed = null;
         if (sessionsProblem is null
-            && PlanSettingsRules.WithSettings(Draft, read).TryGet(out var withSettings, out _)
-            && PlanPhaseRules.WithPhases(withSettings, Draft.Phases).TryGet(out var withPhases, out _))
+            && PlanSettingsRules.WithSettings(Draft, read.Plan).TryGet(out var withPlanSettings, out _)
+            && TrackEditRules.WithSettings(withPlanSettings, mainTrack.Id, read.Track).TryGet(out var withTrackSettings, out _)
+            && PlanPhaseRules.WithPhases(withTrackSettings, mainTrack.Id, mainPhases).TryGet(out var withPhases, out _))
         {
             composed = withPhases;
         }

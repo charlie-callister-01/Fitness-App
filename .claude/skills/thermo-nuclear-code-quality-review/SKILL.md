@@ -1,12 +1,15 @@
 ---
 name: thermo-nuclear-code-quality-review
-description: Run an extremely strict maintainability review for abstraction quality, giant files, and spaghetti-condition growth. Use for a thermo-nuclear code quality review, thermonuclear review, deep code quality audit, or especially harsh maintainability review.
+description: "[wf] Run an extremely strict maintainability review for abstraction quality, giant files, and spaghetti-condition growth. Use for a thermo-nuclear code quality review, thermonuclear review, deep code quality audit, or especially harsh maintainability review."
 disable-model-invocation: true
+tier: optional
 ---
 
 # Thermo-Nuclear Code Quality Review
 
 Use this skill for an unusually strict review focused on implementation quality, maintainability, abstraction quality, and codebase health.
+
+> Source and adaptation: vendored from the cursor/plugins repo (cursor-team-kit), lightly generalised. Check that repo's licence before making this repo public. Favour simple, explicit designs and do not propose speculative abstractions (YAGNI). Run at the end of a phase (or milestone) over that diff, not per PR (per-PR review is `/mattpocock-skills:code-review`), and add findings to the project's refactor backlog (setting `refactor_backlog`, default `docs/REFACTOR.md`). File-size limit follows the project's coding standards (default ~500 lines). Language-specific notes below use C# examples; swap them for your stack.
 
 Above all, this skill should push the reviewer to be **ambitious** about code structure. Do not merely identify local cleanup opportunities. Actively search for "code judo" moves: restructurings that preserve behavior while making the implementation dramatically simpler, smaller, more direct, and more elegant.
 
@@ -31,9 +34,9 @@ Apply the baseline prompt above, plus these explicit review rules:
    - Assume there is often a "code judo" move available: a re-organization that uses the existing architecture more effectively and makes the change dramatically simpler and more elegant.
    - If you see a path to delete complexity rather than rearrange it, push hard for that path.
 
-1. **Do not let a PR push a file from under 1k lines to over 1k lines without a very strong reason.**
+1. **Do not let a PR push a file from under 500 lines to over 500 lines without a very strong reason.**
    - Treat this as a strong code-quality smell by default.
-   - Prefer extracting helpers, subcomponents, modules, or local abstractions instead of letting a file sprawl past 1000 lines.
+   - Prefer extracting helpers, subcomponents, modules, or local abstractions instead of letting a file sprawl past 500 lines.
    - If the diff crosses that threshold, explicitly ask whether the code should be decomposed first.
    - Only waive this if there is a compelling structural reason and the resulting file is still clearly organized.
 
@@ -54,7 +57,7 @@ Apply the baseline prompt above, plus these explicit review rules:
    - Flag thin abstractions, identity wrappers, or pass-through helpers that add indirection without buying clarity.
 
 5. **Push hard on type and boundary cleanliness when they affect maintainability.**
-   - Question unnecessary optionality, `unknown`, `any`, or cast-heavy code when a clearer type boundary could exist.
+   - Question unnecessary nullability, `object`, `dynamic`, or cast-heavy code (C#: `as`, `(T)x`, `!`) when a clearer type boundary could exist.
    - Prefer explicit typed models or shared contracts over loosely-shaped ad-hoc objects.
    - If a branch relies on silent fallback to paper over an unclear invariant, ask whether the boundary should be made explicit instead.
 
@@ -92,20 +95,20 @@ Escalate findings when you see:
 
 - A complicated implementation where a cleaner reframing could delete whole categories of complexity.
 - Refactors that move code around but fail to reduce the number of concepts a reader must hold in their head.
-- A file crossing 1000 lines due to the PR, especially if the new code could be split out.
+- A file crossing 500 lines due to the change, especially if the new code could be split out.
 - New conditionals bolted onto unrelated code paths.
 - One-off booleans, nullable modes, or flags that complicate existing control flow.
 - Feature-specific logic leaking into general-purpose modules.
 - Generic "magic" handling that hides simple structure and makes the code harder to reason about.
 - Thin wrappers or identity abstractions that add indirection without simplifying anything.
-- Unnecessary casts, `any`, `unknown`, or optional params that muddy the real contract.
+- Unnecessary casts, `object`/`dynamic`, null-forgiving `!`, or optional params that muddy the real contract.
 - Copy-pasted logic instead of extracted helpers.
 - Narrow edge-case handling implemented in the middle of an already busy function.
 - Refactors that technically pass tests but make the code less modular or less readable.
 - "Temporary" branching that is likely to become permanent debt.
 - Bespoke helpers where the codebase already has a canonical utility for the job.
 - Logic added in the wrong layer/package when it should live somewhere more central.
-- Sequential async flow where obviously independent work could stay simpler and clearer with parallel execution.
+- Sequential `await`s where obviously independent work could use `Task.WhenAll`.
 - Partial-update logic that leaves state less atomic than necessary.
 
 ## Preferred Remedies
@@ -183,7 +186,7 @@ The bar for approval is:
 Treat these as presumptive blockers unless the author can justify them clearly:
 
 - the PR preserves a lot of incidental complexity when there is a plausible code-judo move that would delete it
-- the PR pushes a file from below 1000 lines to above 1000 lines
+- the PR pushes a file from below 500 lines to above 500 lines
 - the PR adds ad-hoc branching that makes an existing flow more tangled
 - the PR solves a local problem by scattering feature checks across shared code
 - the PR adds an unnecessary abstraction, wrapper, or cast-heavy contract that makes the design more indirect

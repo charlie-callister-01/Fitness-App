@@ -31,7 +31,10 @@ internal static class ExerciseReferences
     private static Plan Plan(Plan plan, string path, Func<string, string, string> exercise) => plan with
     {
         Sessions = plan.Sessions.Select((s, i) => s with { Exercises = Rows(s.Exercises, $"{path}.sessions[{i}].exercises", exercise) }).ToList(),
-        Phases = plan.Phases.Select((ph, i) => Phase(ph, $"{path}.phases[{i}]", exercise)).ToList(),
+        Tracks = plan.Tracks.Select((tr, t) => tr with
+        {
+            Phases = tr.Phases.Select((ph, i) => Phase(ph, $"{path}.tracks[{t}].phases[{i}]", exercise)).ToList(),
+        }).ToList(),
     };
 
     private static Phase Phase(Phase phase, string path, Func<string, string, string> exercise) => phase with

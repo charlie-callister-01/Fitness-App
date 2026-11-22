@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Tracks;
 
 namespace Core.Rules.Library;
 
@@ -39,6 +40,7 @@ public static class LibraryViewBuilder
 
         var shown = new HashSet<string>();
         var groups = new List<LibraryGroup>();
+        var multiTrack = plan is not null && plan.Tracks.Count > 1;
         foreach (var session in plan?.Sessions ?? [])
         {
             var rows = session.Exercises
@@ -46,7 +48,10 @@ public static class LibraryViewBuilder
                 .OfType<Exercise>()
                 .Where(e => shown.Add(e.Id))
                 .ToList();
-            AddGroup(groups, session.Name, rows, text, tag, guided);
+            var heading = multiTrack && TrackRules.TrackOf(plan!, session) is { } track
+                ? $"{track.Name} · {session.Name}"
+                : session.Name;
+            AddGroup(groups, heading, rows, text, tag, guided);
         }
 
         var rest = exercises.Where(e => !shown.Contains(e.Id)).OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToList();

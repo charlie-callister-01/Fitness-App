@@ -5,6 +5,7 @@ using Core.Model;
 using Core.Rules.LogKinds;
 using Core.Rules.Performance;
 using Core.Rules.Units;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Insight;
@@ -124,7 +125,7 @@ public static class ProgressSeries
     private static string? PhaseFocusOf(Plan? plan, DateOnly date)
     {
         if (plan is null || WeekRules.PlanWeekNumber(plan, date) is not { } week) return null;
-        return plan.Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek)?.Focus;
+        return TrackRules.Main(plan).Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek)?.Focus;
     }
 
     private static string Label(double best, double change, int? firstWeek, int decimals)

@@ -17,9 +17,13 @@
 
 **Blocked by:** 01.
 
-**Status:** ready-for-agent
+**Status:** resolved
+**Notes:** Split `PlanSettings` / `TrackSettings`, made `PlanPhaseRules`, `SessionRowRules`, `PlanSaveRules.IsDifferent`, `PlanProgress`, `PlanLifecycleRules`, and `WeekEditRules` Track-aware, added `TrackEditRules`, and minimally updated `PlanSettingsForm`, `PlanEditState`, and `PlanSessionsTab` to keep editing the main Track.
 
-- [ ] Each rule has Core tests, including: Track settings range refusals, Phase overlap naming both Phases inside one Track, duplicate Phase ID across Tracks, daily Session day change refused, `daily` on a weekly Track refused, benchmark off the main Track refused, Copy gives new Track, Phase and Session IDs with `trackId`s following, add Track defaults, reorder refused when a daily Track would be first, reordering makes `IsDifferent` true, moving a daily Session refused, `PlanProgress` from the main Track.
-- [ ] Editing never touches past Workouts (tested).
-- [ ] Existing Editors tests pass with only mechanical changes; the Plan editor still works on the main Track.
-- [ ] `dotnet build` 0 warnings; all tests pass.
+- [x] Each rule has Core tests, including: Track settings range refusals, Phase overlap naming both Phases inside one Track, duplicate Phase ID across Tracks, daily Session day change refused, `daily` on a weekly Track refused, benchmark off the main Track refused, Copy gives new Track, Phase and Session IDs with `trackId`s following, add Track defaults, reorder refused when a daily Track would be first, reordering makes `IsDifferent` true, moving a daily Session refused, `PlanProgress` from the main Track.
+- [x] Editing never touches past Workouts (tested).
+- [x] Existing Editors tests pass with only mechanical changes; the Plan editor still works on the main Track.
+- [x] `dotnet build` 0 warnings; all tests pass.
+
+## Comments
+- 2026-11-22: Implemented on branch `a4-5/ticket-05`. `PlanSettingsRules` split into `PlanSettings` (`WithSettings(Plan, PlanSettings)`) and `TrackSettings` (`WithTrackSettings(Track, TrackSettings)`). Added `TrackEditRules` (`AddTrack`, `RenameTrack`, `WithSettings`, `EditTrack`, `MoveUp`, `MoveDown`). Made `PlanPhaseRules.ValidatePhases`/`WithPhases` and `SessionRowRules.AddSession`/`EditSession` Track-aware (including document-wide Phase ID uniqueness, Track-scoped Phase overrides, daily Session rules, and main-Track-only benchmark intervals). Made `PlanSaveRules.IsDifferent` public and added daily Session refusals in `WeekEditRules`. Updated `PlanSettingsForm`, `PlanEditState`, and `PlanSessionsTab.razor.cs` minimally to keep editing the main Track cleanly.

@@ -122,4 +122,67 @@ public class RestorePreviewTests
         Assert.Equal(["Replaces all your data with this Backup."], preview.Summary);
         Assert.Empty(preview.Items);
     }
+
+    [Fact]
+    public void A_v1_backup_is_ready_and_upgrades_plans_into_a_main_track()
+    {
+        const string v1Backup = """
+            {
+              "formatVersion": 1,
+              "exportedAt": "2026-11-16T09:30:00+00:00",
+              "exportedFrom": "fitness-app 0.1",
+              "exercises": [
+                { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load" }
+              ],
+              "settings": {
+                "displayWeightUnit": "kg",
+                "displayDistanceUnit": "km",
+                "weightIncrementKg": 2.5,
+                "restTimerSeconds": 90,
+                "streakMinWorkoutsPerWeek": 3,
+                "streakCountsCustomWorkouts": false
+              },
+              "plans": [
+                {
+                  "id": "v1-plan",
+                  "name": "Legacy Plan",
+                  "isActive": true,
+                  "startDate": "2026-10-19",
+                  "weeklyTarget": 3,
+                  "streakMinWorkoutsPerWeek": 2,
+                  "streakCountsCustomWorkouts": false,
+                  "weightIncrementKg": 2.5,
+                  "phases": [{ "id": "ph1", "focus": "Base", "startWeek": 1, "endWeek": 4 }],
+                  "sessions": [
+                    {
+                      "id": "s1",
+                      "name": "Session 1",
+                      "defaultDay": "monday",
+                      "type": "strength",
+                      "exercises": [{ "exerciseId": "goblet-squat", "sets": 3, "reps": 8 }]
+                    }
+                  ]
+                }
+              ],
+              "weighIns": [],
+              "breaks": [],
+              "badges": [],
+              "guides": [],
+              "workouts": [],
+              "weekSchedules": []
+            }
+            """;
+
+        var inspected = ImportInput.Inspect(v1Backup);
+        Assert.True(inspected.IsAccepted, string.Join("; ", inspected.Rejections));
+        Assert.Equal(ImportKind.Restore, inspected.Inspected!.SuggestedKind);
+
+        var preview = ImportPreviewer.Preview(DataSnapshot.Empty, inspected.Inspected!, ImportKind.Restore, ImportDecisions.None, Now);
+
+        Assert.True(preview.IsReady, string.Join("; ", preview.Blockers.Select(b => b.Text)));
+        var plan = Assert.Single(preview.Replacement!.Plans!);
+        var track = Assert.Single(plan.Tracks);
+        Assert.Equal("v1-plan-main", track.Id);
+        Assert.Equal("v1-plan-main", Assert.Single(plan.Sessions).TrackId);
+    }
 }

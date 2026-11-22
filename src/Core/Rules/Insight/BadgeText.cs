@@ -3,6 +3,7 @@ using System.Globalization;
 using Core.Model;
 using Core.Rules.Badges;
 using Core.Rules.Performance;
+using Core.Rules.Tracks;
 using Core.Rules.Units;
 using Core.Rules.Weeks;
 
@@ -73,7 +74,7 @@ public static class BadgeText
     }
 
     private static IEnumerable<Workout> Counted(BadgeHistory h) =>
-        h.Workouts.Where(w => WeekRules.IsCounted(h.Plan, w)).OrderByDescending(w => w.Date).ThenBy(w => w.Id, StringComparer.Ordinal);
+        h.Workouts.Where(w => WeekRules.IsCounted(h.Plan, TrackRules.Main(h.Plan), w)).OrderByDescending(w => w.Date).ThenBy(w => w.Id, StringComparer.Ordinal);
 
     private static Func<Workout, BadgeEvent> WorkoutEvent(BadgeHistory h) => w =>
         new BadgeEvent(w.Date, "Workout: " + (h.Plan.Sessions.FirstOrDefault(s => s.Id == w.SessionId)?.Name ?? "Custom workout"));

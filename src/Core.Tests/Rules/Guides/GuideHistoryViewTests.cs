@@ -94,6 +94,28 @@ public class GuideHistoryViewTests
     }
 
     [Fact]
+    public void The_place_resolves_a_secondary_Track_Session_against_its_own_Tracks_current_Phase()
+    {
+        var mainPhase = new Phase("main-ph", "Main Base", 1, 8, [], []);
+        var mobPhase = new Phase("mob-ph", "Mobility Block", 1, 4, [], [new SessionOverride("s-mob", [PlanFixture.Row("squat", sets: 4, reps: 10)])]);
+        var plan = PlanFixture.Make(
+            start: Mon,
+            tracks:
+            [
+                new Track("main", "Gym", new TrackRhythm.Weekly(3, 2, false), [mainPhase]),
+                new Track("mob", "Mobility", new TrackRhythm.Daily(75), [mobPhase]),
+            ],
+            sessions:
+            [
+                PlanFixture.Session("s-mob", DefaultDay.Daily, SessionType.Mobility, "Morning mobility", exercises: [PlanFixture.Row("squat", sets: 2, reps: 5)], trackId: "mob"),
+            ]);
+
+        var place = GuideHistoryView.Build(Squat, [], plan, Mon.AddDays(3)).Place!;
+
+        Assert.Equal(4, Assert.Single(place.Placements).Row.Sets);
+    }
+
+    [Fact]
     public void An_Exercise_in_no_Session_has_no_place()
     {
         var plan = PlanFixture.Make(start: Mon, sessions: [PlanFixture.Session("upper", DayOfWeek.Wednesday, exercises: [PlanFixture.Row("press")])]);

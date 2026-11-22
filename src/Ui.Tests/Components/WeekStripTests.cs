@@ -8,8 +8,8 @@ namespace Ui.Tests.Components;
 public sealed class WeekStripTests : BunitContext
 {
     private static readonly DateOnly Monday = new(2026, 11, 16);
-    private static readonly Session A = new("a", "A: Lower", DayOfWeek.Monday, SessionType.Strength, null, []);
-    private static readonly Session B = new("b", "B: Run", DayOfWeek.Wednesday, SessionType.Cardio, null, []);
+    private static readonly Session A = new("a", "A: Lower", "t", DefaultDay.Monday, SessionType.Strength, null, []);
+    private static readonly Session B = new("b", "B: Run", "t", DefaultDay.Wednesday, SessionType.Cardio, null, []);
 
     private static WeekTile Tile(int offset, Session? session, TileState state, bool today = false) =>
         new(Monday.AddDays(offset), Monday.AddDays(offset).ToString("ddd", System.Globalization.CultureInfo.InvariantCulture),
