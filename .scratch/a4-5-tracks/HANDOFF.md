@@ -2,9 +2,9 @@
 
 Point a fresh chat at this file. Read `CLAUDE.md`, `docs/README.md` and `GLOSSARY.md` first, then `docs/specs/a4-5-tracks.md`, `docs/adr/0007-explicit-tracks-and-format-version-2.md` and the ticket you are working on. File lives at `.scratch/a4-5-tracks/HANDOFF.md`.
 
-## State (22 Nov 2026)
+## State (23 Nov 2026)
 - **PR 1 (tickets 01 to 10) is MERGED to `main` (PR #27, `c3997d7`)** — 1,479 Core, 611 Ui, 39 Web tests green; `dotnet build` 0 warnings. All tickets `01` to `10` in `.scratch/a4-5-tracks/issues/` are `Status: resolved`.
-- **PR 2 (tickets 11 to 15)** is ready (`Status: ready-for-agent` on tickets 11–15; ticket 11 is unblocked now that ticket 10 is resolved). Branch PR 2 from `main` as `feature/a4-5-pr2`.
+- **PR 2 (tickets 11 to 15) is IMPLEMENTED on `feature/a4-5-pr2`** — **1,675 Core, 754 Ui, 39 Web tests green**; `dotnet build` 0 warnings. Tickets `11` to `15` are implemented (ticket 15 code, bUnit/Core tests, manual phone checks in `docs/pwa-manual-checks.md`, and docs/handoff updates are complete; ready for PR 2 code review, thermo-nuclear review, fixes and PR body `.scratch/a4-5-tracks/pr-body-2.md`).
 - **PR 1 Core seams ready for PR 2 screens (tickets 11–15):**
   - **Tickets 11 & 12 (Plan editor):** `PlanSettings` (`StartDate`, `Goal`, `GoalDate`, `WeightIncrementKg`) and `TrackSettings` (`Weekly(WeeklyTarget, StreakMinWorkoutsPerWeek, StreakCountsCustomWorkouts)` / `Daily(DayDonePercent)`) in `PlanSettingsRules`; `TrackEditRules` (`AddTrack`, `RenameTrack`, `WithSettings`, `EditTrack`, `MoveUp`, `MoveDown`); `PlanPhaseRules.ValidatePhases(plan, trackId, phases)` & `WithPhases(plan, trackId, phases)`; `SessionRowRules.AddSession(plan, trackId, ...)` & `EditSession`; `PlanSaveRules.IsDifferent` & `TracksDiffer`; `PlanSettingsForm` (`PlanFormSettings(Plan, Track)`); `PlanPhasesTab.razor.cs` (code-behind already extracted).
   - **Ticket 13 (Week view daily row):** `TrackRules.IsDaily(plan, session)`, `DailyTrackRules.Status(plan, track, workouts, breaks, today)` / `IsOpen` / `DonePercent`, `WeekScheduleRules.Layout(plan, track, ...)` & `MissedInWeek(plan, track, ...)`, `WeekEditRules` (already refuses moving or changing default day of a daily Session).

@@ -74,8 +74,32 @@ public class GuideHistoryViewTests
         var place = GuideHistoryView.Build(Squat, [], plan, Today).Place!;
 
         Assert.Equal(["Lower", "Legs"], place.Placements.Select(p => p.Session.Name));
+        Assert.Equal(["Lower", "Legs"], place.Placements.Select(p => p.SessionLabel));
         Assert.Equal((4, 8), (place.Placements[0].Row.Sets, place.Placements[0].Row.Reps));
         Assert.Null(place.Phase);
+    }
+
+    [Fact]
+    public void Placements_name_each_Sessions_Track_when_the_Plan_has_more_than_one_Track()
+    {
+        var plan = PlanFixture.Make(
+            start: Mon,
+            tracks:
+            [
+                new Track("main", "Main", new TrackRhythm.Weekly(3, 2, false), []),
+                new Track("mob", "Morning mobility", new TrackRhythm.Daily(75), []),
+            ],
+            sessions:
+            [
+                PlanFixture.Session("lower", DayOfWeek.Monday, name: "A: Lower + core", exercises: [PlanFixture.Row("squat", sets: 3, reps: 8)], trackId: "main"),
+                PlanFixture.Session("s-mob", DefaultDay.Daily, SessionType.Mobility, "Morning mobility", exercises: [PlanFixture.Row("squat", sets: 1, reps: 10)], trackId: "mob"),
+            ]);
+
+        var place = GuideHistoryView.Build(Squat, [], plan, Today).Place!;
+
+        Assert.Equal(
+            ["A: Lower + core (Main)", "Morning mobility (Morning mobility, daily)"],
+            place.Placements.Select(p => p.SessionLabel));
     }
 
     [Fact]

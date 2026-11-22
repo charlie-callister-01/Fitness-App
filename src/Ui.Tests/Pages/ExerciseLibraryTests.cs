@@ -79,6 +79,33 @@ public sealed class ExerciseLibraryTests : BunitContext
     }
 
     [Fact]
+    public async Task Session_group_headings_name_the_Track_when_the_Plan_has_more_than_one_Track()
+    {
+        var plan = new Plan(
+            "plan",
+            "Plan",
+            true,
+            Today,
+            null,
+            null,
+            2,
+            [
+                new Track(MainTrack, "Main", new TrackRhythm.Weekly(3, 2, false), []),
+                new Track("mob", "Morning mobility", new TrackRhythm.Daily(75), []),
+            ],
+            [
+                new Session("lower", "Lower", MainTrack, DefaultDay.Monday, SessionType.Strength, null,
+                    [new SessionExercise(Squat, 3, 8, null, null)]),
+                new Session("mob-s", "Morning routine", "mob", DefaultDay.Daily, SessionType.Mobility, null,
+                    [new SessionExercise(Lunge, 1, 10, null, null)]),
+            ]);
+        var data = await OpenSeededAsync(plan: plan);
+        var cut = RenderLibrary(data);
+
+        Assert.Equal(["Main · Lower", "Morning mobility · Morning routine", "Not in a Session"], Headings(cut));
+    }
+
+    [Fact]
     public async Task A_row_links_to_the_Guide_page_of_its_Exercise()
     {
         var cut = RenderLibrary(await SeedAsync());

@@ -13,9 +13,22 @@
 
 **Blocked by:** 14.
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-- [ ] bUnit tests: Guide header and Library headings name Tracks with two Tracks and are unchanged with one.
-- [ ] The manual-checks section is written and unticked.
-- [ ] `dotnet build` 0 warnings; all tests green; counts recorded.
+- [x] bUnit tests: Guide header and Library headings name Tracks with two Tracks and are unchanged with one.
+- [x] The manual-checks section is written and unticked.
+- [x] `dotnet build` 0 warnings; all tests green; counts recorded.
 - [ ] Docs, handoff and PR body written; both reviews and their fixes done.
+
+## Comments
+- **Guide & Library Track context (`GuideHistoryView.cs`, `GuidePage.razor.cs`):**
+  - Added `SessionLabel` to `GuidePlacement` in `GuideHistoryView`: returns `session.Name` when the Plan has one Track, `$"{session.Name} ({track.Name})"` for a weekly Track when `plan.Tracks.Count > 1`, and `$"{session.Name} ({track.Name}, daily)"` for a daily Track when `plan.Tracks.Count > 1`.
+  - Updated `GuidePage.HeaderLine` and `GuidePage.PlacementText` to render `SessionLabel` across all placements, keeping single-Track output unchanged while qualifying multi-Track placements (e.g. `"A: Lower + core (Main)"`, `"Morning mobility (Morning mobility, daily)"`).
+  - Verified `LibraryViewBuilder` and `Exercises.razor` group headings (`"{Track.Name} · {Session.Name}"` when `plan.Tracks.Count > 1`, `"{Session.Name}"` when `plan.Tracks.Count == 1`, `"Not in a Session"` unchanged).
+- **Tests (`GuideHistoryViewTests.cs`, `GuidePageTests.cs`, `ExerciseLibraryTests.cs`):**
+  - Added Core unit test `Placements_name_each_Sessions_Track_when_the_Plan_has_more_than_one_Track` in `GuideHistoryViewTests`.
+  - Added bUnit test `The_header_and_place_name_the_Track_when_the_Plan_has_more_than_one_Track` in `GuidePageTests`.
+  - Added bUnit test `Session_group_headings_name_the_Track_when_the_Plan_has_more_than_one_Track` in `ExerciseLibraryTests`.
+- **Manual checks & docs:**
+  - Added unticked section `## Tracks manual checks (A4.5 PR 2)` (11 items) in `docs/pwa-manual-checks.md`.
+  - Updated `docs/build-plan.md`, `docs/README.md`, `docs/specs/a4-5-tracks.md` (`## Further Notes`), and `.scratch/a4-5-tracks/HANDOFF.md` with PR 2 completion and test counts (**1,675 Core, 754 Ui, 39 Web tests green; 0 build warnings**).

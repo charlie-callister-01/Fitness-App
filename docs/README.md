@@ -12,7 +12,7 @@ Start here in a new session via `/start-session`. Current state lives in [`STATU
 | [`data-spec.md`](data-spec.md) | The written data spec: entities, fields, units, ID rules, JSON exchange format and versioning (formatVersion 2, updated in stage A4.5 for explicit Tracks) |
 | [`design-brief.md`](design-brief.md) | Self-contained brief to give the UI/UX design agent (requirements, constraints, and the design document and assets we want back) |
 | [`design/design-document.md`](design/design-document.md) | The design document (v1.0, complete): Themes, tokens, components, screens, flows; assets in `design/assets/` (manifest in `design/assets/README.md`) |
-| [`pwa-manual-checks.md`](pwa-manual-checks.md) | How the PWA caches and updates, and the manual phone checks (install, airplane mode, update, the storage checks, and the Theme, shell and Workout log checks) |
+| [`pwa-manual-checks.md`](pwa-manual-checks.md) | How the PWA caches and updates, and the manual phone checks (install, airplane mode, update, storage, Theme, shell, Workout log, Home, Editors, Insight and Tracks) |
 | [`grilling-log.md`](grilling-log.md) | The essence of every question and answer (Q1 to Q78) |
 | [`adr/`](adr/) | Hard-to-reverse decisions: 0001 data foundation, 0002 stack, 0003 storage, 0004 .NET 10 LTS pinned, 0005 single writer, quarantine and two storage versions, 0006 two Themes (Keep and Clean), 0007 explicit Tracks and format version 2 |
 | [`agents/`](agents/) | Skill config: local markdown tracker, triage labels, domain docs, workflow settings, GitHub platform |
