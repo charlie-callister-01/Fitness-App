@@ -114,4 +114,40 @@ public class HomeNudgesTests
         Assert.Equal("2026-11-16|MissedSession|s1", keys[0]);
         Assert.Equal("2026-11-16|NoRecentBackup|", keys[1]);
     }
+
+    [Fact]
+    public void OneShortOfTarget_and_MissedSession_keys_stay_distinct_across_Tracks()
+    {
+        var main = new Track("main", "Strength", new TrackRhythm.Weekly(2, 1, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), []);
+        var plan = PlanFixture.Make(
+            tracks: [main, cardio],
+            sessions:
+            [
+                PlanFixture.Session("s-str", DefaultDay.Monday, name: "Lower", trackId: "main"),
+                PlanFixture.Session("s-car", DefaultDay.Tuesday, SessionType.Cardio, name: "Tempo", trackId: "cardio"),
+            ]);
+
+        Workout Done(string id, DateOnly date, string sessionId) =>
+            new(id, date, sessionId, false, null, null, [], [new WorkoutEntry("goblet-squat", EntryStatus.Done, null, null, null, [])], null);
+
+        var thu = Today.AddDays(3);
+        var backup = new DateTimeOffset(2026, 11, 15, 9, 0, 0, TimeSpan.Zero);
+        var computed = NudgeRules.Compute(plan, [], [], [Done("w1", Today, "s-str"), Done("w2", Today.AddDays(1), "s-car")], backup, thu);
+        Assert.Equal(2, computed.Count);
+        Assert.All(computed, n => Assert.Equal(NudgeKind.OneShortOfTarget, n.Kind));
+
+        var shortKeys = HomeNudges.KeysFor(computed, thu);
+        Assert.Equal(2, shortKeys.Distinct().Count());
+
+        var dismissed = new HashSet<string> { shortKeys[0] };
+        var remaining = HomeNudges.Select(computed, dismissed, thu);
+        var kept = Assert.Single(remaining);
+        Assert.Equal(shortKeys[1], kept.Key);
+
+        var missed = NudgeRules.Compute(plan, [], [], [], backup, thu);
+        var missedKeys = HomeNudges.KeysFor(missed, thu);
+        Assert.Equal(2, missedKeys.Count);
+        Assert.Equal(2, missedKeys.Distinct().Count());
+    }
 }

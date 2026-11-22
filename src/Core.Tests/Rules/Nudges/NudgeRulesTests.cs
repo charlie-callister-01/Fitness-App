@@ -141,4 +141,86 @@ public class NudgeRulesTests
         Assert.Equal(["s-mon", "s-wed"], nudges.Where(n => n.SessionId is not null).Select(n => n.SessionId));
         Assert.Equal(nudges.Count, nudges.Distinct().Count());
     }
+
+    [Fact]
+    public void One_weekly_Track_keeps_existing_wording_even_with_a_daily_Track()
+    {
+        var main = new Track("main", "Strength", new TrackRhythm.Weekly(3, 2, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(75), []);
+        var plan = PlanFixture.Make(
+            tracks: [main, mobility],
+            sessions:
+            [
+                PlanFixture.Session("s-mon", DefaultDay.Monday, name: "Lower", trackId: "main"),
+                PlanFixture.Session("s-mob", DefaultDay.Daily, SessionType.Mobility, name: "Morning", trackId: "mob"),
+            ]);
+
+        Workout[] workouts =
+        [
+            new("w1", Mon, "s-mon", false, null, null, [], [new WorkoutEntry("goblet-squat", EntryStatus.Done, null, null, null, [])], null),
+            new("w2", Tue, "s-mon", false, null, null, [], [new WorkoutEntry("goblet-squat", EntryStatus.Done, null, null, null, [])], null),
+        ];
+
+        var shortNudge = Assert.Single(NudgeRules.Compute(plan, [], [], workouts, RecentBackup, Thu));
+        Assert.Equal(NudgeKind.OneShortOfTarget, shortNudge.Kind);
+        Assert.Equal("One workout short of your target of 3 this week.", shortNudge.Message);
+
+        var missedNudge = Assert.Single(NudgeRules.Compute(plan, [], [], [], RecentBackup, Tue));
+        Assert.Equal(NudgeKind.MissedSession, missedNudge.Kind);
+        Assert.Equal("You missed Lower on Monday. Make it up this week?", missedNudge.Message);
+    }
+
+    [Fact]
+    public void Two_weekly_Tracks_one_short_one_on_target_nudges_once_naming_the_short_Track()
+    {
+        var strength = new Track("main", "Strength", new TrackRhythm.Weekly(2, 1, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), []);
+        var plan = PlanFixture.Make(
+            tracks: [strength, cardio],
+            sessions:
+            [
+                PlanFixture.Session("s-str", DefaultDay.Friday, name: "Upper", trackId: "main"),
+                PlanFixture.Session("s-car", DefaultDay.Friday, SessionType.Cardio, name: "Run", trackId: "cardio"),
+            ]);
+
+        Workout Done(string id, DateOnly date, string sessionId) =>
+            new(id, date, sessionId, false, null, null, [], [new WorkoutEntry("goblet-squat", EntryStatus.Done, null, null, null, [])], null);
+
+        // Strength has 2 of 2 (on target), Cardio has 1 of 2 (one short)
+        Workout[] workouts =
+        [
+            Done("w1", Mon, "s-str"),
+            Done("w2", Tue, "s-str"),
+            Done("w3", Wed, "s-car"),
+        ];
+
+        var nudge = Assert.Single(NudgeRules.Compute(plan, [], [], workouts, RecentBackup, Thu));
+        Assert.Equal(NudgeKind.OneShortOfTarget, nudge.Kind);
+        Assert.Contains("Cardio", nudge.Message);
+        Assert.DoesNotContain("Strength", nudge.Message);
+    }
+
+    [Fact]
+    public void Two_missed_Sessions_on_different_weekly_Tracks_produce_two_Nudges_naming_each_Track()
+    {
+        var strength = new Track("main", "Strength", new TrackRhythm.Weekly(3, 2, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), []);
+        var plan = PlanFixture.Make(
+            tracks: [strength, cardio],
+            sessions:
+            [
+                PlanFixture.Session("s-str", DefaultDay.Monday, name: "Lower", trackId: "main"),
+                PlanFixture.Session("s-car", DefaultDay.Tuesday, SessionType.Cardio, name: "Intervals", trackId: "cardio"),
+            ]);
+
+        var nudges = NudgeRules.Compute(plan, [], [], [], RecentBackup, Wed);
+
+        Assert.Equal(2, nudges.Count);
+        Assert.All(nudges, n => Assert.Equal(NudgeKind.MissedSession, n.Kind));
+        Assert.Contains("Lower", nudges[0].Message);
+        Assert.Contains("Strength", nudges[0].Message);
+        Assert.Contains("Intervals", nudges[1].Message);
+        Assert.Contains("Cardio", nudges[1].Message);
+        Assert.NotEqual(nudges[0].SessionId, nudges[1].SessionId);
+    }
 }
