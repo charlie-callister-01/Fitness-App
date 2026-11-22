@@ -301,6 +301,46 @@ public sealed class GuidePageTests : BunitContext
         Assert.Contains("Left knee: keep the box high", cut.Find("section[aria-label='My notes']").TextContent);
     }
 
+    [Fact]
+    public async Task Cancelling_My_notes_with_unsaved_text_asks_Discard_changes_and_Keep_editing_keeps_the_text()
+    {
+        var cut = await RenderPageAsync(SquatGuide("Old"));
+        ButtonNamed(cut, "Edit notes").Click();
+        cut.Find("#guide-notes").Input("Half typed");
+
+        ButtonNamed(cut, "Cancel").Click();
+
+        Assert.Contains(cut.FindAll("[role='dialog'] .fa-sheet__title"), t => t.TextContent == "Discard changes?");
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Keep editing").Click();
+        Assert.Equal("Half typed", cut.Find("#guide-notes").GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task Discarding_My_notes_text_closes_the_sheet_and_saves_nothing()
+    {
+        var data = await OpenSeededAsync(plan: Plan());
+        var cut = await RenderPageAsync(SquatGuide("Old"), data: data);
+        ButtonNamed(cut, "Edit notes").Click();
+        cut.Find("#guide-notes").Input("Half typed");
+        ButtonNamed(cut, "Cancel").Click();
+
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Discard").Click();
+
+        Assert.Empty(cut.FindAll("[role='dialog']"));
+        Assert.Equal("Old", data.Snapshot.Guides.Single().PersonalNotes);
+    }
+
+    [Fact]
+    public async Task Cancelling_My_notes_left_untouched_closes_without_asking()
+    {
+        var cut = await RenderPageAsync(SquatGuide("Old"));
+        ButtonNamed(cut, "Edit notes").Click();
+
+        ButtonNamed(cut, "Cancel").Click();
+
+        Assert.Empty(cut.FindAll("[role='dialog']"));
+    }
+
     // ---- Read-only
 
     [Fact]
@@ -397,6 +437,7 @@ public sealed class GuidePageTests : BunitContext
         log.Find("input[aria-label='Weight, Set 1']").Input("42");
         var workoutBefore = data.Snapshot.Workouts.Single();
 
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"exercises/{Squat}/guide");
         await DisposeComponentsAsync();
         var guide = Render<GuidePage>(p => p.Add(g => g.ExerciseId, Squat));
         Assert.Equal("Goblet squat", guide.Find("h1").TextContent);

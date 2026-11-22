@@ -32,7 +32,7 @@ public abstract class WorkoutSavingFlow
     protected bool CanAct() => _save.CanAct;
 
     /// <summary>This window can write.</summary>
-    protected bool CanWrite => _data.Health.CanWrite;
+    protected bool CanWrite => _save.CanWrite;
 
     /// <summary>The open Workout's latest stored copy, or null when it is gone or already has an end time.</summary>
     protected Workout? FindOpen(string workoutId) =>
