@@ -5,6 +5,8 @@ using Core.Rules.Starting;
 using Core.Storage;
 using Core.Time;
 using Microsoft.Extensions.DependencyInjection;
+using Ui;
+using Ui.Browser;
 using Ui.Log;
 using Ui.Preferences;
 using Ui.Saving;
@@ -185,10 +187,99 @@ internal static class PageFixture
         }
     }
 
-    public static void Wire(BunitContext context, AppData data, SaveFailureNotice? notice = null, FakeDevicePreferences? preferences = null)
+    public sealed class FixedBuildInfo(string identifier = "test-build") : IBuildInfo
+    {
+        public string Identifier => identifier;
+    }
+
+    public sealed record DownloadedFile(string FileName, string Content, string ContentType);
+
+    public sealed record SharedPayload(string Title, string Text, string? FileName, string ContentType);
+
+    /// <summary>Recording fake for <see cref="IBrowserCapabilities"/>.</summary>
+    public sealed class FakeBrowserCapabilities : IBrowserCapabilities
+    {
+        public List<string> CopiedTexts { get; } = [];
+        public List<DownloadedFile> Downloads { get; } = [];
+        public List<SharedPayload> Shares { get; } = [];
+        public int InstallPrompts { get; private set; }
+
+        public bool CopyResult { get; set; } = true;
+        public bool DownloadResult { get; set; } = true;
+        public bool ShareSupported { get; set; } = true;
+        public bool ShareResult { get; set; } = true;
+        public bool IsStandalone { get; set; }
+        public bool CanInstall { get; set; }
+        public bool PromptInstallResult { get; set; } = true;
+
+        public event Action? InstallAvailabilityChanged;
+
+        public Task<bool> CopyTextAsync(string text)
+        {
+            if (CopyResult)
+            {
+                CopiedTexts.Add(text);
+            }
+
+            return Task.FromResult(CopyResult);
+        }
+
+        public Task<bool> DownloadFileAsync(string fileName, string content, string contentType = "application/json")
+        {
+            if (DownloadResult)
+            {
+                Downloads.Add(new DownloadedFile(fileName, content, contentType));
+            }
+
+            return Task.FromResult(DownloadResult);
+        }
+
+        public Task<bool> CanShareAsync() => Task.FromResult(ShareSupported);
+
+        public Task<bool> ShareAsync(string title, string text, string? fileName = null, string contentType = "text/plain")
+        {
+            if (ShareResult)
+            {
+                Shares.Add(new SharedPayload(title, text, fileName, contentType));
+            }
+
+            return Task.FromResult(ShareResult);
+        }
+
+        public Task<bool> IsStandaloneAsync() => Task.FromResult(IsStandalone);
+
+        public Task<bool> CanInstallAsync() => Task.FromResult(CanInstall);
+
+        public Task<bool> PromptInstallAsync()
+        {
+            InstallPrompts++;
+            if (PromptInstallResult)
+            {
+                CanInstall = false;
+                IsStandalone = true;
+                InstallAvailabilityChanged?.Invoke();
+            }
+
+            return Task.FromResult(PromptInstallResult);
+        }
+
+        public void SetCanInstall(bool canInstall)
+        {
+            CanInstall = canInstall;
+            InstallAvailabilityChanged?.Invoke();
+        }
+    }
+
+    public static void Wire(
+        BunitContext context,
+        AppData data,
+        SaveFailureNotice? notice = null,
+        FakeDevicePreferences? preferences = null,
+        FakeBrowserCapabilities? browser = null)
     {
         notice ??= new SaveFailureNotice();
         preferences ??= new FakeDevicePreferences();
+        browser ??= new FakeBrowserCapabilities();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddSingleton(data);
         var clock = new TestClock(Now);
@@ -199,6 +290,9 @@ internal static class PageFixture
         context.Services.AddSingleton<RecordingWakeLock>();
         context.Services.AddSingleton<IWakeLock>(sp => sp.GetRequiredService<RecordingWakeLock>());
         context.Services.AddSingleton<IIdGenerator>(new CountingIds());
+        context.Services.AddSingleton<IBuildInfo>(new FixedBuildInfo());
+        context.Services.AddSingleton(browser);
+        context.Services.AddSingleton<IBrowserCapabilities>(browser);
         context.Services.AddSingleton(notice);
         context.Services.AddSingleton<InAppHistory>();
         context.Services.AddSingleton<LogEditStates>();

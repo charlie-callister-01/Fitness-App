@@ -49,7 +49,6 @@ public sealed class MoreTests : BunitContext
 
     [Theory]
     [InlineData("Export and Import", "backup", typeof(ExportImport))]
-    [InlineData("Settings", "settings", typeof(SettingsPage))]
     public async Task More_LinksToEachSecondaryScreen_WhichIsARoutedPlaceholder(string label, string href, Type page)
     {
         var cut = await RenderMoreAsync();
@@ -63,6 +62,16 @@ public sealed class MoreTests : BunitContext
         var placeholder = Render(b => { b.OpenComponent(0, page); b.CloseComponent(); });
         Assert.NotEmpty(placeholder.Find("h1").TextContent);
         Assert.NotNull(placeholder.Find(".empty"));
+    }
+
+    // Settings is a real page now (see SettingsTests), so it is no longer in the placeholder list above.
+    [Fact]
+    public async Task More_LinksToSettings_WhichHasItsOwnRoute()
+    {
+        var cut = await RenderMoreAsync();
+
+        Assert.Equal("settings", cut.FindAll("nav a").Single(a => a.TextContent.Trim() == "Settings").GetAttribute("href"));
+        Assert.Equal("/settings", ((RouteAttribute)Attribute.GetCustomAttribute(typeof(SettingsPage), typeof(RouteAttribute))!).Template);
     }
 
     // Weekly review is a real page now (see WeeklyReviewTests), so it is no longer in the placeholder list above.

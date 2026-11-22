@@ -370,4 +370,19 @@ public class AppDataEnvironmentTests
         Assert.True(app.Health.DatabaseAvailable);
         Assert.False(app.Health.CanWrite);
     }
+
+    [Fact]
+    public async Task RequestPersistence_asks_the_environment_again_and_updates_health()
+    {
+        var environment = new InMemoryStorageEnvironment { Persistence = PersistenceStatus.NotGranted };
+        var app = await AppData.OpenAsync(new InMemoryDataStore(), environment);
+        Assert.Equal(PersistenceStatus.NotGranted, app.Health.Persistence);
+
+        environment.Persistence = PersistenceStatus.Granted;
+        var status = await app.RequestPersistenceAsync();
+
+        Assert.Equal(PersistenceStatus.Granted, status);
+        Assert.Equal(PersistenceStatus.Granted, app.Health.Persistence);
+        Assert.Equal(2, environment.PersistenceRequests);
+    }
 }
