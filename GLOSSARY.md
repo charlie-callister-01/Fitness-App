@@ -7,23 +7,39 @@ A personal training tracker for planning workouts, logging them quickly at the g
 ### Planning
 
 **Plan**:
-A complete training programme made of phases and Sessions, aimed at a goal. Several Plans can exist, but only one is active at a time.
+A complete training programme made of Tracks, Phases and Sessions, aimed at a goal. Several Plans can exist, but only one is active at a time.
 _Avoid_: Programme, routine, schedule
 
 **Phase**:
-A block of weeks inside a Plan with its own focus (e.g. Foundation, Build, HYROX prep).
+A block of weeks inside a Track with its own focus (e.g. Foundation, Build, HYROX prep).
 _Avoid_: Block, stage, cycle
 
 **Phase goal**:
 An optional target on a Phase (e.g. a lift hitting a weight for reps) that shows when the user is ready to move on early.
 _Avoid_: Exit criteria, milestone
 
+**Track**:
+A named path inside a Plan (for example gym and cardio, or morning mobility) with its own Cadence, rules and optional Phases. Every Session belongs to one Track. Tracks can be added, renamed and reordered, never removed, and a Track's Cadence never changes.
+_Avoid_: Programme, category, lane
+
+**Main track**:
+The first Track in a Plan; it must be weekly. Custom workouts, the benchmark Session and Home's Today card attach to it, and the plain Badge metrics (`streak`, `bestweek`, `sessions`) measure it. It is not a flag: reordering Tracks changes which one is main.
+_Avoid_: Default track, primary track
+
+**Daily Track**:
+A Track whose Sessions are on every day. A day is done when at least the Track's day-done percentage (default 75) of the Workout's planned rows is done, and its Streak is a run of consecutive done days. A daily Session is never a Missed session and cannot be moved.
+_Avoid_: Habit, routine
+
+**Cadence**:
+Whether a Track runs weekly (a weekly target and a weekly Streak) or daily (a day-done percentage and a daily Streak). Chosen when the Track is created.
+_Avoid_: Frequency, schedule
+
 **Benchmark exercise**:
 An Exercise the user has marked as one to track over time. The scheduled benchmark Session is pre-filled from these, and they are shown together with their trends.
 _Avoid_: Test lift, key lift
 
 **Session**:
-A planned template in a Plan (e.g. "A: Lower + core"): a list of Exercises with target sets and reps, usually tied to a day of the week.
+A planned template in a Plan (e.g. "A: Lower + core"), belonging to one Track: a list of Exercises with target sets and reps, tied to a day of the week (or to every day, on a daily Track).
 _Avoid_: Workout (that is what you actually did), day
 
 ### Doing
@@ -73,7 +89,7 @@ A Workout with some planned Exercises left undone. It still counts, and the rest
 _Avoid_: Incomplete workout
 
 **Streak**:
-The number of consecutive weeks (Monday to Sunday) with enough counted Workouts, where the minimum and what counts are user-editable settings. The current week never breaks it while still in progress.
+The number of consecutive weeks (Monday to Sunday) with enough counted Workouts, per weekly Track, where the minimum and what counts are user-editable settings. The current week never breaks it while still in progress. A daily Track has a daily Streak instead: consecutive done days.
 _Avoid_: Run, chain
 
 **Badge**:
