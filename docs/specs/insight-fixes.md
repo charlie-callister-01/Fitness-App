@@ -5,7 +5,7 @@ stage: B6-B8 review fixes
 
 # Insight review fixes
 
-Parent docs: [`insight-b6-b8.md`](insight-b6-b8.md) (the stage spec), tickets in `.scratch/insight/issues/`, [`../../GLOSSARY.md`](../../GLOSSARY.md). Source: the two-axis `/mattpocock-skills:code-review` of `feature/insight` against `origin/main` (24 commits, 98 files). The thermo-nuclear review (`/thermo-nuclear-code-quality-review`) has not run yet; its findings may add to this spec's tickets before they start.
+Parent docs: [`insight-b6-b8.md`](insight-b6-b8.md) (the stage spec), tickets in `.scratch/archive/insight/issues/`, [`../../GLOSSARY.md`](../../GLOSSARY.md). Source: the two-axis `/mattpocock-skills:code-review` of `feature/insight` against `origin/main` (24 commits, 98 files). The thermo-nuclear review (`/thermo-nuclear-code-quality-review`) has not run yet; its findings may add to this spec's tickets before they start.
 
 ## Problem Statement
 
