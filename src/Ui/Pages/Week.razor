@@ -1,6 +1,136 @@
 @page "/week"
+@using Core.Rules.PlanEditing
+@using Core.Rules.Schedule
+@* Week view (S-06, F-08): this week's Sessions on their days, Move, Add a Break, and the suggested re-arranged week as a draft. All logic is
+   in Week.razor.cs; the rules are in Core. *@
+<div class="fa-root fa-week">
+    <header class="fa-week__header">
+        <div>
+            <p class="fa-muted fa-week__range">@RangeText</p>
+            <h1 class="fa-title fa-title--l">Week</h1>
+        </div>
+        @if (_plan is not null)
+        {
+            <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite" OnClick="OnAddBreak">Add a Break</Button>
+        }
+    </header>
 
-<div class="fa-root">
-    <h1 class="fa-title fa-title--l">Week</h1>
-    <EmptyState Kind="EmptyStateKind.NoPlan" Title="Your week will live here" Message="Sessions, Breaks and moves arrive in a later stage." />
+    <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+
+    @if (_plan is null)
+    {
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No active Plan" Message="Make a Plan active and its Sessions will show here." />
+    }
+    else
+    {
+        @if (_draft is { } draft)
+        {
+            <section class="fa-week__draft" aria-label="Suggested week">
+                <h2 class="fa-title fa-title--m">Suggested week</h2>
+                <p class="fa-week__summary" role="status">@draft.Summary</p>
+                <ul class="fa-week__rows">
+                    @foreach (var row in draft.Rows)
+                    {
+                        <li class="fa-week__draftrow @(row.IsChanged ? "fa-week__draftrow--changed" : "")" data-session="@row.SessionId">
+                            <span class="fa-week__name">@row.SessionName</span>
+                            <span class="fa-muted">@DayText(row.CurrentDate)@(row.IsChanged ? $" to {DayText(row.ProposedDate)}" : row.IsUndone ? " (kept)" : " (stays)")</span>
+                            @if (row.IsChanged)
+                            {
+                                <Button Variant="ButtonVariant.Secondary" AccessibleName="@($"Undo move of {row.SessionName}")" OnClick="() => OnUndo(row.SessionId)">Undo</Button>
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (draft.Unplaced.Count > 0)
+                {
+                    <p class="fa-muted">No coming day left for @UnplacedNames(draft).</p>
+                }
+                <div class="fa-week__draftactions">
+                    <Button Variant="ButtonVariant.Primary" Disabled="!Page.CanWrite || _save.IsBusy || draft.ChangedRows.Count == 0" OnClick="OnApplyAsync">Apply</Button>
+                    <Button Variant="ButtonVariant.Secondary" Disabled="_save.IsBusy" OnClick="OnCancelDraft">Cancel</Button>
+                </div>
+            </section>
+        }
+
+        @if (_rows.Count == 0)
+        {
+            <EmptyState Kind="EmptyStateKind.NoPlan" Title="Nothing scheduled this week" Message="No Sessions are planned for this week." />
+        }
+        else
+        {
+            <ul class="fa-week__rows" aria-label="This week">
+                @foreach (var row in _rows)
+                {
+                    <li class="fa-week__row" data-session="@row.SessionId">
+                        <div class="fa-week__main">
+                            <span class="fa-week__day">@DayText(row.Date)</span>
+                            <span class="fa-week__name">@row.Name</span>
+                            @if (row.IsMoved)
+                            {
+                                <span class="fa-muted">Moved this week</span>
+                            }
+                            @if (row.IsBreakDay)
+                            {
+                                <span class="fa-muted">Break day</span>
+                            }
+                        </div>
+                        @if (ChipOf(row) is { } chip)
+                        {
+                            <StateChip Kind="chip" />
+                        }
+                        <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite" AccessibleName="@($"Move {row.Name}")" OnClick="() => OnMove(row)">Move</Button>
+                    </li>
+                }
+            </ul>
+        }
+    }
+
+    <FormSheet Open="_moveRow is not null" Title="@MoveTitle" Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage"
+               Message="@_moveMessage" OnClose="CloseMove">
+        <ChildContent>
+            <div class="fa-week__days" role="group" aria-label="Day">
+                @foreach (var day in _days)
+                {
+                    var date = day;
+                    <Button Variant="ButtonVariant.Secondary" Pressed="_moveDate == date" AccessibleName="@DayText(date)" OnClick="() => _moveDate = date">@DayText(date)</Button>
+                }
+            </div>
+            <fieldset class="fa-week__scope">
+                <legend class="fa-label">Applies to</legend>
+                <label class="fa-week__choice">
+                    <input type="radio" name="move-scope" checked="@(!_makeDefault)" @onchange="() => _makeDefault = false" />
+                    <span>This week only</span>
+                </label>
+                <label class="fa-week__choice">
+                    <input type="radio" name="move-scope" checked="@_makeDefault" @onchange="() => _makeDefault = true" />
+                    <span>Make this the default day</span>
+                </label>
+            </fieldset>
+        </ChildContent>
+        <Actions>
+            <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="OnSaveMoveAsync">Move</Button>
+        </Actions>
+    </FormSheet>
+
+    <FormSheet Open="_breakOpen" Title="Add a Break" Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage"
+               Message="@_breakMessage" OnClose="CloseBreak">
+        <ChildContent>
+            <p class="fa-muted">While you are on a Break, Home goes quiet and your Streak is protected. Your Plan picks up when it ends.</p>
+            <label class="fa-week__field">
+                <span class="fa-label">From</span>
+                <input class="fa-week__input" type="date" value="@_from" @oninput="e => _from = e.Value?.ToString()" />
+            </label>
+            <label class="fa-week__field">
+                <span class="fa-label">To</span>
+                <input class="fa-week__input" type="date" value="@_to" @oninput="e => _to = e.Value?.ToString()" />
+            </label>
+            <label class="fa-week__field">
+                <span class="fa-label">Reason (optional)</span>
+                <input class="fa-week__input" type="text" value="@_reason" @oninput="e => _reason = e.Value?.ToString()" />
+            </label>
+        </ChildContent>
+        <Actions>
+            <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="OnStartBreakAsync">Start Break</Button>
+        </Actions>
+    </FormSheet>
 </div>
