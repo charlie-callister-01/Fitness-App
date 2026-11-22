@@ -1,5 +1,5 @@
 @page "/trophies"
-@* Trophies (design S-13): three tabs. Badges is the BadgeTile grid and detail; Bests is a placeholder until its own ticket; Calendar reuses the
+@* Trophies (design S-13): three tabs. Badges is the BadgeTile grid and detail; Bests is the personal-bests table; Calendar reuses the
    Progress calendar. Each tab is its own component. *@
 <div class="fa-root fa-trophies">
     <h1 class="fa-title fa-title--l">Trophies</h1>
@@ -22,7 +22,7 @@
     }
     else
     {
-        <BadgesTab />
+        <BadgesTab InitialBadgeId="@_openBadge" />
     }
 </div>
 
@@ -30,4 +30,12 @@
     private static readonly string[] Tabs = ["Badges", "Bests", "Calendar"];
 
     private string _tab = "Badges";
+    private string? _openBadge;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    /// <summary>The UnlockToast links here as trophies?badge=ID, which opens that Badge detail on the Badges tab.</summary>
+    protected override void OnInitialized() =>
+        _openBadge = new Uri(Navigation.Uri).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2)).Where(p => p.Length == 2 && p[0] == "badge").Select(p => Uri.UnescapeDataString(p[1])).FirstOrDefault();
 }

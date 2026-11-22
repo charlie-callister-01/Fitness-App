@@ -58,6 +58,10 @@
         _editorOpen = _editing is not null;
     }
 
+    /// <summary>A Badge to open straight away (from the UnlockToast link).</summary>
+    [Parameter]
+    public string? InitialBadgeId { get; set; }
+
     [Inject] private AppData Data { get; set; } = default!;
 
     [Inject] private IClock Clock { get; set; } = default!;
@@ -66,6 +70,7 @@
 
     protected override void OnInitialized()
     {
+        _selectedId = InitialBadgeId;
         Data.Changed += OnDataChanged;
         Rebuild();
     }
