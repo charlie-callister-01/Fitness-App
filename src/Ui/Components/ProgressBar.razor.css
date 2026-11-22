@@ -1,0 +1,46 @@
+.fa-pbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.fa-pbar__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.fa-pbar__label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.fa-pbar__value {
+    color: var(--text-heading);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.fa-pbar__track {
+    height: 12px;
+    background: var(--orb-track);
+    border: var(--border-thin) solid var(--outline);
+    border-radius: var(--radius-round);
+    overflow: hidden;
+    box-sizing: content-box;
+}
+
+.fa-pbar__fill {
+    height: 100%;
+    background: var(--state-swapped);
+}
+
+.fa-pbar--done .fa-pbar__fill {
+    background: var(--done);
+}
+
+.fa-pbar--behind .fa-pbar__fill {
+    background: var(--state-partial);
+}
