@@ -1,0 +1,109 @@
+.fa-sessions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-session {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-session__head,
+.fa-row__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.fa-session__name,
+.fa-session__meta,
+.fa-row__name,
+.fa-row__sets {
+    margin: 0;
+}
+
+.fa-session__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fa-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-row__handle {
+    color: var(--text-muted);
+    letter-spacing: -0.25em;
+    user-select: none;
+}
+
+.fa-row__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.fa-row__edit {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-control);
+}
+
+.fa-row__triple {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+}
+
+.fa-row__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.fa-row__check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+}
+
+.fa-row__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.fa-row__control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--radius-control);
+}
+
+.fa-row__control:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}
+
+.fa-session__problem {
+    margin: 0;
+    color: var(--pr-text);
+}

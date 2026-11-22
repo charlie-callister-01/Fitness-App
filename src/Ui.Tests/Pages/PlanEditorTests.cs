@@ -58,16 +58,6 @@ public sealed class PlanEditorTests : BunitContext
     }
 
     [Fact]
-    public async Task The_Sessions_tab_is_a_labelled_placeholder()
-    {
-        var cut = RenderEditor(await OpenWithAsync(Plan()));
-
-        ShowTab(cut, "Sessions");
-
-        Assert.Contains("Sessions: coming soon", cut.Markup);
-    }
-
-    [Fact]
     public async Task An_unknown_Plan_says_so_and_offers_the_way_back()
     {
         var cut = RenderEditor(await OpenWithAsync(Plan()), "missing");
@@ -290,6 +280,290 @@ public sealed class PlanEditorTests : BunitContext
         ShowTab(cut, "Phases");
 
         Assert.Contains("No Phases yet", cut.Markup);
+    }
+
+    // Sessions
+
+    private static string[] RowNames(IRenderedComponent<PlanEditor> cut) =>
+        [.. cut.FindAll(".fa-row .fa-row__name").Select(n => n.TextContent.Trim())];
+
+    private IRenderedComponent<PlanEditor> OpenSessions(AppData data)
+    {
+        var cut = RenderEditor(data);
+        ShowTab(cut, "Sessions");
+        return cut;
+    }
+
+    [Fact]
+    public async Task Sessions_show_their_rows_with_a_hidden_drag_handle_name_and_summary()
+    {
+        var plan = Plan([new Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+        [
+            new SessionExercise(Squat, 3, 8, null, "Chest up"),
+            new SessionExercise(Lunge, 3, 8, 12, null),
+            new SessionExercise("plank", 2, null, null, null),
+        ])]);
+        var cut = OpenSessions(await OpenWithAsync(plan));
+
+        Assert.Equal("Lower", cut.Find(".fa-session__name").TextContent);
+        Assert.Contains("Monday", cut.Find(".fa-session__meta").TextContent);
+        Assert.Equal(["Goblet squat", "Walking lunge", "Plank"], RowNames(cut));
+        Assert.Equal(["3 x 8", "3 x 8 to 12", "2 sets"], cut.FindAll(".fa-row__sets").Select(s => s.TextContent.Trim()));
+        Assert.All(cut.FindAll(".fa-row__handle"), h => Assert.Equal("true", h.GetAttribute("aria-hidden")));
+        Assert.DoesNotContain("draggable", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Editing_a_row_expands_it_and_the_new_numbers_and_cue_are_saved()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        Field(cut, "Sets").Change("4");
+        Field(cut, "Reps").Change("6");
+        Field(cut, "Highest Reps").Change("10");
+        Field(cut, "Cue").Input("Slow down");
+        Assert.Contains("4 x 6 to 10", cut.FindAll(".fa-row__sets")[0].TextContent);
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(4, data.Snapshot.Plans.Single().Sessions[0].Exercises[0].Sets));
+        Assert.Equal(new SessionExercise(Squat, 4, 6, 10, "Slow down"), data.Snapshot.Plans.Single().Sessions[0].Exercises[0]);
+        Assert.Equal(new SessionExercise(Lunge, 2, 10, null, null), data.Snapshot.Plans.Single().Sessions[0].Exercises[1]);
+    }
+
+    [Fact]
+    public async Task A_row_has_no_Step_field_because_the_data_has_no_per_row_step()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+
+        Assert.DoesNotContain("Step", cut.Find(".fa-row__edit").TextContent);
+    }
+
+    [Fact]
+    public async Task Move_up_and_Move_down_reorder_rows_and_the_order_is_saved()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+
+        cut.Find("button[aria-label='Edit Walking lunge']").Click();
+        Assert.True(Button(cut, "Move down").HasAttribute("disabled"));
+        Button(cut, "Move up").Click();
+
+        Assert.Equal(["Walking lunge", "Goblet squat"], RowNames(cut));
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal(Lunge, data.Snapshot.Plans.Single().Sessions[0].Exercises[0].ExerciseId));
+
+        Assert.True(Button(cut, "Move up").HasAttribute("disabled"));
+        Button(cut, "Move down").Click();
+        Assert.Equal(["Goblet squat", "Walking lunge"], RowNames(cut));
+    }
+
+    [Fact]
+    public async Task Remove_takes_the_row_out_and_Save_stores_it()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        Button(cut, "Remove").Click();
+
+        Assert.Equal(["Walking lunge"], RowNames(cut));
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Plans.Single().Sessions[0].Exercises));
+        Assert.Equal(Lunge, data.Snapshot.Plans.Single().Sessions[0].Exercises[0].ExerciseId);
+    }
+
+    [Fact]
+    public async Task Add_Exercise_from_library_appends_the_picked_Exercise_at_the_end()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+
+        Button(cut, "Add Exercise from library").Click();
+        cut.FindAll("[role='dialog'] .fa-picker__row").Single(r => r.TextContent.Contains("Plank")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(["Goblet squat", "Walking lunge", "Plank"], RowNames(cut)));
+        Assert.Empty(cut.FindAll("[role='dialog']"));
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal(3, data.Snapshot.Plans.Single().Sessions[0].Exercises.Count));
+        Assert.Equal(new SessionExercise("plank", 3, 8, null, null), data.Snapshot.Plans.Single().Sessions[0].Exercises[2]);
+    }
+
+    [Fact]
+    public async Task The_picker_does_not_offer_Exercises_the_Session_already_has()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+
+        Button(cut, "Add Exercise from library").Click();
+
+        var offered = cut.FindAll("[role='dialog'] .fa-picker__row-name").Select(n => n.TextContent.Trim()).ToList();
+        Assert.DoesNotContain("Goblet squat", offered);
+        Assert.DoesNotContain("Walking lunge", offered);
+        Assert.Contains("Plank", offered);
+    }
+
+    [Fact]
+    public async Task A_new_Exercise_made_in_the_picker_lands_in_the_Session()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+        Button(cut, "Add Exercise from library").Click();
+
+        cut.Find("[role='dialog'] .fa-picker__new button").Click();
+        cut.Find("[role='dialog'] input[aria-label='Name']").Input("Cable row");
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Exercise").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(["Goblet squat", "Walking lunge", "Cable row"], RowNames(cut)));
+        Assert.Contains(data.Snapshot.Exercises, e => e.Name == "Cable row");
+    }
+
+    [Fact]
+    public async Task A_Session_can_be_renamed_and_moved_to_another_day_and_type()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+
+        cut.Find("button[aria-label='Edit Session Lower']").Click();
+        Field(cut, "Name").Input("Legs");
+        Field(cut, "Default day").Change(DayOfWeek.Friday.ToString());
+        Field(cut, "Type").Change(SessionType.Body.ToString());
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Done").Click();
+
+        Assert.Equal("Legs", cut.Find(".fa-session__name").TextContent);
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal("Legs", data.Snapshot.Plans.Single().Sessions[0].Name));
+        var session = data.Snapshot.Plans.Single().Sessions[0];
+        Assert.Equal((DayOfWeek.Friday, SessionType.Body), (session.DefaultDay, session.Type));
+        Assert.Equal(2, session.Exercises.Count);
+    }
+
+    [Fact]
+    public async Task A_blank_Session_name_is_refused_in_the_sheet_and_nothing_changes()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+
+        cut.Find("button[aria-label='Edit Session Lower']").Click();
+        Field(cut, "Name").Input("  ");
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Done").Click();
+
+        Assert.Contains("Give the Session a name.", cut.Find("[role='dialog'] [role='alert']").TextContent);
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task A_new_Session_can_be_added_with_a_name_day_and_type()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+
+        Button(cut, "Add Session").Click();
+        Field(cut, "Name").Input("Run");
+        Field(cut, "Default day").Change(DayOfWeek.Saturday.ToString());
+        Field(cut, "Type").Change(SessionType.Cardio.ToString());
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Session").Click();
+
+        Assert.Equal(["Lower", "Run"], cut.FindAll(".fa-session__name").Select(n => n.TextContent));
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal(2, data.Snapshot.Plans.Single().Sessions.Count));
+        var run = data.Snapshot.Plans.Single().Sessions[1];
+        Assert.Equal(("Run", DayOfWeek.Saturday, SessionType.Cardio), (run.Name, run.DefaultDay, run.Type));
+        Assert.Empty(run.Exercises);
+    }
+
+    [Theory]
+    [InlineData("Sets", "0", "Sets must be at least 1.")]
+    [InlineData("Sets", "lots", "Sets must be at least 1.")]
+    [InlineData("Reps", "0", "Reps must be at least 1.")]
+    [InlineData("Highest Reps", "4", "The highest Reps cannot be below Reps.")]
+    public async Task Invalid_sets_or_reps_show_a_message_and_hold_Save_back(string field, string value, string expected)
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+
+        Field(cut, field).Change(value);
+
+        Assert.Contains(expected, cut.Find("[role='alert']").TextContent);
+        Assert.Contains("Goblet squat", cut.Find("[role='alert']").TextContent);
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+        Assert.Contains("Fix the problem on the Sessions tab", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Fixing_the_numbers_lets_Save_through_again()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        Field(cut, "Sets").Change("0");
+
+        Field(cut, "Sets").Change("5");
+
+        Assert.Empty(cut.FindAll("[role='alert']"));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Marking_a_row_as_a_Benchmark_exercise_changes_the_library_Exercise()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        cut.Find(".fa-row__check input").Change(true);
+
+        cut.WaitForAssertion(() => Assert.True(data.Snapshot.Exercises.Single(e => e.Id == Squat).IsBenchmark));
+        Assert.False(data.Snapshot.Exercises.Single(e => e.Id == Lunge).IsBenchmark);
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Saving_the_Sessions_leaves_past_Workouts_unchanged()
+    {
+        var past = Finished("w-past", Today.AddDays(-7), Set("s1", 20, 8));
+        var data = await OpenSeededAsync(plan: Plan(), workouts: past);
+        var cut = OpenSessions(data);
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        Button(cut, "Remove").Click();
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Plans.Single().Sessions[0].Exercises));
+        Assert.Equal(past, data.Snapshot.Workouts.Single());
+    }
+
+    [Fact]
+    public async Task Reordering_works_from_the_keyboard_because_the_buttons_are_real_focusable_buttons()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+
+        cut.Find("button[aria-label='Edit Walking lunge']").Click();
+
+        var up = cut.Find("button[aria-label='Move Walking lunge up']");
+        Assert.Equal("button", up.TagName.ToLowerInvariant());
+        Assert.False(up.HasAttribute("tabindex"));
+        Assert.False(up.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task A_read_only_window_disables_Session_edits_and_the_page_says_why()
+    {
+        var store = new InMemoryDataStore();
+        await OpenWithAsync(Plan(), store);
+        var locked = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
+        var cut = OpenSessions(locked);
+
+        Assert.Contains("read-only", cut.Markup);
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        Assert.All(cut.FindAll(".fa-row__edit input"), i => Assert.True(i.HasAttribute("disabled")));
+        foreach (var text in new[] { "Move up", "Move down", "Remove", "Add Exercise from library", "Add Session", "Edit Session" })
+        {
+            Assert.True(Button(cut, text).HasAttribute("disabled"), text);
+        }
+
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
     }
 
     // Leaving

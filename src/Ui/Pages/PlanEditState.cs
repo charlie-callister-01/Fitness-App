@@ -37,7 +37,12 @@ public sealed class PlanEditState
     public string? PhasesProblem => PlanEditRules.ValidatePhases(Draft.Phases);
 
     /// <summary>The tab to open to fix the first problem, or null when there is none.</summary>
-    public string? ProblemTab => SettingsProblem is not null ? "Settings" : PhasesProblem is not null ? "Phases" : null;
+    public string? ProblemTab => SettingsProblem is not null ? "Settings" : PhasesProblem is not null ? "Phases" : SessionsProblem is not null ? "Sessions" : null;
+
+    /// <summary>The reason the Sessions cannot be saved (a row with bad Sets or Reps, named by its Session), or null.</summary>
+    public string? SessionsProblem => Draft.Sessions
+        .Select(s => PlanEditRules.ValidateRows(s.Exercises) is { } reason ? $"{s.Name}: {reason}" : null)
+        .FirstOrDefault(r => r is not null);
 
     public bool IsValid => ProblemTab is null;
 
@@ -52,7 +57,8 @@ public sealed class PlanEditState
     /// </summary>
     public Plan? Compose()
     {
-        if (Form.Read(Draft) is not PlanEditResult<PlanSettings>.Valid settings
+        if (SessionsProblem is not null
+            || Form.Read(Draft) is not PlanEditResult<PlanSettings>.Valid settings
             || PlanEditRules.WithSettings(Draft, settings.Value) is not PlanEditResult<Plan>.Valid withSettings
             || PlanEditRules.WithPhases(withSettings.Value, Draft.Phases) is not PlanEditResult<Plan>.Valid composed)
         {
