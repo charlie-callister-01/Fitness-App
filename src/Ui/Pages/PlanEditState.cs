@@ -1,3 +1,4 @@
+using Core.Ids;
 using Core.Model;
 using Core.Rules.PlanEditing;
 using Core.Rules.Tracks;
@@ -5,8 +6,8 @@ using Core.Rules.Tracks;
 namespace Ui.Pages;
 
 /// <summary>
-/// The Plan being edited, shared by the Plan editor's tabs: the last saved Plan, the draft the owner is changing, the Settings fields as
-/// typed, the Benchmark flags ticked and any number text that is not a number. Nothing is stored until the page commits
+/// The Plan being edited, shared by the Plan editor's tabs: the last saved Plan, the draft the owner is changing, the selected Track, the
+/// Settings fields as typed, the Benchmark flags ticked and any number text that is not a number. Nothing is stored until the page commits
 /// <see cref="PlanEditSnapshot.Composed"/> (and the flags); leaving drops the draft. Each tab changes only its own part, and the page
 /// asks <see cref="Snapshot"/> whether there is anything wrong and <see cref="IsDirty"/> whether there is anything to save.
 /// </summary>
@@ -16,23 +17,54 @@ public sealed class PlanEditState
     private PlanEditSnapshot? _snapshot;
     private Plan? _snapshotDraft;
     private PlanSettingsForm? _snapshotForm;
+    private string? _snapshotSelectedTrackId;
     private int _snapshotInputs;
 
     public PlanEditState(Plan saved)
     {
         Saved = saved;
         Draft = saved;
+        SelectedTrackId = TrackRules.Main(saved).Id;
         Form = PlanSettingsForm.From(saved);
     }
 
     /// <summary>The Plan as last saved (or as opened).</summary>
     public Plan Saved { get; private set; }
 
-    /// <summary>The Plan with the Phases and Sessions as edited. Its Settings values are stale: read them from <see cref="Form"/>.</summary>
+    /// <summary>The Plan with the Tracks, Phases and Sessions as edited. Its Settings values are read from <see cref="Form"/>.</summary>
     public Plan Draft { get; private set; }
+
+    /// <summary>The id of the Track currently selected in the Track selector.</summary>
+    public string SelectedTrackId { get; private set; }
+
+    /// <summary>The Track currently selected in the Track selector.</summary>
+    public Track SelectedTrack => Draft.Tracks.FirstOrDefault(t => t.Id == SelectedTrackId) ?? TrackRules.Main(Draft);
+
+    /// <summary>The zero-based position of <see cref="SelectedTrack"/> in <see cref="Draft"/>'s Track list.</summary>
+    public int SelectedTrackIndex
+    {
+        get
+        {
+            for (var i = 0; i < Draft.Tracks.Count; i++)
+            {
+                if (Draft.Tracks[i].Id == SelectedTrack.Id)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+    }
+
+    /// <summary>Whether the currently selected Track is the main Track (the first Track in the list).</summary>
+    public bool IsMainTrackSelected => SelectedTrackIndex == 0;
 
     /// <summary>The Settings tab's fields as typed.</summary>
     public PlanSettingsForm Form { get; private set; }
+
+    /// <summary>The Settings tab's fields for the currently selected Track.</summary>
+    public TrackSettingsForm SelectedTrackForm => Form.ForTrack(SelectedTrack);
 
     /// <summary>Row number boxes holding text that is not a number.</summary>
     public RowNumberInputs Inputs { get; } = new();
@@ -42,6 +74,73 @@ public sealed class PlanEditState
 
     /// <summary>Replaces the draft with a changed copy (a tab's edit to Phases or Sessions).</summary>
     public void Change(Func<Plan, Plan> change) => Draft = change(Draft);
+
+    /// <summary>Selects a Track in the Plan editor's Track selector.</summary>
+    public void SelectTrack(string trackId)
+    {
+        if (Draft.Tracks.Any(t => t.Id == trackId))
+        {
+            SelectedTrackId = trackId;
+        }
+    }
+
+    /// <summary>Updates the selected Track's name in the Settings form and syncs any valid Track renames into <see cref="Draft"/>.</summary>
+    public void SetSelectedTrackName(string name)
+    {
+        SelectedTrackForm.Name = name;
+        if (TrackEditRules.RenameTrack(Draft, SelectedTrack.Id, name).TryGet(out var renamed, out _))
+        {
+            Draft = renamed;
+        }
+
+        foreach (var track in Draft.Tracks)
+        {
+            var trackName = Form.ForTrack(track).Name;
+            if (TrackEditRules.RenameTrack(Draft, track.Id, trackName).TryGet(out var next, out _))
+            {
+                Draft = next;
+            }
+        }
+    }
+
+    /// <summary>Adds a new Track with default settings, selects it, and populates its Settings form.</summary>
+    public PlanEditResult<Plan> AddTrack(string? name, TrackCadence cadence, IIdGenerator ids)
+    {
+        var result = TrackEditRules.AddTrack(Draft, name, cadence, ids);
+        if (result.TryGet(out var updated, out _))
+        {
+            Draft = updated;
+            var added = updated.Tracks[^1];
+            Form.ForTrack(added);
+            SelectedTrackId = added.Id;
+        }
+
+        return result;
+    }
+
+    /// <summary>Moves the selected Track one position earlier.</summary>
+    public PlanEditResult<Plan> MoveSelectedTrackUp()
+    {
+        var result = TrackEditRules.MoveUp(Draft, SelectedTrack.Id);
+        if (result.TryGet(out var updated, out _))
+        {
+            Draft = updated;
+        }
+
+        return result;
+    }
+
+    /// <summary>Moves the selected Track one position later.</summary>
+    public PlanEditResult<Plan> MoveSelectedTrackDown()
+    {
+        var result = TrackEditRules.MoveDown(Draft, SelectedTrack.Id);
+        if (result.TryGet(out var updated, out _))
+        {
+            Draft = updated;
+        }
+
+        return result;
+    }
 
     /// <summary>Whether the Exercise shows as a Benchmark exercise: the owner's tick if there is one, else what the library says.</summary>
     public bool IsBenchmark(string exerciseId, bool libraryValue) => _benchmarks.GetValueOrDefault(exerciseId, libraryValue);
@@ -68,11 +167,16 @@ public sealed class PlanEditState
     {
         get
         {
-            if (_snapshot is null || !ReferenceEquals(_snapshotDraft, Draft) || _snapshotForm != Form || _snapshotInputs != Inputs.Version)
+            if (_snapshot is null
+                || !ReferenceEquals(_snapshotDraft, Draft)
+                || _snapshotForm != Form
+                || _snapshotSelectedTrackId != SelectedTrackId
+                || _snapshotInputs != Inputs.Version)
             {
                 _snapshot = Read();
                 _snapshotDraft = Draft;
-                _snapshotForm = Form with { };
+                _snapshotForm = Form.Copy();
+                _snapshotSelectedTrackId = SelectedTrackId;
                 _snapshotInputs = Inputs.Version;
             }
 
@@ -93,6 +197,11 @@ public sealed class PlanEditState
     {
         Saved = saved;
         Draft = saved;
+        if (saved.Tracks.All(t => t.Id != SelectedTrackId))
+        {
+            SelectedTrackId = TrackRules.Main(saved).Id;
+        }
+
         Form = PlanSettingsForm.From(saved);
         _benchmarks.Clear();
         Inputs.Clear();
@@ -100,7 +209,7 @@ public sealed class PlanEditState
 
     private PlanEditSnapshot Read()
     {
-        var settings = Form.Read(Draft);
+        var settings = Form.ApplyTo(Draft, SelectedTrack.Id);
         var mainTrack = TrackRules.Main(Draft);
         var mainPhases = mainTrack.Phases;
         var phasesProblem = PlanPhaseRules.ValidatePhases(Draft, mainTrack.Id, mainPhases);
@@ -108,17 +217,15 @@ public sealed class PlanEditState
             .Select(s => s.Exercises.Select(r => RowProblem(s.Id, r)).FirstOrDefault(p => p is not null) is { } reason ? $"{s.Name}: {reason}" : null)
             .FirstOrDefault(p => p is not null);
 
-        if (!settings.TryGet(out var read, out var settingsProblem))
+        if (!settings.TryGet(out var withSettings, out var settingsProblem))
         {
             return new PlanEditSnapshot(settingsProblem, phasesProblem, sessionsProblem, null, Draft);
         }
 
-        var preview = Draft with { StartDate = read.Plan.StartDate };
+        var preview = Draft with { StartDate = withSettings.StartDate };
         Plan? composed = null;
         if (sessionsProblem is null
-            && PlanSettingsRules.WithSettings(Draft, read.Plan).TryGet(out var withPlanSettings, out _)
-            && TrackEditRules.WithSettings(withPlanSettings, mainTrack.Id, read.Track).TryGet(out var withTrackSettings, out _)
-            && PlanPhaseRules.WithPhases(withTrackSettings, mainTrack.Id, mainPhases).TryGet(out var withPhases, out _))
+            && PlanPhaseRules.WithPhases(withSettings, mainTrack.Id, mainPhases).TryGet(out var withPhases, out _))
         {
             composed = withPhases;
         }

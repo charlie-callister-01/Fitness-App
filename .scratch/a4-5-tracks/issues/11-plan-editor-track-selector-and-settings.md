@@ -14,8 +14,14 @@
 
 **Blocked by:** 10 (PR 1 written). Do not start before PR 1 is merged or its branch is the base.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] bUnit tests: selector lists Tracks in order; selecting a Track shows its settings by cadence; Add Track (weekly and daily) appears, selected, dirty; Move up/down reorders and enables Save; a daily Track cannot be moved first (message shown); no Remove and no cadence control; Plan settings and Track settings edit and persist after Save; invalid values disable Save with the rule's message; discard prompt; read-only disables everything with the reason; failure keeps edits.
-- [ ] After Save, the Plans list and Home reflect an edited weekly target of the main Track.
-- [ ] `dotnet build` 0 warnings; Ui tests green; no new browser tests.
+- [x] bUnit tests: selector lists Tracks in order; selecting a Track shows its settings by cadence; Add Track (weekly and daily) appears, selected, dirty; Move up/down reorders and enables Save; a daily Track cannot be moved first (message shown); no Remove and no cadence control; Plan settings and Track settings edit and persist after Save; invalid values disable Save with the rule's message; discard prompt; read-only disables everything with the reason; failure keeps edits.
+- [x] After Save, the Plans list and Home reflect an edited weekly target of the main Track.
+- [x] `dotnet build` 0 warnings; Ui tests green; no new browser tests.
+
+## Comments
+- Added the Track selector row (`role="group" aria-label="Tracks"`) above the Plan editor tabs in `PlanEditor.razor(.cs,.css)`: renders a chip button per Track in `Draft.Tracks` order with a `"Main"` hint alongside the first Track (`index == 0`), `+ Add Track` opening an `"Add Track"` `FormSheet` (Name and Cadence `Weekly` / `Daily` using `TrackEditRules.AddTrack`), and `Move up` / `Move down` buttons when the Plan has more than one Track (using `TrackEditRules.MoveUp` / `MoveDown` and showing any refusal message in a `role="alert"` well).
+- Extended `PlanEditState` and `PlanSettingsForm` (`TrackSettingsForm` per Track ID) so `SelectedTrackId`, `SelectedTrack`, `SelectedTrackIndex`, `IsMainTrackSelected` and `SelectedTrackForm` are exposed for the tabs (ready for ticket 12), per-Track typed settings survive tab and Track switches, valid Track renames sync to `Draft.Tracks`, and `PlanSettingsForm.ApplyTo` validates the selected Track first and then all Tracks in the Plan.
+- Split `PlanSettingsTab.razor` into `Plan settings` and `Track settings` sections (`@key="State.SelectedTrackId"`): Track name, weekly fields (weekly target, Streak minimum, Custom workouts switch on the main Track only + hint `"Custom workouts belong to the main Track."`), and daily fields (day-done percentage + note `"A day is done when this share of the routine is ticked."`).
+- Added 15 new bUnit test cases in `PlanEditorTests.cs` covering all ticket 11 scenarios.

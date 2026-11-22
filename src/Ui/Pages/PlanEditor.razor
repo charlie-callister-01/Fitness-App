@@ -1,7 +1,9 @@
 @page "/plans/{PlanId}"
+@using Core.Model
 @layout PushedPageLayout
-@* The Plan editor (design S-05, C-20): Settings, Phases and Sessions tabs over one draft (PlanEditState) that is saved together. Each
-   tab is its own component and edits the shared state; this page owns the tab choice, Save and leaving with unsaved changes. *@
+@* The Plan editor (design S-05, C-20): Track selector, Settings, Phases and Sessions tabs over one draft (PlanEditState) that is saved
+   together. Each tab is its own component and edits the shared state; this page owns the Track selector, tab choice, Save and leaving
+   with unsaved changes. *@
 <div class="fa-root fa-planeditor">
     @if (_state is null)
     {
@@ -16,6 +18,37 @@
         <p class="fa-planeditor__banner fa-well">Edits apply going forward. Past Workouts are unchanged.</p>
 
         <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+
+        <div class="fa-planeditor__tracks" role="group" aria-label="Tracks">
+            <div class="fa-planeditor__track-chips">
+                @for (var i = 0; i < _state.Draft.Tracks.Count; i++)
+                {
+                    var index = i;
+                    var track = _state.Draft.Tracks[i];
+                    <div class="fa-planeditor__track">
+                        <Button Variant="ButtonVariant.Secondary" Pressed="_state.SelectedTrack.Id == track.Id" OnClick="() => SelectTrack(track.Id)">@track.Name</Button>
+                        @if (index == 0)
+                        {
+                            <span class="fa-label fa-planeditor__track-hint">Main</span>
+                        }
+                    </div>
+                }
+                <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" OnClick="OpenAddTrackSheet">+ Add Track</Button>
+            </div>
+
+            @if (_state.Draft.Tracks.Count > 1)
+            {
+                <div class="fa-planeditor__track-order">
+                    <Button Variant="ButtonVariant.Secondary" Disabled="@(Disabled || _state.SelectedTrackIndex == 0)" AccessibleName="@($"Move {_state.SelectedTrack.Name} up")" OnClick="MoveTrackUp">Move up</Button>
+                    <Button Variant="ButtonVariant.Secondary" Disabled="@(Disabled || _state.SelectedTrackIndex == _state.Draft.Tracks.Count - 1)" AccessibleName="@($"Move {_state.SelectedTrack.Name} down")" OnClick="MoveTrackDown">Move down</Button>
+                </div>
+            }
+
+            @if (_trackMessage is { Length: > 0 })
+            {
+                <p class="fa-well fa-planeditor__track-problem" role="alert">@_trackMessage</p>
+            }
+        </div>
 
         <div class="fa-planeditor__tabs" role="group" aria-label="Plan sections">
             @foreach (var tab in Tabs)
@@ -50,6 +83,28 @@
 
             <Button Variant="ButtonVariant.Primary" Disabled="@(Disabled || !_state.IsDirty || _state.Snapshot.Composed is null)" OnClick="SaveAsync">Save</Button>
         </div>
+
+        <FormSheet Open="_addTrackOpen" Title="Add Track" Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage"
+                   Message="@_addTrackMessage" OnClose="CloseAddTrackSheet">
+            <ChildContent>
+                <label class="fa-planeditor__field">
+                    <span class="fa-label">Name</span>
+                    <input class="fa-planeditor__control" type="text" @bind="_newTrackName" @bind:event="oninput" />
+                </label>
+                <label class="fa-planeditor__field">
+                    <span class="fa-label">Cadence</span>
+                    <select class="fa-planeditor__control" @bind="_newTrackCadence">
+                        @foreach (var cadence in Enum.GetValues<TrackCadence>())
+                        {
+                            <option value="@cadence">@cadence</option>
+                        }
+                    </select>
+                </label>
+            </ChildContent>
+            <Actions>
+                <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="ApplyAddTrack">Add Track</Button>
+            </Actions>
+        </FormSheet>
 
         <FormSheet Open="@(_leaveTarget is not null)" Title="Discard changes?" CancelLabel="" OnClose="KeepEditing">
             <ChildContent>

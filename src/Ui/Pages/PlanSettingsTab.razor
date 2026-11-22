@@ -1,39 +1,70 @@
-@* The Plan editor's Settings tab (design S-05): the Plan-level values, held as typed in State.Form. *@
+@using Core.Model
+@* The Plan editor's Settings tab (design S-05): split into Plan settings (whole Plan) and Track settings (for the selected Track by cadence). *@
 <div class="fa-planform">
-    <label class="fa-planform__field">
-        <span class="fa-label">Start date</span>
-        <input class="fa-planform__control" type="date" disabled="@Disabled" value="@State.Form.StartDate" @onchange="e => Set(v => State.Form.StartDate = v, e)" />
-    </label>
+    <section class="fa-planform__group fa-panel" aria-label="Plan settings">
+        <h2 class="fa-title fa-title--m fa-planform__heading">Plan settings</h2>
 
-    <label class="fa-planform__field">
-        <span class="fa-label">Goal</span>
-        <input class="fa-planform__control" type="text" disabled="@Disabled" @bind="State.Form.Goal" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
-    </label>
+        <label class="fa-planform__field">
+            <span class="fa-label">Start date</span>
+            <input class="fa-planform__control" type="date" disabled="@Disabled" value="@State.Form.StartDate" @onchange="e => Set(v => State.Form.StartDate = v, e)" />
+        </label>
 
-    <label class="fa-planform__field">
-        <span class="fa-label">Goal date</span>
-        <input class="fa-planform__control" type="date" disabled="@Disabled" value="@State.Form.GoalDate" @onchange="e => Set(v => State.Form.GoalDate = v, e)" />
-    </label>
+        <label class="fa-planform__field">
+            <span class="fa-label">Goal</span>
+            <input class="fa-planform__control" type="text" disabled="@Disabled" @bind="State.Form.Goal" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+        </label>
 
-    <label class="fa-planform__field">
-        <span class="fa-label">Weekly target (Workouts)</span>
-        <input class="fa-planform__control" type="text" inputmode="numeric" disabled="@Disabled" @bind="State.Form.WeeklyTarget" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
-    </label>
+        <label class="fa-planform__field">
+            <span class="fa-label">Goal date</span>
+            <input class="fa-planform__control" type="date" disabled="@Disabled" value="@State.Form.GoalDate" @onchange="e => Set(v => State.Form.GoalDate = v, e)" />
+        </label>
 
-    <label class="fa-planform__field">
-        <span class="fa-label">Streak minimum (Workouts a week)</span>
-        <input class="fa-planform__control" type="text" inputmode="numeric" disabled="@Disabled" @bind="State.Form.StreakMinimum" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
-    </label>
+        <label class="fa-planform__field">
+            <span class="fa-label">Weight increment (kg)</span>
+            <input class="fa-planform__control" type="text" inputmode="decimal" disabled="@Disabled" @bind="State.Form.WeightIncrement" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+        </label>
+    </section>
 
-    <label class="fa-planform__switch">
-        <input type="checkbox" role="switch" disabled="@Disabled" @bind="State.Form.CustomWorkoutsCount" @bind:after="() => OnEdited.InvokeAsync()" />
-        <span>Custom workouts count toward the Streak</span>
-    </label>
+    <section class="fa-planform__group fa-panel" aria-label="Track settings" @key="State.SelectedTrackId">
+        <h2 class="fa-title fa-title--m fa-planform__heading">Track settings</h2>
 
-    <label class="fa-planform__field">
-        <span class="fa-label">Weight increment (kg)</span>
-        <input class="fa-planform__control" type="text" inputmode="decimal" disabled="@Disabled" @bind="State.Form.WeightIncrement" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
-    </label>
+        <label class="fa-planform__field">
+            <span class="fa-label">Track name</span>
+            <input class="fa-planform__control" type="text" disabled="@Disabled" value="@TrackForm.Name" @oninput="OnTrackNameInput" />
+        </label>
+
+        @if (State.SelectedTrack.Rhythm is TrackRhythm.Weekly)
+        {
+            <label class="fa-planform__field">
+                <span class="fa-label">Weekly target (Workouts)</span>
+                <input class="fa-planform__control" type="text" inputmode="numeric" disabled="@Disabled" @bind="TrackForm.WeeklyTarget" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+            </label>
+
+            <label class="fa-planform__field">
+                <span class="fa-label">Streak minimum (Workouts a week)</span>
+                <input class="fa-planform__control" type="text" inputmode="numeric" disabled="@Disabled" @bind="TrackForm.StreakMinimum" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+            </label>
+
+            @if (State.IsMainTrackSelected)
+            {
+                <label class="fa-planform__switch">
+                    <input type="checkbox" role="switch" disabled="@Disabled" @bind="TrackForm.CustomWorkoutsCount" @bind:after="() => OnEdited.InvokeAsync()" />
+                    <span>Custom workouts count toward the Streak</span>
+                </label>
+            }
+
+            <p class="fa-muted fa-planform__note">Custom workouts belong to the main Track.</p>
+        }
+        else
+        {
+            <label class="fa-planform__field">
+                <span class="fa-label">Day-done percentage</span>
+                <input class="fa-planform__control" type="text" inputmode="numeric" disabled="@Disabled" @bind="TrackForm.DayDonePercent" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+            </label>
+
+            <p class="fa-muted fa-planform__note">A day is done when this share of the routine is ticked.</p>
+        }
+    </section>
 
     @if (State.Snapshot.SettingsProblem is { } problem)
     {
@@ -53,9 +84,17 @@
     [Parameter]
     public EventCallback OnEdited { get; set; }
 
+    private TrackSettingsForm TrackForm => State.SelectedTrackForm;
+
     private Task Set(Action<string> assign, ChangeEventArgs e)
     {
         assign(e.Value?.ToString() ?? "");
+        return OnEdited.InvokeAsync();
+    }
+
+    private Task OnTrackNameInput(ChangeEventArgs e)
+    {
+        State.SetSelectedTrackName(e.Value?.ToString() ?? "");
         return OnEdited.InvokeAsync();
     }
 }
