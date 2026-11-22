@@ -42,7 +42,7 @@ public static class HomeNudges
     public static string KeyFor(Nudge nudge, DateOnly today)
     {
         var monday = WeekCalendar.MondayOf(today);
-        var subject = nudge.SessionId ?? (nudge.Area?.ToString() ?? "");
+        var subject = nudge.SessionId ?? nudge.Area?.ToString() ?? nudge.TrackId ?? "";
         return $"{monday:yyyy-MM-dd}|{nudge.Kind}|{subject}";
     }
 

@@ -28,8 +28,10 @@ public sealed record BadgeProgress(
     bool Reached);
 
 /// <summary>
-/// Badge progress. Supported metrics (case-insensitive): <c>sessions</c> (counted Workouts ever), <c>streak</c> (best-ever Streak run),
-/// <c>bestweek</c> (also accepted as <c>best week</c>, the product brief's prose name; most counted Workouts in one week), <c>prs</c> (PRs across all Exercises), <c>bodyweight</c> (Weigh-ins),
+/// Badge progress. Supported metrics (case-insensitive): <c>sessions</c> (counted Workouts ever on the main Track),
+/// <c>streak</c> (best-ever Streak run on the main Track), <c>bestweek</c> (also accepted as <c>best week</c>, most counted Workouts in one week on the main Track),
+/// <c>streak:&lt;trackId&gt;</c> (best run on that Track: weeks for weekly, days for daily), <c>days:&lt;trackId&gt;</c> (daily: total done days; weekly: total counted Workouts),
+/// <c>bestweek:&lt;trackId&gt;</c> (weekly Track's best week; not measurable for a daily Track), <c>prs</c> (PRs across all Exercises), <c>bodyweight</c> (Weigh-ins),
 /// or an Exercise ID (its best value in its own measure; a body measurement uses its latest reading).
 /// A negative target on a measurement means a drop of that size from its first reading.
 /// </summary>
@@ -77,17 +79,49 @@ public static class BadgeRules
         var main = TrackRules.Main(h.Plan);
         switch (metric.ToLowerInvariant())
         {
-            case "sessions": return new Measured(WeekRules.CountedWorkoutsByWeek(h.Plan, main, h.Workouts).Values.Sum());
-            case "streak" or "bestweek" or "best week":
-                var streak = WeekRules.Streak(h.Plan, main, h.Workouts, h.Breaks, today);
-                return new Measured(metric.ToLowerInvariant() == "streak" ? streak.BestRun : streak.BestWeekCount);
+            case "sessions": return DaysForTrack(h, main, today);
+            case "streak": return StreakForTrack(h, main, today);
+            case "bestweek" or "best week": return BestWeekForTrack(h, main, today);
             case "prs": return new Measured(h.Exercises.Sum(e => ExercisePerformance.Prs(e, h.Workouts).Count));
             case "bodyweight": return Weights(h);
         }
 
+        if (metric.IndexOf(':') is > 0 and var colon)
+            return MeasureTrackMetric(metric[..colon].ToLowerInvariant(), metric[(colon + 1)..], h, today);
+
         var exercise = h.Exercises.FirstOrDefault(e => e.Id == metric);
         return exercise is null ? null : ExerciseMeasure(exercise, h);
     }
+
+    private static Measured? MeasureTrackMetric(string prefix, string trackId, BadgeHistory h, DateOnly today)
+    {
+        if (trackId.Length == 0) return null;
+        var track = h.Plan.Tracks.FirstOrDefault(t => string.Equals(t.Id, trackId, StringComparison.OrdinalIgnoreCase));
+        if (track is null) return null;
+
+        return prefix switch
+        {
+            "streak" => StreakForTrack(h, track, today),
+            "days" => DaysForTrack(h, track, today),
+            "bestweek" => BestWeekForTrack(h, track, today),
+            _ => null,
+        };
+    }
+
+    private static Measured StreakForTrack(BadgeHistory h, Track track, DateOnly today) =>
+        track.Rhythm is TrackRhythm.Daily
+            ? new Measured(DailyTrackRules.Status(h.Plan, track, h.Workouts, h.Breaks, today).BestRun)
+            : new Measured(WeekRules.Streak(h.Plan, track, h.Workouts, h.Breaks, today).BestRun);
+
+    private static Measured DaysForTrack(BadgeHistory h, Track track, DateOnly today) =>
+        track.Rhythm is TrackRhythm.Daily
+            ? new Measured(DailyTrackRules.Status(h.Plan, track, h.Workouts, h.Breaks, today).DaysDone)
+            : new Measured(WeekRules.CountedWorkoutsByWeek(h.Plan, track, h.Workouts).Values.Sum());
+
+    private static Measured? BestWeekForTrack(BadgeHistory h, Track track, DateOnly today) =>
+        track.Rhythm is TrackRhythm.Weekly
+            ? new Measured(WeekRules.Streak(h.Plan, track, h.Workouts, h.Breaks, today).BestWeekCount)
+            : null;
 
     private static Measured Weights(BadgeHistory h)
     {
