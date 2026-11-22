@@ -176,25 +176,35 @@ public static class WeekEditRules
     }
 
     /// <summary>
-    /// The suggested week as a draft (null when the week is already workable), from the existing re-arrangement rule. Every Session in
-    /// the suggestion becomes a row, so the owner sees what moves and what stays.
+    /// The suggested week as a draft (null when the week is already workable), from the existing re-arrangement rule over every weekly Track.
+    /// Every Session in the suggestion becomes a row, so the owner sees what moves and what stays. Never lists a daily Session.
     /// </summary>
     public static WeekDraft? SuggestDraft(
         Plan plan, IReadOnlyList<Exercise> exercises, IReadOnlyList<WeekSchedule> schedules,
         IReadOnlyList<Break> breaks, IReadOnlyList<Workout> workouts, DateOnly today)
     {
-        if (WeekRearrangement.Suggest(plan, TrackRules.Main(plan), exercises, schedules, breaks, workouts, today) is not RearrangementResult.Proposal proposal)
+        var monday = WeekCalendar.MondayOf(today);
+        var rows = new List<DraftRow>();
+        var unplaced = new List<string>();
+        var anyProposal = false;
+
+        foreach (var track in plan.Tracks.Where(t => t.Rhythm is TrackRhythm.Weekly))
         {
-            return null;
+            if (WeekRearrangement.Suggest(plan, track, exercises, schedules, breaks, workouts, today) is not RearrangementResult.Proposal proposal)
+            {
+                continue;
+            }
+
+            anyProposal = true;
+            var layout = WeekScheduleRules.Layout(plan, track, schedules, breaks, today);
+            rows.AddRange(proposal.Placements
+                .Select(p => (Placement: p, Now: layout.Sessions.FirstOrDefault(s => s.SessionId == p.SessionId)))
+                .Where(x => x.Now is not null)
+                .Select(x => new DraftRow(x.Placement.SessionId, x.Now!.Session.Name, x.Now.Date, x.Placement.Date, false)));
+            unplaced.AddRange(proposal.Unplaced);
         }
 
-        var layout = WeekScheduleRules.Layout(plan, TrackRules.Main(plan), schedules, breaks, today);
-        var rows = proposal.Placements
-            .Select(p => (Placement: p, Now: layout.Sessions.FirstOrDefault(s => s.SessionId == p.SessionId)))
-            .Where(x => x.Now is not null)
-            .Select(x => new DraftRow(x.Placement.SessionId, x.Now!.Session.Name, x.Now.Date, x.Placement.Date, false))
-            .ToList();
-        return new WeekDraft(proposal.Monday, rows, proposal.Unplaced);
+        return anyProposal ? new WeekDraft(monday, rows, unplaced) : null;
     }
 
     private static string Text(DateOnly date) => date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);

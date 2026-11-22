@@ -289,4 +289,174 @@ public sealed class HomeTests : BunitContext
         Assert.Contains("Recent PRs", cut.Markup);
         Assert.Contains("No Weigh-ins yet.", cut.Markup);
     }
+
+    // Daily Track cards and extra weekly Track week lines.
+
+    private static Plan MultiTrackHomePlan()
+    {
+        var gym = new Track(MainTrack, "Gym", new TrackRhythm.Weekly(2, 2, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(75), []);
+        return new Plan("plan", "Plan", true, Today.AddDays(-7), null, null, 2, [gym, cardio, mobility],
+        [
+            Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)], MainTrack),
+            Session("upper", "Upper", DayOfWeek.Thursday, SessionType.Strength, null, [new SessionExercise(Lunge, 2, 10, null, null)], MainTrack),
+            Session("tempo", "Tempo Run", DayOfWeek.Monday, SessionType.Cardio, null, [new SessionExercise(Lunge, 2, 10, null, null)], "cardio"),
+            Session("long", "Long Run", DayOfWeek.Saturday, SessionType.Cardio, null, [new SessionExercise(Squat, 2, 10, null, null)], "cardio"),
+            new Session("stretch", "Morning Mobility", "mob", DefaultDay.Daily, SessionType.Mobility, null,
+                [new SessionExercise(Squat, 1, 5, null, null), new SessionExercise(Lunge, 1, 5, null, null)]),
+        ]);
+    }
+
+    private static Workout DailyFinished(string id, DateOnly date) =>
+        new(id, date, "stretch", false,
+            new DateTimeOffset(date.ToDateTime(new TimeOnly(7, 0)), TimeSpan.Zero),
+            new DateTimeOffset(date.ToDateTime(new TimeOnly(7, 15)), TimeSpan.Zero),
+            [new SessionExercise(Squat, 1, 5, null, null), new SessionExercise(Lunge, 1, 5, null, null)],
+            [
+                new WorkoutEntry(Squat, EntryStatus.Done, null, null, null, [Set($"{id}-1", 10, 5)]),
+                new WorkoutEntry(Lunge, EntryStatus.Done, null, null, null, [Set($"{id}-2", 10, 5)]),
+            ],
+            null);
+
+    [Fact]
+    public async Task A_one_Track_Plan_renders_no_daily_Track_cards_or_extra_week_lines()
+    {
+        var cut = await RenderHomeAsync(await OpenSeededAsync(plan: Plan()));
+
+        Assert.Empty(cut.FindAll(".fa-home__daily"));
+        Assert.Empty(cut.FindAll(".fa-home__extraline"));
+    }
+
+    [Fact]
+    public async Task Daily_Track_card_renders_in_each_state_with_its_Streak_and_Start_Continue_and_Done_behave_right()
+    {
+        var yesterdayDone = DailyFinished("w-yest", Today.AddDays(-1));
+        var data = await OpenSeededAsync(plan: MultiTrackHomePlan(), workouts: yesterdayDone);
+        var cut = await RenderHomeAsync(data);
+
+        // Not started today, 1 day streak from yesterday (open today doesn't break it).
+        var card = Assert.Single(cut.FindAll(".fa-home__daily"));
+        Assert.Equal("mob", card.GetAttribute("data-track"));
+        Assert.Contains("Mobility", card.TextContent);
+        Assert.Contains("Morning Mobility", card.TextContent);
+        Assert.Contains("Not started", card.TextContent);
+        Assert.Contains("1 day", card.TextContent);
+
+        // Tapping Start on the daily Track card creates today's Workout for that daily Session and opens its log.
+        cut.Find("button[aria-label='Start Morning Mobility']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(2, data.Snapshot.Workouts.Count));
+        var openDaily = data.Snapshot.Workouts.Single(w => w.Date == Today && w.SessionId == "stretch");
+        Assert.Null(openDaily.EndedAt);
+        cut.WaitForAssertion(() => Assert.Equal($"log/{openDaily.Id}", CurrentPath));
+
+        // In progress: card shows In progress and Continue, while main Track TodayCard still offers Start for Lower.
+        card = Assert.Single(cut.FindAll(".fa-home__daily"));
+        Assert.Contains("In progress · 0% done", card.TextContent);
+        Assert.Contains("Lower", cut.Find(".fa-todaycard").TextContent);
+        Services.GetRequiredService<NavigationManager>().NavigateTo("");
+        cut.Find("button[aria-label='Continue Morning Mobility']").Click();
+        cut.WaitForAssertion(() => Assert.Equal($"log/{openDaily.Id}", CurrentPath));
+        Assert.Equal(2, data.Snapshot.Workouts.Count);
+
+        // Done: once finished at >= 75%, card shows Done chip, 2 days streak, and no Start or Continue button on the daily card.
+        var finishedToday = DailyFinished(openDaily.Id, Today);
+        await cut.InvokeAsync(() => data.CommitAsync(Change.Put(finishedToday)));
+        cut.WaitForAssertion(() =>
+        {
+            var doneCard = Assert.Single(cut.FindAll(".fa-home__daily"));
+            Assert.Equal("Done", doneCard.QuerySelector(".fa-chip__word")?.TextContent.Trim());
+            Assert.Contains("100% done", doneCard.TextContent);
+            Assert.Contains("2 days", doneCard.TextContent);
+            Assert.Empty(doneCard.QuerySelectorAll("button"));
+        });
+    }
+
+    [Fact]
+    public async Task Daily_Track_card_shows_On_a_Break_with_no_button_during_a_Break()
+    {
+        var data = await OpenSeededAsync(plan: MultiTrackHomePlan(), workouts: DailyFinished("w-yest", Today.AddDays(-1)));
+        await data.CommitAsync(Change.Put(new Break("b1", Today, Today.AddDays(2), "Rest")));
+        var cut = await RenderHomeAsync(data);
+
+        var card = Assert.Single(cut.FindAll(".fa-home__daily"));
+        Assert.Contains("On a Break", card.TextContent);
+        Assert.Contains("1 day", card.TextContent);
+        Assert.Empty(card.QuerySelectorAll("button"));
+    }
+
+    [Fact]
+    public async Task Extra_weekly_Track_week_line_renders_progress_and_Sessions_and_tapping_a_Session_starts_it()
+    {
+        var data = await OpenSeededAsync(plan: MultiTrackHomePlan());
+        var cut = await RenderHomeAsync(data);
+
+        var extra = Assert.Single(cut.FindAll(".fa-home__extraline"));
+        Assert.Equal("cardio", extra.GetAttribute("data-track"));
+        Assert.Contains("Cardio: 0 of 2 · target 2 · Streak 0 weeks", extra.TextContent);
+        var sessionButtons = extra.QuerySelectorAll(".fa-home__extrasession");
+        Assert.Equal(2, sessionButtons.Length);
+        Assert.Contains("Tempo Run", sessionButtons[0].TextContent);
+        Assert.Contains("Mon · upcoming", sessionButtons[0].TextContent);
+        Assert.Contains("fa-home__extrasession--today", sessionButtons[0].ClassName);
+        Assert.Contains("Long Run", sessionButtons[1].TextContent);
+        Assert.Contains("Sat · upcoming", sessionButtons[1].TextContent);
+
+        cut.Find(".fa-home__extraline button[aria-label*='Tempo Run']").Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
+        var started = Assert.Single(data.Snapshot.Workouts);
+        Assert.Equal(("tempo", Today), (started.SessionId, started.Date));
+        cut.WaitForAssertion(() => Assert.Equal($"log/{started.Id}", CurrentPath));
+    }
+
+    [Fact]
+    public async Task Track_qualified_Nudge_renders_and_can_be_dismissed_for_the_week()
+    {
+        var data = await OpenSeededAsync(plan: MultiTrackHomePlan());
+        // Wednesday: Monday's Lower (Gym) and Tempo Run (Cardio) were both missed -> Track-qualified nudges.
+        var cut = await RenderHomeAsync(data, Now.AddDays(2));
+
+        var nudges = cut.FindAll(".fa-nudge");
+        Assert.Equal(2, nudges.Count);
+        Assert.Contains("You missed Lower (Gym) on Monday.", nudges[0].TextContent);
+        Assert.Contains("You missed Tempo Run (Cardio) on Monday.", nudges[1].TextContent);
+
+        cut.FindAll(".fa-nudge__dismiss")[1].Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain(cut.FindAll(".fa-nudge"), n => n.TextContent.Contains("Tempo Run (Cardio)"));
+        });
+    }
+
+    [Fact]
+    public async Task Read_only_disables_the_daily_Track_card_and_extra_weekly_Track_week_line()
+    {
+        var store = new InMemoryDataStore();
+        await OpenSeededAsync(store, MultiTrackHomePlan());
+        var locked = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
+        var readOnlyCut = await RenderHomeAsync(locked);
+
+        Assert.True(readOnlyCut.Find("button[aria-label='Start Morning Mobility']").HasAttribute("disabled"));
+        Assert.All(readOnlyCut.FindAll(".fa-home__extrasession"), b => Assert.True(b.HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public async Task Failed_save_on_the_daily_Track_card_and_extra_weekly_Track_week_line_reports_failure_and_stays_on_Home()
+    {
+        var failingStore = new FaultInjectingDataStore(new InMemoryDataStore());
+        var data = await OpenSeededAsync(failingStore, MultiTrackHomePlan());
+        var cut = await RenderHomeAsync(data);
+        failingStore.FailAllWrites(StoreFailureKind.StorageFull);
+
+        cut.Find("button[aria-label='Start Morning Mobility']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("out of storage", _notice.Message));
+        Assert.Empty(data.Snapshot.Workouts);
+        Assert.Equal("", CurrentPath);
+
+        _notice.ReportMessage(null);
+        cut.Find(".fa-home__extraline button[aria-label*='Tempo Run']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("out of storage", _notice.Message));
+        Assert.Empty(data.Snapshot.Workouts);
+        Assert.Equal("", CurrentPath);
+    }
 }

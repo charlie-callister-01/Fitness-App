@@ -63,9 +63,9 @@ public sealed partial class GuidePage : IAsyncDisposable
         {
             var history = History;
             var parts = new List<string>();
-            if (history.Place?.Placements.FirstOrDefault() is { } first)
+            if (history.Place?.Placements is { Count: > 0 } placements)
             {
-                parts.Add($"{first.Session.Name} · {PlannedText(first.Row)}");
+                parts.AddRange(placements.Select(p => $"{p.SessionLabel} · {PlannedText(p.Row)}"));
             }
 
             if (history.Best is { } best)
@@ -240,8 +240,8 @@ public sealed partial class GuidePage : IAsyncDisposable
 
     private static string PlacementText(GuidePlacement placement) =>
         placement.Row.Cue is { Length: > 0 } cue
-            ? $"{placement.Session.Name}: {PlannedText(placement.Row)} · {cue}"
-            : $"{placement.Session.Name}: {PlannedText(placement.Row)}";
+            ? $"{placement.SessionLabel}: {PlannedText(placement.Row)} · {cue}"
+            : $"{placement.SessionLabel}: {PlannedText(placement.Row)}";
 
     private string ResultText(LastResult result) =>
         result.BestSet is { } best ? SetText.Result(Exercise!.LogKind, best, Converter) : $"{result.Sets.Count} sets";

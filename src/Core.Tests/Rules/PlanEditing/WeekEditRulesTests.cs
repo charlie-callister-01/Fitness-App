@@ -298,6 +298,29 @@ public class WeekEditRulesTests
         Assert.Contains("daily", Reason(WeekEditRules.MakeDefaultDay(plan, "push", DefaultDay.Daily)));
     }
 
+    [Fact]
+    public void SuggestDraft_includes_extra_weekly_Tracks_and_never_lists_a_daily_Session()
+    {
+        var gym = Standard.Tracks[0];
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(1, 1, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(75), []);
+        var tempo = PlanFixture.Session("tempo", DayOfWeek.Wednesday, SessionType.Cardio, name: "Tempo", trackId: "cardio");
+        var stretch = PlanFixture.Session("stretch", DefaultDay.Daily, SessionType.Mobility, name: "Stretch", trackId: "mob");
+        var plan = Standard with
+        {
+            Tracks = [gym, cardio, mobility],
+            Sessions = [.. Standard.Sessions, tempo, stretch],
+        };
+
+        var draft = WeekEditRules.SuggestDraft(
+            plan, Library, [], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], [Logged(Mon, "legsA")], Mon.AddDays(1));
+
+        Assert.NotNull(draft);
+        Assert.Contains(draft!.Rows, r => r.SessionId == "tempo");
+        Assert.DoesNotContain(draft.Rows, r => r.SessionId == "stretch");
+        Assert.DoesNotContain("stretch", draft.Unplaced);
+    }
+
     // WeekSchedule holds a list, so it compares by reference; compare its week and moves.
     private static readonly IEqualityComparer<WeekSchedule?> ScheduleComparer = EqualityComparer<WeekSchedule?>.Create(
         (a, b) => a is not null && b is not null && a.WeekStart == b.WeekStart && a.Moves.SequenceEqual(b.Moves));

@@ -76,6 +76,38 @@ public sealed class GuidePageTests : BunitContext
     }
 
     [Fact]
+    public async Task The_header_and_place_name_the_Track_when_the_Plan_has_more_than_one_Track()
+    {
+        var plan = new Plan(
+            "plan",
+            "Plan",
+            true,
+            Today,
+            null,
+            null,
+            2,
+            [
+                new Track(MainTrack, "Main", new TrackRhythm.Weekly(3, 2, false), []),
+                new Track("mob", "Morning mobility", new TrackRhythm.Daily(75), []),
+            ],
+            [
+                new Session("lower", "A: Lower + core", MainTrack, DefaultDay.Monday, SessionType.Strength, null,
+                    [new SessionExercise(Squat, 3, 8, null, "Chest up")]),
+                new Session("mob-s", "Morning mobility", "mob", DefaultDay.Daily, SessionType.Mobility, null,
+                    [new SessionExercise(Squat, 1, 10, null, null)]),
+            ]);
+        var data = await OpenSeededAsync(plan: plan, workouts: Past("w1", Today.AddDays(-7), 40, 8));
+        var cut = await RenderPageAsync(SquatGuide(), data: data);
+
+        Assert.Equal(
+            "A: Lower + core (Main) · 3 × 8 · Morning mobility (Morning mobility, daily) · 1 × 10 · Best 40 kg × 8",
+            cut.Find(".fa-guidepage__header p").TextContent);
+        var placeText = cut.Find("section[aria-label='In your Plan']").TextContent;
+        Assert.Contains("A: Lower + core (Main): 3 × 8 · Chest up", placeText);
+        Assert.Contains("Morning mobility (Morning mobility, daily): 1 × 10", placeText);
+    }
+
+    [Fact]
     public async Task History_lists_the_last_three_results_and_marks_the_Personal_records()
     {
         var cut = await RenderPageAsync(

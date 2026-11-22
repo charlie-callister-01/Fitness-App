@@ -51,10 +51,21 @@ public sealed partial class Plans : IDisposable
 
     private static string Summary(Plan plan)
     {
-        var sessions = $"{plan.Sessions.Count} {(plan.Sessions.Count == 1 ? "Session" : "Sessions")}";
+        var parts = new List<string>();
+        if (plan.Tracks.Count > 1)
+        {
+            parts.Add($"{plan.Tracks.Count} Tracks");
+        }
+
+        parts.Add($"{plan.Sessions.Count} {(plan.Sessions.Count == 1 ? "Session" : "Sessions")}");
         var phaseCount = Core.Rules.Tracks.TrackRules.Main(plan).Phases.Count;
-        var phases = $"{phaseCount} {(phaseCount == 1 ? "Phase" : "Phases")}";
-        return PlanProgress.TotalWeeks(plan) is { } weeks ? $"{sessions} · {phases} · {weeks} {(weeks == 1 ? "week" : "weeks")}" : $"{sessions} · {phases}";
+        parts.Add($"{phaseCount} {(phaseCount == 1 ? "Phase" : "Phases")}");
+        if (PlanProgress.TotalWeeks(plan) is { } weeks)
+        {
+            parts.Add($"{weeks} {(weeks == 1 ? "week" : "weeks")}");
+        }
+
+        return string.Join(" · ", parts);
     }
 
     private void OpenNew()

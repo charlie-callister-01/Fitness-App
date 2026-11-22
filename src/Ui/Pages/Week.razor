@@ -52,18 +52,50 @@
             </section>
         }
 
-        @if (_rows.Count == 0)
+        @if (_dailyRows.Count > 0)
+        {
+            <ul class="fa-week__rows" aria-label="Every day">
+                @foreach (var daily in _dailyRows)
+                {
+                    <li class="fa-week__row" data-session="@daily.SessionId" data-daily="true">
+                        <div class="fa-week__main">
+                            <span class="fa-week__day fa-muted">Every day · @daily.TrackName</span>
+                            <span class="fa-week__name">@daily.Name</span>
+                            <span class="fa-muted">@DailyStateText(daily.State)</span>
+                        </div>
+                        @if (daily.State == DailyRowState.Done)
+                        {
+                            <StateChip Kind="StateChipKind.Done" />
+                            @if (daily.DoneWorkout is { } doneWorkout)
+                            {
+                                <Button Variant="ButtonVariant.Secondary" AccessibleName="@($"View summary for {daily.Name}")" OnClick="() => OnOpenWorkout(doneWorkout)">View summary</Button>
+                            }
+                        }
+                        else if (daily.InProgressWorkout is { } openWorkout)
+                        {
+                            <Button Variant="ButtonVariant.Primary" AccessibleName="@($"Continue {daily.Name}")" OnClick="() => OnOpenWorkout(openWorkout)">Continue</Button>
+                        }
+                        else
+                        {
+                            <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite || _save.IsBusy" AccessibleName="@($"Start {daily.Name}")" OnClick="() => OnStartDailyAsync(daily.Session)">Start</Button>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (_rows.Count == 0 && _dailyRows.Count == 0)
         {
             <EmptyState Kind="EmptyStateKind.NoPlan" Title="Nothing scheduled this week" Message="No Sessions are planned for this week." />
         }
-        else
+        else if (_rows.Count > 0)
         {
             <ul class="fa-week__rows" aria-label="This week">
                 @foreach (var row in _rows)
                 {
                     <li class="fa-week__row" data-session="@row.SessionId">
                         <div class="fa-week__main">
-                            <span class="fa-week__day fa-muted">@DayText(row.Date)</span>
+                            <span class="fa-week__day fa-muted">@(row.ShowTrackName ? $"{DayText(row.Date)} · {row.TrackName}" : DayText(row.Date))</span>
                             <span class="fa-week__name">@row.Name</span>
                             @if (row.IsMoved)
                             {

@@ -15,8 +15,18 @@
 
 **Blocked by:** 13.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] bUnit tests: Plans headline with Phases, without Phases and with two Tracks; Home shows a daily Track card in each state with its Streak; Start on the card creates today's Workout of the daily Session; an extra weekly Track week line renders and starts a Session; a one-Track Plan's Home is unchanged (existing `HomeTests` pass); read-only and failure cases as in B3.
-- [ ] Browser tests are not added; the manual checks go in ticket 15.
-- [ ] `dotnet build` 0 warnings; Ui tests green.
+- [x] bUnit tests: Plans headline with Phases, without Phases and with two Tracks; Home shows a daily Track card in each state with its Streak; Start on the card creates today's Workout of the daily Session; an extra weekly Track week line renders and starts a Session; a one-Track Plan's Home is unchanged (existing `HomeTests` pass); read-only and failure cases as in B3.
+- [x] Browser tests are not added; the manual checks go in ticket 15.
+- [x] `dotnet build` 0 warnings; Ui tests green.
+
+## Comments
+- **Plans list & Plan editor header (`Plans.razor.cs`, `PlanEditor.razor`, `PlanEditor.razor.css`):**
+  - Updated `Plans.Summary(Plan plan)` to prefix `"{plan.Tracks.Count} Tracks"` when `plan.Tracks.Count > 1`, keeping a 1-Track Plan's summary unchanged.
+  - Added `<p class="fa-label fa-planeditor__active">@PlanProgress.ActiveLabel(_state.Saved, Page.Today)</p>` in `PlanEditor.razor` when `_state.Saved.IsActive` is true, reading the main Track's Phases via `PlanProgress.ActiveLabel`.
+- **Home (`Home.razor`, `Home.razor.cs`, `Home.razor.css`):**
+  - Kept the Today card, alternatives, week strip, main week line and orbs on the main Track.
+  - Rendered one compact card per daily Track (`_view.DailyTracks`) under the Today card/alternatives showing the Track name, daily Streak (`"n day"` / `"n days"`), today's Session name, Break state (`"On a Break"`), or state (`Not started` with `Start` button, `In progress · p% done` with `Continue` button, or `Done` `StateChip` with `p% done` and no button), wired to `StartAsync` / `OnContinue` with `GuardedSave` and read-only guards.
+  - Rendered one week line per extra weekly Track (`_view.ExtraWeekLines`) below the main week line showing its summary (`"{TrackName}: {Done} of {Scheduled} · target {Target} · Streak {Streak} week(s)"` plus `Missed` codes when present) and tappable Session buttons (`ExtraWeekSession`) with today outline and state words, starting the Session via `StartAsync` with the same read-only and busy guards.
+- **Tests:** Added bUnit tests in `PlansTests`, `PlanEditorTests`, and `HomeTests` covering active headlines with/without main Track Phases, multi-Track summary counts, daily Track cards in `NotStarted`, `InProgress`, `Done`, and `OnBreak` states, extra weekly Track week lines and starting Sessions, Track-qualified Nudges and dismissal, single-Track invariance, read-only mode, and failed saves.

@@ -1,24 +1,24 @@
 @using Core.Model
 @using Core.Rules.Library
 @using Core.Rules.PlanEditing
-@* The Plan editor's Sessions tab (design S-05, C-20, F-04): a section per Session with its Exercise rows. A row shows a decorative drag
-   handle, the name and "3 x 8"; Edit expands it in place (Sets, Reps, highest Reps, Cue, Benchmark) and Move up, Move down and Remove are
-   text buttons, so reordering never needs a pointer. A Session's name, default day and type change in a sheet, which is also how a new
-   Session is added. A row with bad numbers is named under its Session and holds Save back. *@
-<div class="fa-sessions">
-    @if (State.Draft.Sessions.Count == 0)
+@* The Plan editor's Sessions tab (design S-05, C-20, F-04): a section per Session on the selected Track with its Exercise rows. A row shows
+   a decorative drag handle, the name and "3 x 8"; Edit expands it in place (Sets, Reps, highest Reps, Cue, and on the main Track, Benchmark)
+   and Move up, Move down and Remove are text buttons, so reordering never needs a pointer. A Session's name, default day (on weekly Tracks)
+   and type change in a sheet, which is also how a new Session is added. A row with bad numbers is named under its Session and holds Save back. *@
+<div class="fa-sessions" @key="State.SelectedTrackId">
+    @if (SelectedSessions.Count == 0)
     {
         <p class="fa-muted">No Sessions yet. Add one, then add Exercises from your library.</p>
     }
 
-    @foreach (var session in State.Draft.Sessions)
+    @foreach (var session in SelectedSessions)
     {
         var sessionId = session.Id;
         <section class="fa-session fa-panel" aria-label="@session.Name">
             <div class="fa-session__head">
                 <div>
                     <h2 class="fa-title fa-title--m fa-session__name">@session.Name</h2>
-                    <p class="fa-muted fa-session__meta">@session.DefaultDay · @session.Type</p>
+                    <p class="fa-muted fa-session__meta">@DayLabel(session.DefaultDay) · @session.Type</p>
                 </div>
                 <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" AccessibleName="@($"Edit Session {session.Name}")" OnClick="() => OpenSessionSheet(sessionId)">Edit Session</Button>
             </div>
@@ -69,10 +69,13 @@
                                     <span class="fa-label">Cue</span>
                                     <input class="fa-row__control" type="text" disabled="@Disabled" value="@row.Cue" @oninput="e => SetCue(sessionId, index, e)" />
                                 </label>
-                                <label class="fa-row__check">
-                                    <input type="checkbox" disabled="@(Disabled || !exercise.InLibrary)" checked="@exercise.IsBenchmark" @onchange="e => SetBenchmark(row.ExerciseId, exercise.LibraryBenchmark, e)" />
-                                    <span>Benchmark exercise</span>
-                                </label>
+                                @if (State.IsMainTrackSelected)
+                                {
+                                    <label class="fa-row__check">
+                                        <input type="checkbox" disabled="@(Disabled || !exercise.InLibrary)" checked="@exercise.IsBenchmark" @onchange="e => SetBenchmark(row.ExerciseId, exercise.LibraryBenchmark, e)" />
+                                        <span>Benchmark exercise</span>
+                                    </label>
+                                }
                                 <a class="fa-row__guide" href="@($"exercises/{row.ExerciseId}/guide")" aria-label="@($"Guide for {name}")">Guide</a>
                                 <div class="fa-row__actions">
                                     <Button Variant="ButtonVariant.Secondary" Disabled="@(Disabled || index == 0)" AccessibleName="@($"Move {name} up")" OnClick="() => Move(sessionId, index, up: true)">Move up</Button>
@@ -106,15 +109,25 @@
             <span class="fa-label">Name</span>
             <input class="fa-row__control" type="text" @bind="_sheet.Name" @bind:event="oninput" />
         </label>
-        <label class="fa-row__field">
-            <span class="fa-label">Default day</span>
-            <select class="fa-row__control" @bind="_sheet.Day">
-                @foreach (var day in Days)
-                {
-                    <option value="@day">@day</option>
-                }
-            </select>
-        </label>
+        @if (IsDailySheet)
+        {
+            <div class="fa-row__field">
+                <span class="fa-label">Default day</span>
+                <p class="fa-muted">Every day</p>
+            </div>
+        }
+        else
+        {
+            <label class="fa-row__field">
+                <span class="fa-label">Default day</span>
+                <select class="fa-row__control" @bind="_sheet.Day">
+                    @foreach (var day in Days)
+                    {
+                        <option value="@day">@day</option>
+                    }
+                </select>
+            </label>
+        }
         <label class="fa-row__field">
             <span class="fa-label">Type</span>
             <select class="fa-row__control" @bind="_sheet.Type">
@@ -124,9 +137,17 @@
                 }
             </select>
         </label>
+        @if (State.IsMainTrackSelected && _sheet.Type == SessionType.Test)
+        {
+            <label class="fa-row__field">
+                <span class="fa-label">Benchmark interval (weeks)</span>
+                <input class="fa-row__control" type="text" inputmode="numeric" @bind="_sheet.BenchmarkIntervalWeeks" @bind:event="oninput" />
+            </label>
+        }
     </ChildContent>
     <Actions>
         <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="ApplySessionSheet">@(_sheet.EditingSessionId is null ? "Add Session" : "Done")</Button>
     </Actions>
 </FormSheet>
+
 

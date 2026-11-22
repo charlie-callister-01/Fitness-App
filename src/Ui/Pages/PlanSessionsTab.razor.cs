@@ -1,3 +1,4 @@
+using System.Globalization;
 using Core.Ids;
 using Core.Model;
 using Core.Rules.Library;
@@ -8,7 +9,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Ui.Pages;
 
-/// <summary>The Session sheet's fields while it is open: the name, default day and type, and which Session it edits (null when adding).</summary>
+/// <summary>The Session sheet's fields while it is open: the name, default day, type, optional benchmark interval, and which Session it edits (null when adding).</summary>
 public sealed class SessionSheetDraft
 {
     public string? EditingSessionId { get; init; }
@@ -18,6 +19,8 @@ public sealed class SessionSheetDraft
     public DefaultDay Day { get; set; } = DefaultDay.Monday;
 
     public SessionType Type { get; set; } = SessionType.Strength;
+
+    public string BenchmarkIntervalWeeks { get; set; } = "";
 
     /// <summary>The plain refusal to show in the sheet, or null.</summary>
     public string? Message { get; set; }
@@ -56,6 +59,16 @@ public sealed partial class PlanSessionsTab
 
     /// <summary>The whole editor cannot be changed (read-only window or a save running).</summary>
     private bool Disabled => !Page.CanWrite || Saving;
+
+    private IReadOnlyList<Session> SelectedSessions => TrackRules.SessionsOf(State.Draft, State.SelectedTrack);
+
+    private bool IsDailySheet =>
+        _sheet.EditingSessionId is { } id
+        && State.Draft.Sessions.FirstOrDefault(s => s.Id == id) is { } session
+            ? TrackRules.IsDaily(State.Draft, session)
+            : State.SelectedTrack.Rhythm is TrackRhythm.Daily;
+
+    private static string DayLabel(DefaultDay day) => day == DefaultDay.Daily ? "Every day" : day.ToString();
 
     private PickerRequest PickerRequestForOpenSession =>
         PickerRequest.ForPlanEditor(
@@ -148,14 +161,26 @@ public sealed partial class PlanSessionsTab
 
     private void OpenAddSessionSheet()
     {
-        _sheet = new SessionSheetDraft();
+        var isDaily = State.SelectedTrack.Rhythm is TrackRhythm.Daily;
+        _sheet = new SessionSheetDraft
+        {
+            Day = isDaily ? DefaultDay.Daily : DefaultDay.Monday,
+            Type = isDaily ? SessionType.Mobility : SessionType.Strength,
+        };
         _sheetOpen = true;
     }
 
     private void OpenSessionSheet(string sessionId)
     {
         var session = State.Draft.Sessions.First(s => s.Id == sessionId);
-        _sheet = new SessionSheetDraft { EditingSessionId = sessionId, Name = session.Name, Day = session.DefaultDay, Type = session.Type };
+        _sheet = new SessionSheetDraft
+        {
+            EditingSessionId = sessionId,
+            Name = session.Name,
+            Day = session.DefaultDay,
+            Type = session.Type,
+            BenchmarkIntervalWeeks = session.BenchmarkIntervalWeeks?.ToString(CultureInfo.InvariantCulture) ?? "",
+        };
         _sheetOpen = true;
     }
 
@@ -163,9 +188,22 @@ public sealed partial class PlanSessionsTab
 
     private async Task ApplySessionSheet()
     {
+        int? interval = null;
+        if (State.IsMainTrackSelected && _sheet.Type == SessionType.Test && !string.IsNullOrWhiteSpace(_sheet.BenchmarkIntervalWeeks))
+        {
+            if (!int.TryParse(_sheet.BenchmarkIntervalWeeks, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+            {
+                _sheet.Message = "The benchmark interval must be at least 1 week.";
+                return;
+            }
+
+            interval = parsed;
+        }
+
+        var day = IsDailySheet ? DefaultDay.Daily : _sheet.Day;
         var result = _sheet.EditingSessionId is { } id
-            ? SessionRowRules.EditSession(State.Draft, id, _sheet.Name, _sheet.Day, _sheet.Type)
-            : SessionRowRules.AddSession(State.Draft, TrackRules.Main(State.Draft).Id, _sheet.Name, _sheet.Day, _sheet.Type, Ids);
+            ? SessionRowRules.EditSession(State.Draft, id, _sheet.Name, day, _sheet.Type, interval)
+            : SessionRowRules.AddSession(State.Draft, State.SelectedTrack.Id, _sheet.Name, day, _sheet.Type, Ids, interval);
         if (!result.TryGet(out var changed, out var reason))
         {
             _sheet.Message = reason;

@@ -4,12 +4,65 @@
     gap: var(--space-3);
 }
 
-.fa-planeditor h1 {
+.fa-planeditor h1,
+.fa-planeditor__active {
     margin: 0;
 }
 
 .fa-planeditor__banner {
     margin: 0;
+}
+
+.fa-planeditor__tracks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-planeditor__track-chips,
+.fa-planeditor__track-order {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.fa-planeditor__track {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.fa-planeditor__track-hint {
+    padding: 0 var(--space-1);
+}
+
+.fa-planeditor__track-problem {
+    margin: 0;
+    color: var(--pr-text);
+}
+
+.fa-planeditor__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fa-planeditor__control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--radius-control);
+}
+
+.fa-planeditor__control:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
 }
 
 .fa-planeditor__tabs {

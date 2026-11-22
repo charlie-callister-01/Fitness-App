@@ -30,7 +30,9 @@ public partial class PlanPhasesTab
     [Parameter]
     public EventCallback OnEdited { get; set; }
 
-    private IReadOnlyList<Phase> MainPhases => TrackRules.Main(State.Draft).Phases;
+    private IReadOnlyList<Phase> SelectedPhases => State.SelectedTrack.Phases;
+
+    private IReadOnlyList<Session> TrackSessions => TrackRules.SessionsOf(State.Draft, State.SelectedTrack);
 
     private static string NameOf(Phase phase) => string.IsNullOrWhiteSpace(phase.Focus) ? "Unnamed Phase" : phase.Focus;
 
@@ -48,20 +50,26 @@ public partial class PlanPhasesTab
 
     private void Toggle(string id) => _expandedId = _expandedId == id ? null : id;
 
-    private static Plan WithMainPhases(Plan plan, Func<IReadOnlyList<Phase>, IReadOnlyList<Phase>> change)
+    private Plan WithSelectedPhases(Plan plan, Func<IReadOnlyList<Phase>, IReadOnlyList<Phase>> change)
     {
-        var main = TrackRules.Main(plan);
-        return plan with { Tracks = [main with { Phases = change(main.Phases) }, .. plan.Tracks.Skip(1)] };
+        var trackId = State.SelectedTrack.Id;
+        return plan with
+        {
+            Tracks = [.. plan.Tracks.Select(t => t.Id == trackId ? t with { Phases = change(t.Phases) } : t)],
+        };
     }
 
     private Task ChangePhase(string id, Func<Phase, Phase> change)
     {
-        State.Change(plan => WithMainPhases(plan, phases => [.. phases.Select(p => p.Id == id ? change(p) : p)]));
+        State.Change(plan => WithSelectedPhases(plan, phases => [.. phases.Select(p => p.Id == id ? change(p) : p)]));
         return OnEdited.InvokeAsync();
     }
 
     private Task ChangeGoal(string id, int index, Func<PhaseGoal, PhaseGoal> change) =>
         ChangePhase(id, p => p with { Goals = [.. p.Goals.Select((g, i) => i == index ? change(g) : g)] });
+
+    private Task ChangeOverride(string id, int index, Func<SessionOverride, SessionOverride> change) =>
+        ChangePhase(id, p => p with { SessionOverrides = [.. p.SessionOverrides.Select((o, i) => i == index ? change(o) : o)] });
 
     private Task SetFocus(string id, ChangeEventArgs e) => ChangePhase(id, p => p with { Focus = e.Value?.ToString() ?? "" });
 
@@ -95,18 +103,36 @@ public partial class PlanPhasesTab
     private Task RemoveGoal(string id, int index) =>
         ChangePhase(id, p => p with { Goals = [.. p.Goals.Where((_, i) => i != index)] });
 
+    private Task AddOverride(string id)
+    {
+        var first = TrackSessions.FirstOrDefault();
+        return first is null
+            ? Task.CompletedTask
+            : ChangePhase(id, p => p with { SessionOverrides = [.. p.SessionOverrides, new SessionOverride(first.Id, first.Exercises)] });
+    }
+
+    private Task SetOverrideSession(string id, int index, ChangeEventArgs e)
+    {
+        var sessionId = e.Value?.ToString() ?? "";
+        var exercises = TrackSessions.FirstOrDefault(s => s.Id == sessionId)?.Exercises ?? [];
+        return ChangeOverride(id, index, o => o with { SessionId = sessionId, Exercises = o.SessionId == sessionId ? o.Exercises : exercises });
+    }
+
+    private Task RemoveOverride(string id, int index) =>
+        ChangePhase(id, p => p with { SessionOverrides = [.. p.SessionOverrides.Where((_, i) => i != index)] });
+
     private Task AddPhase()
     {
-        var start = MainPhases.Count == 0 ? 1 : MainPhases.Max(p => p.EndWeek) + 1;
+        var start = SelectedPhases.Count == 0 ? 1 : SelectedPhases.Max(p => p.EndWeek) + 1;
         var phase = new Phase(Ids.NewId(), "New Phase", start, start + 3, [], []);
-        State.Change(plan => WithMainPhases(plan, phases => [.. phases, phase]));
+        State.Change(plan => WithSelectedPhases(plan, phases => [.. phases, phase]));
         _expandedId = phase.Id;
         return OnEdited.InvokeAsync();
     }
 
     private Task RemovePhase(string id)
     {
-        State.Change(plan => WithMainPhases(plan, phases => [.. phases.Where(p => p.Id != id)]));
+        State.Change(plan => WithSelectedPhases(plan, phases => [.. phases.Where(p => p.Id != id)]));
         _expandedId = null;
         return OnEdited.InvokeAsync();
     }

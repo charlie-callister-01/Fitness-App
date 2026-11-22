@@ -1,3 +1,5 @@
+using Core.Ids;
+using Core.Model;
 using Core.Rules.PlanEditing;
 using Core.Storage;
 using Core.Time;
@@ -20,10 +22,17 @@ public sealed partial class PlanEditor : IDisposable
     private string? _leaveTarget;
     private bool _allowLeave;
     private bool _justSaved;
+    private string? _trackMessage;
+    private bool _addTrackOpen;
+    private string _newTrackName = "";
+    private TrackCadence _newTrackCadence = TrackCadence.Weekly;
+    private string? _addTrackMessage;
 
     [Inject] private AppData Data { get; set; } = default!;
 
     [Inject] private IClock Clock { get; set; } = default!;
+
+    [Inject] private IIdGenerator Ids { get; set; } = default!;
 
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
 
@@ -53,6 +62,8 @@ public sealed partial class PlanEditor : IDisposable
         _openedFor = PlanId;
         _state = Data.Snapshot.Plans.FirstOrDefault(p => p.Id == PlanId) is { } plan ? new PlanEditState(plan) : null;
         _tab = Tabs[0];
+        _trackMessage = null;
+        _addTrackOpen = false;
     }
 
     public void Dispose()
@@ -67,6 +78,75 @@ public sealed partial class PlanEditor : IDisposable
     private void OnSaveStarted() => StateHasChanged();
 
     private void ShowTab(string tab) => _tab = tab;
+
+    private void SelectTrack(string trackId)
+    {
+        _state?.SelectTrack(trackId);
+        _trackMessage = null;
+    }
+
+    private void OpenAddTrackSheet()
+    {
+        _newTrackName = "";
+        _newTrackCadence = TrackCadence.Weekly;
+        _addTrackMessage = null;
+        _addTrackOpen = true;
+    }
+
+    private void CloseAddTrackSheet() => _addTrackOpen = false;
+
+    private void ApplyAddTrack()
+    {
+        if (_state is null)
+        {
+            return;
+        }
+
+        if (!_state.AddTrack(_newTrackName, _newTrackCadence, Ids).TryGet(out _, out var reason))
+        {
+            _addTrackMessage = reason;
+            return;
+        }
+
+        _addTrackOpen = false;
+        _addTrackMessage = null;
+        _trackMessage = null;
+        _justSaved = false;
+    }
+
+    private void MoveTrackUp()
+    {
+        if (_state is null)
+        {
+            return;
+        }
+
+        if (!_state.MoveSelectedTrackUp().TryGet(out _, out var reason))
+        {
+            _trackMessage = reason;
+            return;
+        }
+
+        _trackMessage = null;
+        _justSaved = false;
+    }
+
+    private void MoveTrackDown()
+    {
+        if (_state is null)
+        {
+            return;
+        }
+
+        if (!_state.MoveSelectedTrackDown().TryGet(out _, out var reason))
+        {
+            _trackMessage = reason;
+            return;
+        }
+
+        _trackMessage = null;
+        _justSaved = false;
+    }
 
     private void OnEdited() => _justSaved = false;
 
@@ -83,6 +163,7 @@ public sealed partial class PlanEditor : IDisposable
         if (saved)
         {
             state.MarkSaved(plan);
+            _trackMessage = null;
             _justSaved = true;
         }
     }

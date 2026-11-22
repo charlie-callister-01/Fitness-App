@@ -33,6 +33,44 @@
                 }
             }
 
+            @foreach (var daily in _view.DailyTracks)
+            {
+                <section class="fa-panel fa-home__daily" aria-label="@daily.TrackName" data-track="@daily.TrackId">
+                    <div class="fa-home__daily-top">
+                        <span class="fa-label">@daily.TrackName</span>
+                        <span class="fa-muted">@DailyStreakText(daily.Streak)</span>
+                    </div>
+                    <h2 class="fa-title fa-title--m">@(daily.Session?.Name ?? daily.TrackName)</h2>
+                    @if (daily.OnBreak)
+                    {
+                        <p class="fa-muted">On a Break</p>
+                    }
+                    else
+                    {
+                        @switch (daily.State)
+                        {
+                            case DailyTrackState.Done:
+                                <div class="fa-home__daily-done">
+                                    <StateChip Kind="StateChipKind.Done" />
+                                    <span class="fa-muted">@daily.DonePercent% done</span>
+                                </div>
+                                break;
+                            case DailyTrackState.InProgress when daily.InProgressWorkout is { } openWorkout:
+                                <p class="fa-muted">In progress · @daily.DonePercent% done</p>
+                                <Button Variant="ButtonVariant.Primary" AccessibleName="@($"Continue {daily.Session?.Name ?? daily.TrackName}")" OnClick="() => OnContinue(openWorkout)">Continue</Button>
+                                break;
+                            default:
+                                <p class="fa-muted">Not started</p>
+                                @if (daily.Session is { } dailySession)
+                                {
+                                    <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite || _save.IsBusy" AccessibleName="@($"Start {dailySession.Name}")" OnClick="() => StartAsync(dailySession)">Start</Button>
+                                }
+                                break;
+                        }
+                    }
+                </section>
+            }
+
             @if (_view.Strip.Count > 0)
             {
                 <WeekStrip Tiles="_view.Strip" OnOpenDay="OnOpenDay" />
@@ -41,6 +79,29 @@
             @if (_view.Line is { } line)
             {
                 <WeekLine Line="line" />
+            }
+
+            @foreach (var extra in _view.ExtraWeekLines)
+            {
+                <section class="fa-panel fa-home__extraline" aria-label="@extra.TrackName" data-track="@extra.TrackId">
+                    <p class="fa-muted fa-home__extraline-summary">@ExtraLineSummary(extra)</p>
+                    @if (extra.Sessions.Count > 0)
+                    {
+                        <div class="fa-home__extraline-sessions" role="group" aria-label="@($"{extra.TrackName} Sessions this week")">
+                            @foreach (var item in extra.Sessions)
+                            {
+                                var session = item.Session;
+                                <button type="button" class="fa-home__extrasession @(item.IsToday ? "fa-home__extrasession--today" : "")"
+                                        disabled="@(!Page.CanWrite || _save.IsBusy)"
+                                        aria-label="@ExtraSessionLabel(extra.TrackName, item)"
+                                        @onclick="() => StartAsync(session)">
+                                    <span class="fa-home__extrasession-name">@session.Name</span>
+                                    <span class="fa-muted">@item.Date.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture) · @ExtraStateWords(item.State)</span>
+                                </button>
+                            }
+                        </div>
+                    }
+                </section>
             }
         </div>
 

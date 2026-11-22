@@ -775,4 +775,566 @@ public sealed class PlanEditorTests : BunitContext
         cut.WaitForAssertion(() => Assert.Equal(5, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget));
         Assert.Equal(1, saves);
     }
+
+    // Track selector and split Settings
+
+    private static Plan MultiTrackPlan() =>
+        Plan() with
+        {
+            Tracks =
+            [
+                new Track(MainTrack, "Gym", new TrackRhythm.Weekly(3, 2, true), [Ph("p1", "Foundation", 1, 4)]),
+                new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), [Ph("c1", "Engine", 1, 6)]),
+                new Track("mobility", "Mobility", new TrackRhythm.Daily(75), []),
+            ],
+        };
+
+    private static string[] TrackChipNames(IRenderedComponent<PlanEditor> cut) =>
+        [.. cut.FindAll(".fa-planeditor__track button").Select(b => b.TextContent.Trim())];
+
+    [Fact]
+    public async Task The_Track_selector_lists_Tracks_in_order_marks_the_first_as_Main_and_has_no_Remove_or_cadence_control()
+    {
+        var cut = RenderEditor(await OpenWithAsync(MultiTrackPlan()));
+
+        Assert.Equal(["Gym", "Cardio", "Mobility"], TrackChipNames(cut));
+        var trackWrappers = cut.FindAll(".fa-planeditor__track");
+        Assert.Equal("Main", trackWrappers[0].QuerySelector(".fa-planeditor__track-hint")?.TextContent.Trim());
+        Assert.Null(trackWrappers[1].QuerySelector(".fa-planeditor__track-hint"));
+        Assert.Null(trackWrappers[2].QuerySelector(".fa-planeditor__track-hint"));
+        Assert.Equal("true", Button(cut, "Gym").GetAttribute("aria-pressed"));
+        Assert.Equal("false", Button(cut, "Cardio").GetAttribute("aria-pressed"));
+        Assert.Equal("false", Button(cut, "Mobility").GetAttribute("aria-pressed"));
+
+        Assert.Equal(["Plan settings", "Track settings"], cut.FindAll(".fa-planform__heading").Select(h => h.TextContent.Trim()));
+        Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Contains("Remove Track", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(cut.FindAll(".fa-planform label .fa-label"), l => l.TextContent.Trim() == "Cadence");
+    }
+
+    [Fact]
+    public async Task Selecting_a_Track_shows_its_settings_by_cadence_and_only_the_main_Track_offers_Custom_workouts_counting()
+    {
+        var cut = RenderEditor(await OpenWithAsync(MultiTrackPlan()));
+
+        Assert.Equal("Gym", Field(cut, "Track name").GetAttribute("value"));
+        Assert.Equal("3", Field(cut, "Weekly target (Workouts)").GetAttribute("value"));
+        Assert.Equal("2", Field(cut, "Streak minimum (Workouts a week)").GetAttribute("value"));
+        Assert.Single(cut.FindAll(".fa-planform input[type='checkbox']"));
+        Assert.Contains("Custom workouts belong to the main Track.", cut.Markup);
+
+        Button(cut, "Cardio").Click();
+        Assert.Equal("true", Button(cut, "Cardio").GetAttribute("aria-pressed"));
+        Assert.Equal("Cardio", Field(cut, "Track name").GetAttribute("value"));
+        Assert.Equal("2", Field(cut, "Weekly target (Workouts)").GetAttribute("value"));
+        Assert.Equal("1", Field(cut, "Streak minimum (Workouts a week)").GetAttribute("value"));
+        Assert.Empty(cut.FindAll(".fa-planform input[type='checkbox']"));
+        Assert.Contains("Custom workouts belong to the main Track.", cut.Markup);
+
+        Button(cut, "Mobility").Click();
+        Assert.Equal("true", Button(cut, "Mobility").GetAttribute("aria-pressed"));
+        Assert.Equal("Mobility", Field(cut, "Track name").GetAttribute("value"));
+        Assert.Equal("75", Field(cut, "Day-done percentage").GetAttribute("value"));
+        Assert.Contains("A day is done when this share of the routine is ticked.", cut.Markup);
+        Assert.Empty(cut.FindAll(".fa-planform input[type='checkbox']"));
+        Assert.DoesNotContain(cut.FindAll(".fa-planform label .fa-label"), l => l.TextContent.Trim() == "Weekly target (Workouts)");
+    }
+
+    [Fact]
+    public async Task Add_Track_adds_weekly_and_daily_Tracks_with_rule_defaults_selects_them_and_marks_the_editor_dirty()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = RenderEditor(data);
+
+        Button(cut, "+ Add Track").Click();
+        Field(cut, "Name").Input("Run");
+        Field(cut, "Cadence").Change(TrackCadence.Weekly.ToString());
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Track").Click();
+
+        Assert.Empty(cut.FindAll("[role='dialog']"));
+        Assert.Equal(["Main", "Run"], TrackChipNames(cut));
+        Assert.Equal("true", Button(cut, "Run").GetAttribute("aria-pressed"));
+        Assert.Equal("Run", Field(cut, "Track name").GetAttribute("value"));
+        Assert.Equal("3", Field(cut, "Weekly target (Workouts)").GetAttribute("value"));
+        Assert.Equal("2", Field(cut, "Streak minimum (Workouts a week)").GetAttribute("value"));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+
+        Button(cut, "+ Add Track").Click();
+        Field(cut, "Name").Input("Mobility");
+        Field(cut, "Cadence").Change(TrackCadence.Daily.ToString());
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Track").Click();
+
+        Assert.Equal(["Main", "Run", "Mobility"], TrackChipNames(cut));
+        Assert.Equal("true", Button(cut, "Mobility").GetAttribute("aria-pressed"));
+        Assert.Equal("75", Field(cut, "Day-done percentage").GetAttribute("value"));
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(3, data.Snapshot.Plans.Single().Tracks.Count));
+        var tracks = data.Snapshot.Plans.Single().Tracks;
+        Assert.Equal(("Run", new TrackRhythm.Weekly(3, 2, false)), (tracks[1].Name, tracks[1].Rhythm));
+        Assert.Equal(("Mobility", new TrackRhythm.Daily(75)), (tracks[2].Name, tracks[2].Rhythm));
+    }
+
+    [Theory]
+    [InlineData("   ", "Give the Track a name.")]
+    [InlineData("main", "A Track named \"Main\" already exists in this Plan.")]
+    public async Task Add_Track_refuses_blank_or_duplicate_names_in_the_sheet(string name, string expected)
+    {
+        var cut = RenderEditor(await OpenWithAsync(Plan()));
+
+        Button(cut, "+ Add Track").Click();
+        Field(cut, "Name").Input(name);
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Track").Click();
+
+        Assert.Contains(expected, cut.Find("[role='dialog'] [role='alert']").TextContent);
+        Assert.Equal(["Main"], TrackChipNames(cut));
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Move_up_and_Move_down_reorder_Tracks_change_which_Track_is_Main_and_enable_Save()
+    {
+        var data = await OpenWithAsync(MultiTrackPlan());
+        var cut = RenderEditor(data);
+
+        Button(cut, "Cardio").Click();
+        Button(cut, "Move up").Click();
+
+        Assert.Equal(["Cardio", "Gym", "Mobility"], TrackChipNames(cut));
+        Assert.Equal("Main", cut.FindAll(".fa-planeditor__track")[0].QuerySelector(".fa-planeditor__track-hint")?.TextContent.Trim());
+        Assert.Single(cut.FindAll(".fa-planform input[type='checkbox']"));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal("Cardio", data.Snapshot.Plans.Single().Tracks[0].Name));
+
+        Button(cut, "Move down").Click();
+        Assert.Equal(["Gym", "Cardio", "Mobility"], TrackChipNames(cut));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task A_daily_Track_cannot_be_moved_first_and_shows_the_rule_message()
+    {
+        var plan = Plan() with
+        {
+            Tracks =
+            [
+                new Track(MainTrack, "Gym", new TrackRhythm.Weekly(3, 2, false), []),
+                new Track("mobility", "Mobility", new TrackRhythm.Daily(75), []),
+            ],
+        };
+        var cut = RenderEditor(await OpenWithAsync(plan));
+
+        Button(cut, "Mobility").Click();
+        Button(cut, "Move up").Click();
+
+        Assert.Contains("The main Track must be weekly, so a daily Track cannot be first.", cut.Find("[role='alert']").TextContent);
+        Assert.Equal(["Gym", "Mobility"], TrackChipNames(cut));
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+
+        Button(cut, "Gym").Click();
+        Button(cut, "Move down").Click();
+
+        Assert.Contains("The main Track must be weekly, so a daily Track cannot be first.", cut.Find("[role='alert']").TextContent);
+        Assert.Equal(["Gym", "Mobility"], TrackChipNames(cut));
+    }
+
+    [Fact]
+    public async Task Track_settings_across_multiple_Tracks_survive_Track_switches_and_persist_after_Save()
+    {
+        var data = await OpenWithAsync(MultiTrackPlan());
+        var cut = RenderEditor(data);
+
+        Field(cut, "Track name").Input("Strength");
+        Field(cut, "Weekly target (Workouts)").Input("4");
+
+        Button(cut, "Mobility").Click();
+        Field(cut, "Track name").Input("Morning mobility");
+        Field(cut, "Day-done percentage").Input("80");
+
+        Button(cut, "Strength").Click();
+        Assert.Equal("Strength", Field(cut, "Track name").GetAttribute("value"));
+        Assert.Equal("4", Field(cut, "Weekly target (Workouts)").GetAttribute("value"));
+
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("Strength", data.Snapshot.Plans.Single().Tracks[0].Name));
+        var saved = data.Snapshot.Plans.Single();
+        Assert.Equal(4, Assert.IsType<TrackRhythm.Weekly>(saved.Tracks[0].Rhythm).WeeklyTarget);
+        Assert.Equal("Morning mobility", saved.Tracks[2].Name);
+        Assert.Equal(80, Assert.IsType<TrackRhythm.Daily>(saved.Tracks[2].Rhythm).DayDonePercent);
+    }
+
+    [Theory]
+    [InlineData("Track name", "   ", "Give the Track a name.")]
+    [InlineData("Track name", "Cardio", "A Track named \"Cardio\" already exists in this Plan.")]
+    [InlineData("Day-done percentage", "0", "The day-done percentage must be between 1 and 100.")]
+    [InlineData("Day-done percentage", "101", "The day-done percentage must be between 1 and 100.")]
+    [InlineData("Day-done percentage", "lots", "The day-done percentage must be between 1 and 100.")]
+    public async Task Invalid_Track_settings_disable_Save_with_the_rule_message(string label, string value, string expected)
+    {
+        var cut = RenderEditor(await OpenWithAsync(MultiTrackPlan()));
+        if (label == "Day-done percentage")
+        {
+            Button(cut, "Mobility").Click();
+        }
+
+        Field(cut, label).Input(value);
+
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+        Assert.Contains(expected, cut.Find("[role='alert']").TextContent);
+        Assert.Contains("Fix the problem on the Settings tab", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Leaving_with_unsaved_Track_changes_shows_the_discard_prompt()
+    {
+        var cut = RenderEditor(await OpenWithAsync(MultiTrackPlan()));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("plans/plan");
+        Button(cut, "Cardio").Click();
+        Button(cut, "Move up").Click();
+
+        navigation.NavigateTo("plans");
+
+        cut.WaitForAssertion(() => Assert.Contains("Discard changes?", cut.Markup));
+        Assert.Equal("plans/plan", CurrentPath);
+    }
+
+    [Fact]
+    public async Task A_read_only_window_disables_Track_controls_and_settings()
+    {
+        var store = new InMemoryDataStore();
+        await OpenWithAsync(MultiTrackPlan(), store);
+        var locked = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
+        var cut = RenderEditor(locked);
+
+        Assert.Contains("read-only", cut.Markup);
+        Assert.True(Button(cut, "+ Add Track").HasAttribute("disabled"));
+        Assert.True(Button(cut, "Move up").HasAttribute("disabled"));
+        Assert.True(Button(cut, "Move down").HasAttribute("disabled"));
+        Assert.All(cut.FindAll(".fa-planform input"), i => Assert.True(i.HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public async Task After_Save_the_Plans_list_and_Home_reflect_an_edited_main_Track_and_its_weekly_target()
+    {
+        var data = await OpenWithAsync(MultiTrackPlan());
+        var cut = RenderEditor(data);
+
+        Button(cut, "Cardio").Click();
+        Field(cut, "Weekly target (Workouts)").Input("5");
+        Button(cut, "Move up").Click();
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("Cardio", data.Snapshot.Plans.Single().Tracks[0].Name));
+        Assert.Equal(5, MainWeekly(data.Snapshot.Plans.Single()).WeeklyTarget);
+
+        var home = Render<Home>();
+        Assert.Contains("target 5", home.Markup);
+
+        var plans = Render<Plans>();
+        Assert.Contains("Active · week 1 of 6", plans.Markup);
+    }
+
+    // Phases and Sessions per Track
+
+    private static Plan MultiTrackPlanWithSessions() =>
+        MultiTrackPlan() with
+        {
+            Sessions =
+            [
+                Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+                [
+                    new SessionExercise(Squat, 3, 8, null, "Chest up"),
+                    new SessionExercise(Lunge, 2, 10, null, null),
+                ]),
+                Session("tempo", "Tempo Run", DayOfWeek.Thursday, SessionType.Cardio, null,
+                [
+                    new SessionExercise("plank", 3, null, null, null),
+                ], trackId: "cardio"),
+                new Session("morning", "Morning Flow", "mobility", DefaultDay.Daily, SessionType.Mobility, null,
+                [
+                    new SessionExercise("plank", 2, null, null, null),
+                ]),
+            ],
+        };
+
+    [Fact]
+    public async Task Switching_Tracks_swaps_the_Phases_and_Sessions_shown_and_a_Track_with_no_Phases_says_so_with_Add_Phase()
+    {
+        var cut = RenderEditor(await OpenWithAsync(MultiTrackPlanWithSessions()));
+
+        ShowTab(cut, "Phases");
+        Assert.Equal(["Foundation"], cut.FindAll(".fa-phase__name").Select(n => n.TextContent.Trim()));
+        Assert.Contains("Weeks 1 to 4 · 16 Nov to 13 Dec 2026", cut.Find(".fa-phase__weeks").TextContent);
+
+        Button(cut, "Cardio").Click();
+        Assert.Equal(["Engine"], cut.FindAll(".fa-phase__name").Select(n => n.TextContent.Trim()));
+        Assert.Contains("Weeks 1 to 6 · 16 Nov to 27 Dec 2026", cut.Find(".fa-phase__weeks").TextContent);
+
+        Button(cut, "Mobility").Click();
+        Assert.Empty(cut.FindAll(".fa-phase"));
+        Assert.Contains("No Phases for this Track", cut.Markup);
+        Assert.False(Button(cut, "Add Phase").HasAttribute("disabled"));
+
+        ShowTab(cut, "Sessions");
+        Assert.Equal(["Morning Flow"], cut.FindAll(".fa-session__name").Select(n => n.TextContent.Trim()));
+        Assert.Contains("Every day · Mobility", cut.Find(".fa-session__meta").TextContent);
+
+        Button(cut, "Cardio").Click();
+        Assert.Equal(["Tempo Run"], cut.FindAll(".fa-session__name").Select(n => n.TextContent.Trim()));
+        Assert.Contains("Thursday · Cardio", cut.Find(".fa-session__meta").TextContent);
+
+        Button(cut, "Gym").Click();
+        Assert.Equal(["Lower"], cut.FindAll(".fa-session__name").Select(n => n.TextContent.Trim()));
+        Assert.Contains("Monday · Strength", cut.Find(".fa-session__meta").TextContent);
+    }
+
+    [Fact]
+    public async Task Phase_overlap_inside_one_Track_is_refused_naming_both_Phases_while_same_weeks_in_another_Track_are_allowed()
+    {
+        var data = await OpenWithAsync(MultiTrackPlanWithSessions());
+        var cut = RenderEditor(data);
+
+        ShowTab(cut, "Phases");
+        Button(cut, "Mobility").Click();
+        Button(cut, "Add Phase").Click();
+        Field(cut, "Focus").Input("Habit");
+        Field(cut, "First week").Change("1");
+        Field(cut, "Last week").Change("4");
+
+        // Weeks 1 to 4 are already used by Gym's "Foundation", which is allowed on a different Track.
+        Assert.Empty(cut.FindAll("[role='alert']"));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+
+        Button(cut, "Add Phase").Click();
+        Field(cut, "Focus").Input("Maintain");
+        Field(cut, "First week").Change("3");
+        Field(cut, "Last week").Change("6");
+
+        var alert = cut.Find("[role='alert']").TextContent;
+        Assert.Contains("Maintain", alert);
+        Assert.Contains("Habit", alert);
+        Assert.Contains("overlaps", alert);
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+
+        Field(cut, "First week").Change("5");
+        Assert.Empty(cut.FindAll("[role='alert']"));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, data.Snapshot.Plans.Single().Tracks[2].Phases.Count));
+        Assert.Equal(["Habit", "Maintain"], data.Snapshot.Plans.Single().Tracks[2].Phases.Select(p => p.Focus));
+    }
+
+    [Fact]
+    public async Task Add_Session_on_a_daily_Track_has_no_day_picker_says_Every_day_and_Editing_a_daily_Session_does_not_offer_a_day_picker()
+    {
+        var data = await OpenWithAsync(MultiTrackPlanWithSessions());
+        var cut = OpenSessions(data);
+
+        Button(cut, "Mobility").Click();
+        Button(cut, "Add Session").Click();
+
+        var dialog = cut.Find("[role='dialog']");
+        Assert.Contains("Every day", dialog.TextContent);
+        Assert.DoesNotContain(dialog.QuerySelectorAll("select"), s => s.ParentElement?.QuerySelector(".fa-label")?.TextContent.Trim() == "Default day");
+        Field(cut, "Name").Input("Evening Stretch");
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Session").Click();
+
+        Assert.Equal(["Morning Flow", "Evening Stretch"], cut.FindAll(".fa-session__name").Select(n => n.TextContent.Trim()));
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal(4, data.Snapshot.Plans.Single().Sessions.Count));
+        var added = data.Snapshot.Plans.Single().Sessions[^1];
+        Assert.Equal(("Evening Stretch", "mobility", DefaultDay.Daily, SessionType.Mobility), (added.Name, added.TrackId, added.DefaultDay, added.Type));
+
+        cut.Find("button[aria-label='Edit Session Morning Flow']").Click();
+        dialog = cut.Find("[role='dialog']");
+        Assert.Contains("Every day", dialog.TextContent);
+        Assert.DoesNotContain(dialog.QuerySelectorAll("select"), s => s.ParentElement?.QuerySelector(".fa-label")?.TextContent.Trim() == "Default day");
+        Field(cut, "Name").Input("Morning Routine");
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Done").Click();
+
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal("Morning Routine", data.Snapshot.Plans.Single().Sessions[2].Name));
+        Assert.Equal(DefaultDay.Daily, data.Snapshot.Plans.Single().Sessions[2].DefaultDay);
+    }
+
+    [Fact]
+    public async Task Weekly_Track_day_picker_lists_Monday_to_Sunday_without_Daily_and_Type_includes_Mobility()
+    {
+        var cut = OpenSessions(await OpenWithAsync(MultiTrackPlanWithSessions()));
+
+        Button(cut, "Add Session").Click();
+
+        var dayOptions = Field(cut, "Default day").QuerySelectorAll("option").Select(o => o.TextContent.Trim()).ToList();
+        Assert.Equal(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], dayOptions);
+        Assert.DoesNotContain("Daily", dayOptions);
+
+        var typeOptions = Field(cut, "Type").QuerySelectorAll("option").Select(o => o.TextContent.Trim()).ToList();
+        Assert.Contains("Mobility", typeOptions);
+    }
+
+    [Fact]
+    public async Task Benchmark_toggle_and_interval_appear_on_the_main_Track_only()
+    {
+        var data = await OpenWithAsync(MultiTrackPlanWithSessions());
+        var cut = OpenSessions(data);
+
+        // Main Track row has Benchmark exercise toggle
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        Assert.Contains("Benchmark exercise", cut.Find(".fa-row__edit").TextContent);
+        Assert.NotEmpty(cut.FindAll(".fa-row__check input"));
+
+        // Main Track Session sheet offers Benchmark interval (weeks) when Type is Test
+        Button(cut, "Add Session").Click();
+        Field(cut, "Name").Input("Benchmark Test");
+        Field(cut, "Type").Change(SessionType.Test.ToString());
+        Assert.Contains("Benchmark interval (weeks)", cut.Find("[role='dialog']").TextContent);
+        Field(cut, "Benchmark interval (weeks)").Input("6");
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Session").Click();
+
+        // Extra weekly Track has neither Benchmark exercise toggle nor Benchmark interval field
+        Button(cut, "Cardio").Click();
+        cut.Find("button[aria-label='Edit Plank']").Click();
+        Assert.DoesNotContain("Benchmark exercise", cut.Find(".fa-row__edit").TextContent);
+        Assert.Empty(cut.FindAll(".fa-row__check input"));
+
+        Button(cut, "Add Session").Click();
+        Field(cut, "Type").Change(SessionType.Test.ToString());
+        Assert.DoesNotContain("Benchmark interval (weeks)", cut.Find("[role='dialog']").TextContent);
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Cancel").Click();
+
+        // Daily Track row has no Benchmark exercise toggle either
+        Button(cut, "Mobility").Click();
+        cut.Find("button[aria-label='Edit Plank']").Click();
+        Assert.DoesNotContain("Benchmark exercise", cut.Find(".fa-row__edit").TextContent);
+        Assert.Empty(cut.FindAll(".fa-row__check input"));
+
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Equal(6, data.Snapshot.Plans.Single().Sessions.Single(s => s.Name == "Benchmark Test").BenchmarkIntervalWeeks));
+    }
+
+    [Fact]
+    public async Task A_Phase_override_Session_choice_lists_only_the_selected_Tracks_Sessions()
+    {
+        var data = await OpenWithAsync(MultiTrackPlanWithSessions());
+        var cut = RenderEditor(data);
+
+        ShowTab(cut, "Phases");
+        cut.Find("button[aria-label='Edit Foundation']").Click();
+        Button(cut, "Add override").Click();
+
+        var gymSessionOptions = Field(cut, "Override Session").QuerySelectorAll("option").Select(o => o.TextContent.Trim()).ToList();
+        Assert.Equal(["Lower"], gymSessionOptions);
+
+        Button(cut, "Cardio").Click();
+        cut.Find("button[aria-label='Edit Engine']").Click();
+        Button(cut, "Add override").Click();
+
+        var cardioSessionOptions = Field(cut, "Override Session").QuerySelectorAll("option").Select(o => o.TextContent.Trim()).ToList();
+        Assert.Equal(["Tempo Run"], cardioSessionOptions);
+
+        SaveButton(cut).Click();
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Plans.Single().Tracks[1].Phases[0].SessionOverrides));
+        Assert.Equal("tempo", data.Snapshot.Plans.Single().Tracks[1].Phases[0].SessionOverrides[0].SessionId);
+    }
+
+    [Fact]
+    public async Task A_problem_on_a_non_selected_Track_still_disables_Save_and_names_the_tab_and_Track()
+    {
+        var cut = RenderEditor(await OpenWithAsync(MultiTrackPlanWithSessions()));
+
+        // Cause a Phase problem on Mobility, then switch back to Gym
+        ShowTab(cut, "Phases");
+        Button(cut, "Mobility").Click();
+        Button(cut, "Add Phase").Click();
+        Field(cut, "First week").Change("5");
+        Field(cut, "Last week").Change("2");
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+        Assert.Contains("Fix the problem on the Phases tab to save.", cut.Markup);
+
+        Button(cut, "Gym").Click();
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+        Assert.Contains("Fix the problem on the Phases (Mobility) tab to save.", cut.Markup);
+
+        // Fix the Phase problem on Mobility, then cause a Session row problem on Cardio and switch to Gym
+        Button(cut, "Mobility").Click();
+        Field(cut, "First week").Change("1");
+        Field(cut, "Last week").Change("4");
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+
+        ShowTab(cut, "Sessions");
+        Button(cut, "Cardio").Click();
+        cut.Find("button[aria-label='Edit Plank']").Click();
+        Field(cut, "Sets").Change("0");
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+
+        Button(cut, "Gym").Click();
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+        Assert.Contains("Fix the problem on the Sessions (Cardio) tab to save.", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Saving_multi_Track_Phase_and_Session_edits_leaves_past_Workouts_unchanged()
+    {
+        var past = Finished("w-past", Today.AddDays(-7), Set("s1", 20, 8));
+        var data = await OpenSeededAsync(plan: MultiTrackPlanWithSessions(), workouts: past);
+        var cut = OpenSessions(data);
+
+        Button(cut, "Cardio").Click();
+        cut.Find("button[aria-label='Edit Plank']").Click();
+        Field(cut, "Sets").Change("5");
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(5, data.Snapshot.Plans.Single().Sessions[1].Exercises[0].Sets));
+        Assert.Equal(past, data.Snapshot.Workouts.Single());
+    }
+
+    [Fact]
+    public async Task A_read_only_window_disables_per_Track_Phase_and_Session_edits_and_shows_the_reason()
+    {
+        var store = new InMemoryDataStore();
+        await OpenWithAsync(MultiTrackPlanWithSessions(), store);
+        var locked = await AppData.OpenAsync(store, new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
+        var readOnlyCut = RenderEditor(locked);
+
+        ShowTab(readOnlyCut, "Phases");
+        Button(readOnlyCut, "Cardio").Click();
+        Assert.Contains("read-only", readOnlyCut.Markup);
+        Assert.True(Button(readOnlyCut, "Add Phase").HasAttribute("disabled"));
+
+        ShowTab(readOnlyCut, "Sessions");
+        Button(readOnlyCut, "Mobility").Click();
+        Assert.True(Button(readOnlyCut, "Add Session").HasAttribute("disabled"));
+        Assert.True(Button(readOnlyCut, "Edit Session").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task The_editor_header_shows_the_active_week_headline_from_the_main_Tracks_Phases_and_hides_it_for_an_inactive_Plan()
+    {
+        var activeWithPhases = MultiTrackPlan();
+        var inactive = MultiTrackPlan() with { Id = "inactive", IsActive = false };
+        var data = await OpenWithAsync(activeWithPhases);
+        await data.CommitAsync(Change.Put(inactive));
+
+        var cutWithPhases = RenderEditor(data, "plan");
+        Assert.Equal("Active · week 1 of 4", cutWithPhases.Find(".fa-planeditor__active").TextContent.Trim());
+
+        var cutInactive = Render<PlanEditor>(p => p.Add(x => x.PlanId, "inactive"));
+        Assert.Empty(cutInactive.FindAll(".fa-planeditor__active"));
+
+        var activeWithoutPhases = MultiTrackPlan() with
+        {
+            Tracks =
+            [
+                new Track(MainTrack, "Gym", new TrackRhythm.Weekly(3, 2, true), []),
+                new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), [Ph("c1", "Engine", 1, 6)]),
+            ],
+        };
+        await data.CommitAsync(Change.Put(activeWithoutPhases));
+        var cutWithoutPhases = Render<PlanEditor>(p => p.Add(x => x.PlanId, "plan"));
+        Assert.Equal("Active · week 1", cutWithoutPhases.Find(".fa-planeditor__active").TextContent.Trim());
+    }
 }

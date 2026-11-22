@@ -4,6 +4,7 @@ using Core.Rules.Schedule;
 using Core.Rules.Tracks;
 using Core.Storage;
 using Core.Tests.Storage;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Ui.Pages;
 using Ui.Saving;
@@ -376,6 +377,127 @@ public sealed class WeekTests : BunitContext
         Assert.True(cut.FindAll("button").First(b => b.TextContent.Trim() == "Add a Break").HasAttribute("disabled"));
         Assert.True(cut.FindAll("button").First(b => b.TextContent.Trim() == "Apply").HasAttribute("disabled"));
         Assert.Empty(Schedules(locked));
+    }
+
+    // Daily rows and extra weekly Tracks.
+
+    private static Plan MultiTrackPlan()
+    {
+        var gym = new Track(MainTrack, "Gym", new TrackRhythm.Weekly(2, 2, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(1, 1, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(75), []);
+        return new Plan("plan", "Plan", true, Today, null, null, 2, [gym, cardio, mobility],
+        [
+            Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)], MainTrack),
+            Session("tempo", "Tempo Run", DayOfWeek.Tuesday, SessionType.Cardio, null, [new SessionExercise(Lunge, 2, 10, null, null)], "cardio"),
+            Session("upper", "Upper", DayOfWeek.Wednesday, SessionType.Strength, null, [new SessionExercise(Lunge, 2, 10, null, null)], MainTrack),
+            new Session("stretch", "Morning Mobility", "mob", DefaultDay.Daily, SessionType.Mobility, null,
+                [new SessionExercise(Squat, 1, 5, null, null), new SessionExercise(Lunge, 1, 5, null, null)]),
+        ]);
+    }
+
+    private string CurrentPath =>
+        Services.GetRequiredService<NavigationManager>().Uri[Services.GetRequiredService<NavigationManager>().BaseUri.Length..];
+
+    [Fact]
+    public async Task A_daily_Session_shows_once_as_Every_day_above_the_week_with_Track_name_no_Missed_chip_and_no_Move()
+    {
+        var data = await OpenSeededAsync(plan: MultiTrackPlan());
+        var cut = RenderWeek(data, daysLater: 2);
+
+        var dailyRow = Assert.Single(cut.FindAll("ul[aria-label='Every day'] li"));
+        Assert.Equal("stretch", dailyRow.GetAttribute("data-session"));
+        Assert.Contains("Every day · Mobility", dailyRow.TextContent);
+        Assert.Contains("Morning Mobility", dailyRow.TextContent);
+        Assert.Contains("Not started", dailyRow.TextContent);
+        Assert.Empty(dailyRow.QuerySelectorAll(".fa-chip"));
+        Assert.Empty(cut.FindAll("button[aria-label='Move Morning Mobility']"));
+
+        // The weekly day list excludes the daily Session.
+        Assert.Equal(["Lower", "Tempo Run", "Upper"], RowNames(cut));
+        Assert.DoesNotContain(cut.FindAll("ul[aria-label='This week'] li"), li => li.GetAttribute("data-session") == "stretch");
+    }
+
+    [Fact]
+    public async Task Starting_continuing_and_opening_a_done_Workout_from_the_daily_row_work()
+    {
+        var data = await OpenSeededAsync(plan: MultiTrackPlan());
+        var cut = RenderWeek(data);
+
+        // Not started -> Start creates today's Workout for the daily Session and navigates to its log.
+        cut.Find("button[aria-label='Start Morning Mobility']").Click();
+
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
+        var started = Assert.Single(data.Snapshot.Workouts);
+        Assert.Equal(("stretch", Today), (started.SessionId, started.Date));
+        Assert.Null(started.EndedAt);
+        cut.WaitForAssertion(() => Assert.Equal($"log/{started.Id}", CurrentPath));
+
+        // While open today, the daily row shows In progress and Continue opens the open Workout without creating a second one.
+        var inProgressRow = Assert.Single(cut.FindAll("ul[aria-label='Every day'] li"));
+        Assert.Contains("In progress", inProgressRow.TextContent);
+        Services.GetRequiredService<NavigationManager>().NavigateTo("week");
+        cut.Find("button[aria-label='Continue Morning Mobility']").Click();
+        cut.WaitForAssertion(() => Assert.Equal($"log/{started.Id}", CurrentPath));
+        Assert.Single(data.Snapshot.Workouts);
+
+        // Once finished at or above dayDonePercent, the daily row shows Done and View summary opens the finished Workout.
+        var finished = started with
+        {
+            EndedAt = Now.AddMinutes(15),
+            Entries =
+            [
+                new WorkoutEntry(Squat, EntryStatus.Done, null, null, null, [Set("s1", 20, 5)]),
+                new WorkoutEntry(Lunge, EntryStatus.Done, null, null, null, [Set("s2", 20, 5)]),
+            ],
+        };
+        await cut.InvokeAsync(() => data.CommitAsync(Change.Put(finished)));
+
+        cut.WaitForAssertion(() =>
+        {
+            var doneRow = Assert.Single(cut.FindAll("ul[aria-label='Every day'] li"));
+            Assert.Contains("Done", doneRow.TextContent);
+            Assert.Equal("Done", doneRow.QuerySelector(".fa-chip__word")!.TextContent);
+        });
+        Services.GetRequiredService<NavigationManager>().NavigateTo("week");
+        cut.Find("button[aria-label='View summary for Morning Mobility']").Click();
+        cut.WaitForAssertion(() => Assert.Equal($"log/{finished.Id}", CurrentPath));
+    }
+
+    [Fact]
+    public async Task Extra_weekly_Track_Sessions_show_on_their_days_with_Track_names_and_the_draft_excludes_daily_Sessions()
+    {
+        var data = await OpenSeededAsync(plan: MultiTrackPlan());
+        await data.CommitAsync([Change.Put(TuesdayToWednesday())]);
+        var cut = RenderWeek(data);
+
+        // Both weekly Tracks' Sessions show on their days with their Track names.
+        Assert.Contains("Mon 16 Nov · Gym", cut.Find("ul[aria-label='This week'] li[data-session='lower']").TextContent);
+        Assert.Contains("Tue 17 Nov · Cardio", cut.Find("ul[aria-label='This week'] li[data-session='tempo']").TextContent);
+        Assert.Contains("Wed 18 Nov · Gym", cut.Find("ul[aria-label='This week'] li[data-session='upper']").TextContent);
+
+        // Suggested draft includes affected weekly Tracks' Sessions and never lists the daily Session.
+        var draftSessionIds = cut.FindAll(".fa-week__draft li").Select(li => li.GetAttribute("data-session")!).ToList();
+        Assert.Contains("tempo", draftSessionIds);
+        Assert.Contains("upper", draftSessionIds);
+        Assert.DoesNotContain("stretch", draftSessionIds);
+
+        // Moving an extra weekly Track's Session works just like the main Track's.
+        ClickRowMove(cut, "Tempo Run");
+        ClickInSheet(cut, "Thu 19 Nov");
+        ClickInSheet(cut, "Move");
+
+        cut.WaitForAssertion(() => Assert.Single(Schedules(data)));
+        Assert.Contains(Schedules(data)[0].Moves, m => m.SessionId == "tempo" && m.Date == Today.AddDays(3));
+    }
+
+    [Fact]
+    public async Task A_one_Track_Plans_Week_rows_do_not_repeat_the_Track_name()
+    {
+        var cut = RenderWeek(await OpenSeededAsync(plan: TwoSessionPlan()));
+
+        Assert.Empty(cut.FindAll("ul[aria-label='Every day']"));
+        Assert.DoesNotContain("· Main", cut.Find("li[data-session='lower']").TextContent);
     }
 
     /// <summary>A store that counts writes and can hold them until released, to prove a double tap saves once.</summary>

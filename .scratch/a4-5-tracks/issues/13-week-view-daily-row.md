@@ -13,8 +13,18 @@
 
 **Blocked by:** 12 (sequential order; it needs only PR 1 and ticket 11's shared pieces, but run one ticket at a time).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Tests: a daily Session shows once as "Every day" above the week with today's state; never a Missed chip even after days pass without a Workout; no Move control; the Move sheet's Session list and the draft exclude it; extra weekly Track Sessions placed on their days with the Track name; a one-Track Plan's Week view is unchanged (existing tests pass).
-- [ ] Core test for the new `WeekRows` data.
-- [ ] `dotnet build` 0 warnings; Core and Ui tests green.
+- [x] Tests: a daily Session shows once as "Every day" above the week with today's state; never a Missed chip even after days pass without a Workout; no Move control; the Move sheet's Session list and the draft exclude it; extra weekly Track Sessions placed on their days with the Track name; a one-Track Plan's Week view is unchanged (existing tests pass).
+- [x] Core test for the new `WeekRows` data.
+- [x] `dotnet build` 0 warnings; Core and Ui tests green.
+
+## Comments
+- **Core (`WeekRows` & `WeekEditRules`):**
+  - Added `DailyRowState` (`NotStarted`, `InProgress`, `Done`) and `DailyWeekRow` (`Session`, `TrackId`, `TrackName`, `State`, `InProgressWorkout`, `DoneWorkout`), built by `WeekRows.BuildDaily(plan, workouts, today)` over the Plan's daily Tracks using `DailyTrackRules.IsOpen` and `DailyTrackRules.IsWorkoutDone`. Daily rows never produce a Missed state even after days pass without a Workout.
+  - Updated `WeekRows.Build` to lay out all weekly Tracks in date, Track, and Session order with per-Track `MissedInWeek` and `Done` chips, attaching `TrackName` and `ShowTrackName` (true when the Plan has more than one weekly Track; false for a one-weekly-Track Plan so its rows are unchanged).
+  - Updated `WeekEditRules.SuggestDraft` to iterate across all weekly Tracks when proposing a re-arranged week after a Break, never including daily Sessions.
+- **Ui (`Week.razor` & `Week.razor.cs`):**
+  - Rendered `<ul class="fa-week__rows" aria-label="Every day">` above the weekly days list when `_dailyRows` has entries. Each row shows `"Every day · {TrackName}"`, the Session name, today's state (`"Not started"`, `"In progress"`, or `"Done"` with a `Done` `StateChip`), and its action button (`Start`, `Continue`, or `View summary`), wired through `GuardedSave` and `WorkoutStarter` / `NavigationManager` with no Move control and no Missed chip.
+  - Day rows show `"{DayText} · {TrackName}"` when the Plan has more than one weekly Track, and plain `{DayText}` when there is only one weekly Track.
+- **Tests:** Added unit tests in `WeekRowsTests` and `WeekEditRulesTests`, and bUnit tests in `WeekTests`.

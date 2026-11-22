@@ -1,17 +1,17 @@
 @using Core.Rules.Formatting
 @using Core.Rules.Insight
 @using System.Globalization
-@* The Plan editor's Phases tab (design S-05, C-20): a row per Phase with the weeks and dates it covers; Edit expands the row in place to
-   change the focus, the first and last week and the optional Phase goals. Overlaps and reversed ranges are named in a message under the
-   list and hold Save back. *@
-<div class="fa-phases">
-    @if (MainPhases.Count == 0)
+@* The Plan editor's Phases tab (design S-05, C-20): a row per Phase on the selected Track with the weeks and dates it covers; Edit expands
+   the row in place to change the focus, the first and last week, the optional Phase goals and any Session overrides. Overlaps and reversed
+   ranges are named in a message under the list and hold Save back. *@
+<div class="fa-phases" @key="State.SelectedTrackId">
+    @if (SelectedPhases.Count == 0)
     {
-        <p class="fa-muted">No Phases yet. Add one to split the Plan into blocks of weeks.</p>
+        <p class="fa-muted">No Phases for this Track. No Phases yet — add one to split the Track into blocks of weeks.</p>
     }
 
     <ul class="fa-phases__list">
-        @foreach (var phase in MainPhases)
+        @foreach (var phase in SelectedPhases)
         {
             var id = phase.Id;
             var open = _expandedId == id;
@@ -76,8 +76,34 @@
                             </div>
                         }
 
+                        @if (phase.SessionOverrides.Count > 0)
+                        {
+                            <p class="fa-label">Session overrides</p>
+                            @for (var i = 0; i < phase.SessionOverrides.Count; i++)
+                            {
+                                var index = i;
+                                var item = phase.SessionOverrides[i];
+                                <div class="fa-phase__goal">
+                                    <label class="fa-phase__field">
+                                        <span class="fa-label">Override Session</span>
+                                        <select class="fa-phase__control" disabled="@Disabled" @onchange="e => SetOverrideSession(id, index, e)">
+                                            @foreach (var session in TrackSessions)
+                                            {
+                                                <option value="@session.Id" selected="@(session.Id == item.SessionId)">@session.Name</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" AccessibleName="@($"Remove override {index + 1}")" OnClick="() => RemoveOverride(id, index)">Remove override</Button>
+                                </div>
+                            }
+                        }
+
                         <div class="fa-phase__actions">
                             <Button Variant="ButtonVariant.Secondary" Disabled="@(Disabled || Data.Snapshot.Exercises.Count == 0)" OnClick="() => AddGoal(id)">Add goal</Button>
+                            @if (TrackSessions.Count > 0)
+                            {
+                                <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" OnClick="() => AddOverride(id)">Add override</Button>
+                            }
                             <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" AccessibleName="@($"Remove Phase {NameOf(phase)}")" OnClick="() => RemovePhase(id)">Remove Phase</Button>
                         </div>
                     </div>
