@@ -11,8 +11,13 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each rule has Core tests including: overlapping Phases, reversed dates, last row removal, copy gives new ids and inactive, make active leaves exactly one active Plan, two Sessions on one day, Break overlap, undo of one draft row.
-- [ ] Editing a Plan never touches past Workouts (tested).
-- [ ] No Ui file is edited; `dotnet build` has 0 warnings and all tests pass.
+- [x] Each rule has Core tests including: overlapping Phases, reversed dates, last row removal, copy gives new ids and inactive, make active leaves exactly one active Plan, two Sessions on one day, Break overlap, undo of one draft row.
+- [x] Editing a Plan never touches past Workouts (tested).
+- [x] No Ui file is edited; `dotnet build` has 0 warnings and all tests pass.
+
+**Notes from implementation**
+- The storage validator requires Phases to start at week 1 with no gap and no overlap, so `PlanEditRules.ValidatePhases` enforces the same (a Plan that passed the editor could otherwise be rejected on commit).
+- Rules live in `Core/Rules/PlanEditing` (`PlanEditRules`, `WeekEditRules`, `WeekDraft`). Moving a Session back to its default day removes the move rather than storing it.
+- The weight increment must be more than 0 (not in the spec's list, but a zero increment would break Suggested targets).
