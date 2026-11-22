@@ -6,7 +6,7 @@
 @using Core.Rules.Units
 @using Core.Storage
 @* The finish summary (design 8.5, S-02): duration, Sets, PRs with the previous best, every Exercise with its state chip, reason or "was X" and
-   RPE, the Pain check result, the Streak line, a static Badge unlock toast and Done back to Home. Everything comes from the Core builder over
+   RPE, the Pain check result, the Streak line, the UnlockToast and Done back to Home. Everything comes from the Core builder over
    the stored data, so it reads the same however the page was reached, including a finished Workout reopened by its URL. *@
 <div class="fa-summary">
     <h1 class="fa-title fa-title--l fa-summary__title">@(_summary.IsPartial ? "Partial workout" : "Workout done")</h1>
@@ -68,7 +68,7 @@
 
     @foreach (var badge in _summary.UnlockedBadges)
     {
-        <p class="fa-well fa-unlock" role="status">Badge unlocked: <b>@badge.Name</b></p>
+        <UnlockToast Badge="badge" />
     }
 
     <Button Variant="ButtonVariant.Primary" Href="./">Done</Button>

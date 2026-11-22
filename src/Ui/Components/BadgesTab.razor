@@ -36,6 +36,10 @@
     private TrophyView _view = new([], 0, [], false);
     private string? _selectedId;
 
+    /// <summary>A Badge to open straight away (from the UnlockToast link).</summary>
+    [Parameter]
+    public string? InitialBadgeId { get; set; }
+
     [Inject] private AppData Data { get; set; } = default!;
 
     [Inject] private IClock Clock { get; set; } = default!;
@@ -44,6 +48,7 @@
 
     protected override void OnInitialized()
     {
+        _selectedId = InitialBadgeId;
         Data.Changed += OnDataChanged;
         Rebuild();
     }

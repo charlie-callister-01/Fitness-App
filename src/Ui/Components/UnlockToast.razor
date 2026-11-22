@@ -1,0 +1,42 @@
+@using Core.Model
+@using Ui.Log
+@implements IDisposable
+@* C-23 UnlockToast: a calm line on the finish summary for a newly unlocked Badge. It fades in, hides itself after 4 s and a tap opens the
+   Badge. No sound, no haptics. Reduced motion switches the fade off through the global rule in ui.css. *@
+@if (_visible)
+{
+    <a class="fa-well fa-unlock fa-unlocktoast" role="status" href="trophies?badge=@Uri.EscapeDataString(Badge.Id)">Badge unlocked: <b>@Badge.Name</b></a>
+}
+
+@code {
+    private const int VisibleSeconds = 4;
+
+    private readonly CancellationTokenSource _cancel = new();
+    private bool _visible = true;
+
+    [Parameter, EditorRequired]
+    public Badge Badge { get; set; } = default!;
+
+    [Inject] private ISecondTicker Ticker { get; set; } = default!;
+
+    protected override void OnInitialized() => _ = HideAfterAsync();
+
+    public void Dispose() => _cancel.Cancel();
+
+    private async Task HideAfterAsync()
+    {
+        try
+        {
+            for (var i = 0; i < VisibleSeconds; i++)
+            {
+                await Ticker.WaitNextAsync(_cancel.Token);
+            }
+
+            _visible = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+}
