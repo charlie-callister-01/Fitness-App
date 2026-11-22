@@ -55,12 +55,13 @@ public class ExchangeFormatErrorTests
     }
 
     [Fact]
-    public void Newer_version_says_to_update_the_app()
+    public void Newer_version_says_to_update_the_app_and_names_the_current_version()
     {
-        var error = SingleError("""{"formatVersion":2}""");
+        var error = SingleError("""{"formatVersion":3}""");
 
         Assert.Equal(("formatVersion", "unsupported_version"), (error.Path, error.Code));
         Assert.Contains("update the app", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", error.Message);
     }
 
     [Fact]

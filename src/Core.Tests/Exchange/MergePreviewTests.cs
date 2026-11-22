@@ -2,6 +2,7 @@ using Core.Exchange;
 using Core.Model;
 using Core.Serialisation;
 using Core.Storage;
+using Core.Tests.Rules.TestData;
 
 namespace Core.Tests.Exchange;
 
@@ -18,9 +19,9 @@ public class MergePreviewTests
             [new WorkoutEntry("squat", EntryStatus.Done, null, null, null, [new WorkoutSet($"set-{id}", weightKg, 5, null, null, null, false)])], null);
 
     private static Plan MakePlan(string id, bool active, params string[] sessionIds) =>
-        new(id, $"Plan {id}", active, new DateOnly(2026, 12, 1), null, null, 3, 2, false, 2.5,
-            [new Phase($"ph-{id}", "Base", 1, 4, [], [])],
-            [.. sessionIds.Select(s => new Session(s, $"Session {s}", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("squat", 3, 5, null, null)]))]);
+        PlanFixture.Make(id: id, name: $"Plan {id}", isActive: active, start: new DateOnly(2026, 12, 1), incrementKg: 2.5,
+            phases: [new Phase($"ph-{id}", "Base", 1, 4, [], [])],
+            sessions: [.. sessionIds.Select(s => PlanFixture.Session(s, DefaultDay.Monday, SessionType.Strength, $"Session {s}", exercises: [new SessionExercise("squat", 3, 5, null, null)], trackId: $"{id}-main"))]);
 
     private static ExchangeDocument Doc() => new(ExchangeFormat.CurrentVersion, null, null, null, null);
 
@@ -193,5 +194,44 @@ public class MergePreviewTests
         var preview = Merge(Library(), Doc() with { WeighIns = [new WeighIn("wi1", Day, 80)] });
 
         Assert.Equal(["Adds 1 Weigh-in.", "Touches no Workouts."], preview.Summary);
+    }
+
+    [Fact]
+    public void Merging_a_plan_treats_tracks_as_part_of_the_plan()
+    {
+        var oneTrack = MakePlan("a", true, "s-a");
+        var twoTrack = oneTrack with
+        {
+            Tracks =
+            [
+                oneTrack.Tracks[0],
+                new Track("mobility", "Morning mobility", new TrackRhythm.Daily(75), [new Phase("mob-1", "Habit", 1, 4, [], [])]),
+            ],
+            Sessions =
+            [
+                .. oneTrack.Sessions,
+                new Session("m-mob", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [new SessionExercise("squat", 1, null, null, null)]),
+            ],
+        };
+
+        var addedTrack = Merge(Library() with { Plans = [oneTrack] }, Doc() with { Plans = [twoTrack] });
+
+        Assert.True(addedTrack.IsReady, string.Join("; ", addedTrack.Blockers.Select(b => b.Text)));
+        Assert.Equal(["Changes 1 Plan.", "Touches no Workouts."], addedTrack.Summary);
+        var afterAdd = Applied(addedTrack);
+        Assert.True(afterAdd.Plans[0].IsActive);
+        Assert.Equal(["a-main", "mobility"], afterAdd.Plans[0].Tracks.Select(t => t.Id));
+
+        var unchanged = Merge(afterAdd, Doc() with { Plans = [twoTrack] });
+        Assert.Empty(unchanged.Changes);
+        Assert.Equal(["Nothing to change."], unchanged.Summary);
+
+        var updatedRule = twoTrack with
+        {
+            Tracks = [twoTrack.Tracks[0], twoTrack.Tracks[1] with { Rhythm = new TrackRhythm.Daily(80) }],
+        };
+        var changedRule = Merge(afterAdd, Doc() with { Plans = [updatedRule] });
+        Assert.Equal(["Changes 1 Plan.", "Touches no Workouts."], changedRule.Summary);
+        Assert.Equal(80, Assert.IsType<TrackRhythm.Daily>(Applied(changedRule).Plans[0].Tracks[1].Rhythm).DayDonePercent);
     }
 }

@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Benchmarks;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Tests.Rules.TestData;
 using static Core.Tests.Rules.TestData.Dates;
@@ -150,7 +151,7 @@ public class BenchmarkRulesTests
     [Fact]
     public void A_benchmark_with_a_zero_interval_is_not_a_benchmark_and_never_throws()
     {
-        var plan = Plan() with { Sessions = [new Session("test", "Test", DayOfWeek.Saturday, SessionType.Test, 0, [])] };
+        var plan = Plan() with { Sessions = [PlanFixture.Session("test", DefaultDay.Saturday, SessionType.Test, name: "Test", benchmarkEveryWeeks: 0)] };
 
         Assert.Null(BenchmarkRules.NextDue(plan, [], [], D(2026, 2, 3)));
         Assert.DoesNotContain(BenchmarkRules.List(plan, Library, []), e => e.Latest is not null);
@@ -159,7 +160,7 @@ public class BenchmarkRulesTests
     [Fact]
     public void Next_benchmark_is_null_without_a_benchmark_session()
     {
-        var plan = Plan() with { Sessions = [new Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [])] };
+        var plan = Plan() with { Sessions = [PlanFixture.Session("lower", DefaultDay.Monday, name: "Lower")] };
 
         Assert.Null(BenchmarkRules.NextDue(plan, [], [], D(2026, 2, 3)));
     }
@@ -171,6 +172,24 @@ public class BenchmarkRulesTests
     {
         var history = new[] { Lift("w1", D(2026, 1, 10), "test", "squat", Set(kg: 100, reps: 1)) };
 
-        Assert.Equal(0, WeekRules.CountedWorkouts(Plan(), history, D(2026, 1, 5)));
+        var plan = Plan();
+        Assert.Equal(0, WeekRules.CountedWorkouts(plan, TrackRules.Main(plan), history, D(2026, 1, 5)));
+    }
+
+    [Fact]
+    public void Benchmark_rules_read_the_main_Tracks_Sessions_only()
+    {
+        var main = new Track("main", "Main", new TrackRhythm.Weekly(3, 2, false), []);
+        var extra = new Track("extra", "Extra", new TrackRhythm.Weekly(1, 1, false), []);
+        var plan = PlanFixture.Make(start: Start, tracks: [main, extra], sessions:
+        [
+            PlanFixture.Session("lower", DayOfWeek.Monday, name: "Lower", trackId: "main"),
+            PlanFixture.Session("rogue-test", DayOfWeek.Saturday, SessionType.Test, name: "Rogue", benchmarkEveryWeeks: 4, trackId: "extra"),
+        ]);
+        var history = new[] { Lift("w1", D(2026, 1, 10), "rogue-test", "squat", Set(kg: 100, reps: 1)) };
+
+        Assert.Null(BenchmarkRules.NextDue(plan, [], history, D(2026, 1, 5)));
+        Assert.Null(BenchmarkRules.List(plan, Library, history).Single(e => e.Exercise.Id == "squat").Latest);
+        Assert.Null(BenchmarkRules.PreFill(plan, Library, history).Single(r => r.Exercise.Id == "squat").Previous);
     }
 }

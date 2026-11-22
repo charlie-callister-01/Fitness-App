@@ -100,12 +100,31 @@ internal static class PageFixture
         new("pullup", "Pull-up", LogKind.BodyweightLoad, null, false),
     ];
 
+    public const string MainTrack = "plan-main";
+
+    public static Session Session(
+        string id,
+        string name,
+        DayOfWeek day,
+        SessionType type = SessionType.Strength,
+        int? benchmarkIntervalWeeks = null,
+        IReadOnlyList<SessionExercise>? exercises = null,
+        string trackId = MainTrack) =>
+        new(id, name, trackId, day.ToDefaultDay(), type, benchmarkIntervalWeeks, exercises ?? []);
+
+    public static Plan WithMainPhases(Plan plan, IReadOnlyList<Phase> phases) =>
+        plan with { Tracks = [plan.Tracks[0] with { Phases = phases }, .. plan.Tracks.Skip(1)] };
+
+    public static TrackRhythm.Weekly MainWeekly(Plan plan) =>
+        Assert.IsType<TrackRhythm.Weekly>(plan.Tracks[0].Rhythm);
+
     /// <summary>The active Plan: "Lower" on Mondays with Goblet squat 3 x 8 and Walking lunge 2 x 10.</summary>
     public static Plan Plan(IReadOnlyList<Session>? sessions = null, bool active = true) =>
-        new("plan", "Plan", active, Today, null, null, 3, 2, false, 2, [],
+        new("plan", "Plan", active, Today, null, null, 2,
+            [new Track(MainTrack, "Main", new TrackRhythm.Weekly(3, 2, false), [])],
             sessions ??
             [
-                new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+                Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
                 [
                     new SessionExercise(Squat, 3, 8, null, "Chest up"),
                     new SessionExercise(Lunge, 2, 10, null, null),

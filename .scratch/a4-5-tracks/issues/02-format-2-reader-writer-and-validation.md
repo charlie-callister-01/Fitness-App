@@ -13,11 +13,16 @@
 
 **Blocked by:** 01.
 
-**Status:** ready-for-agent
+**Status:** resolved
+Notes: Implemented `formatVersion` 2 reader/writer (`ExchangeFormat.CurrentVersion = 2`, `V2Reader`, `PlanReader.ReadV2`, `TrackJsonConverter`), `DocumentValidator` Track/Session/Phase/WeekSchedule validation rules with exact `path` and `code`, updated `ExchangeReadMe`, removed temporary v1 writer (`V1ExchangeDocument` / `ToV1Document`), replaced `docs/data-spec.md` from the draft and aligned it with `DataSpecConformanceTests`. Mechanical fixture update in `Ui.Tests/Pages/PlansTests.cs` (`Other()` Track ID) because format 2 now preserves and checks Track ID uniqueness across Plans.
 
-- [ ] A Plan with a weekly main Track and a daily Track (own Phases, daily Session with `daily`, `mobility` type) reads through the real reader and writes back identically.
-- [ ] Each rule above has a failing-input test with exact `path` and `code`; `unknown_track` is reported at the Session's `trackId`.
-- [ ] A v1 document and a v1 Backup still read (upgraded to one Main Track) and give the same Plans' values as before.
-- [ ] `formatVersion` 3 is `unsupported_version`; the message names the current version.
-- [ ] `docs/data-spec.md` matches the code and its examples are parsed by the conformance test.
-- [ ] `dotnet build` 0 warnings; all earlier tests pass.
+- [x] A Plan with a weekly main Track and a daily Track (own Phases, daily Session with `daily`, `mobility` type) reads through the real reader and writes back identically.
+- [x] Each rule above has a failing-input test with exact `path` and `code`; `unknown_track` is reported at the Session's `trackId`.
+- [x] A v1 document and a v1 Backup still read (upgraded to one Main Track) and give the same Plans' values as before.
+- [x] `formatVersion` 3 is `unsupported_version`; the message names the current version.
+- [x] `docs/data-spec.md` matches the code and its examples are parsed by the conformance test.
+- [x] `dotnet build` 0 warnings; all earlier tests pass.
+
+## Comments
+
+- 2026-11-22: Resolved on branch `a4-5/ticket-02`. Core.Tests 1,374, Ui.Tests 611, Web.Tests 39 (all passing, 0 warnings).

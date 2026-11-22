@@ -21,11 +21,18 @@ public static class PlanLifecycleRules
     /// A new, inactive Plan with no Phases and no Sessions, starting on <paramref name="startDate"/> with the app's defaults. A blank name
     /// is refused.
     /// </summary>
-    public static PlanEditResult<Plan> FromScratch(string? name, DateOnly startDate, IIdGenerator ids) =>
-        string.IsNullOrWhiteSpace(name)
-            ? new PlanEditResult<Plan>.Invalid(NameNeeded)
-            : new PlanEditResult<Plan>.Valid(
-                new Plan(ids.NewId(), name.Trim(), false, startDate, null, null, 3, 2, false, 2.5, [], []));
+    public static PlanEditResult<Plan> FromScratch(string? name, DateOnly startDate, IIdGenerator ids)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return new PlanEditResult<Plan>.Invalid(NameNeeded);
+        }
+
+        var planId = ids.NewId();
+        var mainTrack = new Track($"{planId}-main", "Main", new TrackRhythm.Weekly(3, 2, false), []);
+        return new PlanEditResult<Plan>.Valid(
+            new Plan(planId, name.Trim(), false, startDate, null, null, 2.5, [mainTrack], []));
+    }
 
     /// <summary>
     /// The Plans that change when <paramref name="planId"/> becomes the active one: that Plan and the one that was active, so one commit
@@ -43,13 +50,23 @@ public static class PlanLifecycleRules
 
     internal static Plan Duplicate(Plan plan, string name, IIdGenerator ids)
     {
+        var newTrackIds = plan.Tracks.ToDictionary(t => t.Id, _ => ids.NewId());
         var newSessionIds = plan.Sessions.ToDictionary(s => s.Id, _ => ids.NewId());
-        var sessions = plan.Sessions.Select(s => s with { Id = newSessionIds[s.Id] }).ToList();
-        var phases = plan.Phases.Select(p => p with
+        var sessions = plan.Sessions
+            .Select(s => s with { Id = newSessionIds[s.Id], TrackId = newTrackIds.GetValueOrDefault(s.TrackId, s.TrackId) })
+            .ToList();
+        var tracks = plan.Tracks.Select(t => t with
         {
-            Id = ids.NewId(),
-            SessionOverrides = [.. p.SessionOverrides.Select(o => o with { SessionId = newSessionIds.GetValueOrDefault(o.SessionId, o.SessionId) })],
+            Id = newTrackIds[t.Id],
+            Phases =
+            [
+                .. t.Phases.Select(p => p with
+                {
+                    Id = ids.NewId(),
+                    SessionOverrides = [.. p.SessionOverrides.Select(o => o with { SessionId = newSessionIds.GetValueOrDefault(o.SessionId, o.SessionId) })],
+                }),
+            ],
         }).ToList();
-        return plan with { Id = ids.NewId(), Name = name.Trim(), IsActive = false, Phases = phases, Sessions = sessions };
+        return plan with { Id = ids.NewId(), Name = name.Trim(), IsActive = false, Tracks = tracks, Sessions = sessions };
     }
 }

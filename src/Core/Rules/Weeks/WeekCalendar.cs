@@ -16,6 +16,10 @@ public static class WeekCalendar
     /// <summary>The date of weekday <paramref name="day"/> in the week starting on <paramref name="monday"/>.</summary>
     public static DateOnly DefaultDate(DateOnly monday, DayOfWeek day) => monday.AddDays(((int)day + 6) % 7);
 
+    /// <summary>The date of <paramref name="day"/> in the week starting on <paramref name="monday"/>, or null when daily.</summary>
+    public static DateOnly? DefaultDate(DateOnly monday, Model.DefaultDay day) =>
+        Model.DefaultDayExtensions.AsDayOfWeek(day) is { } dow ? DefaultDate(monday, dow) : null;
+
     /// <summary>The seven dates of the week starting on <paramref name="monday"/>, Monday first.</summary>
     public static IEnumerable<DateOnly> DaysOf(DateOnly monday) => Enumerable.Range(0, 7).Select(monday.AddDays);
 }

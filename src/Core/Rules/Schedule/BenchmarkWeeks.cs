@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Schedule;
@@ -11,13 +12,14 @@ public static class BenchmarkWeeks
         session is { Type: SessionType.Test, BenchmarkIntervalWeeks: > 0 };
 
     /// <summary>
-    /// Whether the Session is scheduled in the week starting on <paramref name="monday"/>. A benchmark Session
-    /// is scheduled in Plan weeks 1, 1+N, 1+2N and so on (a baseline in the first week) and never before the
-    /// Plan starts. Any other Session is always scheduled.
+    /// Whether the Session is scheduled in the week starting on <paramref name="monday"/>. A benchmark Session belongs
+    /// to the main Track only and is scheduled in Plan weeks 1, 1+N, 1+2N and so on (a baseline in the first week)
+    /// and never before the Plan starts. Any other Session is always scheduled.
     /// </summary>
     public static bool IsScheduledInWeek(Plan plan, Session session, DateOnly monday)
     {
         if (!IsBenchmark(session)) return true;
+        if (plan.Tracks.Count == 0 || session.TrackId != TrackRules.Main(plan).Id) return false;
         var week = WeekRules.PlanWeekNumber(plan, WeekCalendar.SundayOf(monday));
         return week is { } n && (n - 1) % session.BenchmarkIntervalWeeks!.Value == 0;
     }

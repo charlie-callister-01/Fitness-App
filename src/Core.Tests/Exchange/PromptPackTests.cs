@@ -55,7 +55,19 @@ public class PromptPackTests
 
         Assert.Contains(string.Join(", ", Enum.GetNames<LogKind>().Select(CamelCase)), prompt);
         Assert.Contains(string.Join(", ", Enum.GetNames<SessionType>().Select(CamelCase)), prompt);
-        Assert.Contains("monday, tuesday, wednesday, thursday, friday, saturday, sunday", prompt);
+        Assert.Contains(string.Join(", ", Enum.GetNames<TrackCadence>().Select(CamelCase)), prompt);
+        Assert.Contains("monday, tuesday, wednesday, thursday, friday, saturday, sunday, daily", prompt);
+    }
+
+    [Fact]
+    public void WritePlan_describes_Tracks_and_states_the_first_Track_is_main_and_must_be_weekly()
+    {
+        var prompt = PromptPack.WritePlan(Library());
+
+        Assert.Contains("`tracks`", prompt);
+        Assert.Contains("`trackId`", prompt);
+        Assert.Contains("`dayDonePercent`", prompt);
+        Assert.Contains("first Track is the main Track and must be `weekly`", prompt);
     }
 
     private static string CamelCase(string name) => char.ToLowerInvariant(name[0]) + name[1..];
@@ -114,8 +126,12 @@ public class PromptPackTests
         var preview = ImportPreviewer.Preview(Library(), inspected, ImportKind.Plan, ImportDecisions.None);
 
         Assert.True(preview.IsReady, string.Join("; ", preview.Blockers.Select(b => b.Text)));
-        Assert.Contains(preview.Items, i => i.Action == ImportItemAction.Add && i.Text.Contains("Kettlebell swing"));
-        Assert.Contains(preview.Items, i => i.Action == ImportItemAction.Add && i.Text.Contains("Example Plan"));
+        Assert.Contains(preview.Items, i => i.Action == ImportItemAction.Add && i.Text.Contains("Cat-cow"));
+        Assert.Contains(preview.Items, i => i.Action == ImportItemAction.Add && i.Text.Contains("Hip flexor stretch"));
+        Assert.Contains(preview.Items, i => i.Action == ImportItemAction.Add && i.Text.Contains("HYROX London") && i.Text.Contains("2 Tracks"));
+        var plan = Assert.Single(inspected.Document.Plans!);
+        Assert.Equal(2, plan.Tracks.Count);
+        Assert.Equal(TrackCadence.Daily, plan.Tracks[1].Rhythm.Cadence);
     }
 
     [Fact]

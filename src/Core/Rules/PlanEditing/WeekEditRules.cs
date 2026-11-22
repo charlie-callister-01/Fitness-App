@@ -3,6 +3,7 @@ using Core.Ids;
 using Core.Model;
 using Core.Rules.Rearrangement;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Storage;
 
@@ -87,6 +88,11 @@ public static class WeekEditRules
             return new PlanEditResult<WeekSchedule>.Invalid("That Session is no longer in the Plan.");
         }
 
+        if (TrackRules.IsDaily(plan, session))
+        {
+            return new PlanEditResult<WeekSchedule>.Invalid("A daily Session is on every day and cannot be moved.");
+        }
+
         if (!WeekCalendar.InWeek(monday, date))
         {
             return new PlanEditResult<WeekSchedule>.Invalid("Pick a day in this week.");
@@ -117,7 +123,7 @@ public static class WeekEditRules
                     message => new PlanEditResult<SessionMoveChanges>.Invalid(message));
         }
 
-        if (!MakeDefaultDay(plan, sessionId, date.DayOfWeek).TryGet(out var newPlan, out var reason))
+        if (!MakeDefaultDay(plan, sessionId, date.DayOfWeek.ToDefaultDay()).TryGet(out var newPlan, out var reason))
         {
             return new PlanEditResult<SessionMoveChanges>.Invalid(reason);
         }
@@ -127,11 +133,26 @@ public static class WeekEditRules
         return new PlanEditResult<SessionMoveChanges>.Valid(new SessionMoveChanges(newPlan, cleared));
     }
 
-    /// <summary>The Plan with the Session's default day changed ("Make this the default day").</summary>
-    public static PlanEditResult<Plan> MakeDefaultDay(Plan plan, string sessionId, DayOfWeek day) =>
-        plan.Sessions.Any(s => s.Id == sessionId)
-            ? new PlanEditResult<Plan>.Valid(plan with { Sessions = [.. plan.Sessions.Select(s => s.Id == sessionId ? s with { DefaultDay = day } : s)] })
-            : new PlanEditResult<Plan>.Invalid("That Session is no longer in the Plan.");
+    /// <summary>The Plan with the Session's default day changed ("Make this the default day"). Refuses daily Sessions.</summary>
+    public static PlanEditResult<Plan> MakeDefaultDay(Plan plan, string sessionId, DefaultDay day)
+    {
+        if (plan.Sessions.FirstOrDefault(s => s.Id == sessionId) is not { } session)
+        {
+            return new PlanEditResult<Plan>.Invalid("That Session is no longer in the Plan.");
+        }
+
+        if (TrackRules.IsDaily(plan, session))
+        {
+            return new PlanEditResult<Plan>.Invalid("A daily Session is on every day and its default day cannot be changed.");
+        }
+
+        if (day == DefaultDay.Daily)
+        {
+            return new PlanEditResult<Plan>.Invalid("A weekly Track Session must be on a day of the week, not daily.");
+        }
+
+        return new PlanEditResult<Plan>.Valid(plan with { Sessions = [.. plan.Sessions.Select(s => s.Id == sessionId ? s with { DefaultDay = day } : s)] });
+    }
 
     /// <summary>
     /// A new Break for the dates, both included. An end before the start is refused, and so is any overlap with a Break that exists
@@ -162,12 +183,12 @@ public static class WeekEditRules
         Plan plan, IReadOnlyList<Exercise> exercises, IReadOnlyList<WeekSchedule> schedules,
         IReadOnlyList<Break> breaks, IReadOnlyList<Workout> workouts, DateOnly today)
     {
-        if (WeekRearrangement.Suggest(plan, exercises, schedules, breaks, workouts, today) is not RearrangementResult.Proposal proposal)
+        if (WeekRearrangement.Suggest(plan, TrackRules.Main(plan), exercises, schedules, breaks, workouts, today) is not RearrangementResult.Proposal proposal)
         {
             return null;
         }
 
-        var layout = WeekScheduleRules.Layout(plan, schedules, breaks, today);
+        var layout = WeekScheduleRules.Layout(plan, TrackRules.Main(plan), schedules, breaks, today);
         var rows = proposal.Placements
             .Select(p => (Placement: p, Now: layout.Sessions.FirstOrDefault(s => s.SessionId == p.SessionId)))
             .Where(x => x.Now is not null)

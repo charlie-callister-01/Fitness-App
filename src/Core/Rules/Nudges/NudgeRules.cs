@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Nudges;
@@ -12,8 +13,8 @@ public enum NudgeKind
     NoRecentBackup,
 }
 
-/// <summary>An in-app message with a stable kind and the data it refers to: the Session for a missed session, the body area for repeated pain.</summary>
-public sealed record Nudge(NudgeKind Kind, string Message, string? SessionId = null, BodyArea? Area = null);
+/// <summary>An in-app message with a stable kind and the data it refers to: the Session for a missed session, the body area for repeated pain, or the Track for per-Track weekly Nudges.</summary>
+public sealed record Nudge(NudgeKind Kind, string Message, string? SessionId = null, BodyArea? Area = null, string? TrackId = null);
 
 /// <summary>Nudges, computed from data plus an explicit "today". Nothing is stored.</summary>
 public static class NudgeRules
@@ -33,15 +34,26 @@ public static class NudgeRules
     {
         if (BreakCalendar.IsBreakDay(breaks, today)) return [];
 
+        var weeklyTracks = plan.Tracks.Where(t => t.Rhythm is TrackRhythm.Weekly).ToList();
+        var nameTrack = weeklyTracks.Count > 1;
+
         var monday = WeekCalendar.MondayOf(today);
         var nudges = new List<Nudge>();
         nudges.AddRange(RepeatedPain(workouts, monday));
-        nudges.AddRange(Missed(plan, schedules, breaks, workouts, today));
+        nudges.AddRange(Missed(plan, weeklyTracks, nameTrack, schedules, breaks, workouts, today));
 
-        var done = WeekRules.CountedWorkouts(plan, workouts, monday);
-        if (today.DayNumber - monday.DayNumber >= OneShortFromDayIndex && done == plan.WeeklyTarget - 1)
-            nudges.Add(new(NudgeKind.OneShortOfTarget,
-                $"One workout short of your target of {plan.WeeklyTarget} this week."));
+        if (today.DayNumber - monday.DayNumber >= OneShortFromDayIndex)
+        {
+            foreach (var track in weeklyTracks)
+            {
+                var weekly = (TrackRhythm.Weekly)track.Rhythm;
+                if (WeekRules.CountedWorkouts(plan, track, workouts, monday) != weekly.WeeklyTarget - 1) continue;
+                var message = nameTrack
+                    ? $"One workout short of your {track.Name} target of {weekly.WeeklyTarget} this week."
+                    : $"One workout short of your target of {weekly.WeeklyTarget} this week.";
+                nudges.Add(new(NudgeKind.OneShortOfTarget, message, TrackId: track.Id));
+            }
+        }
 
         if (lastBackup is null)
             nudges.Add(new(NudgeKind.NoRecentBackup, "No Backup yet. Make one so you don't lose your data."));
@@ -77,10 +89,18 @@ public static class NudgeRules
     }
 
     private static IEnumerable<Nudge> Missed(
-        Plan plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
+        Plan plan, IReadOnlyList<Track> weeklyTracks, bool nameTrack,
+        IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
         IReadOnlyList<Workout> workouts, DateOnly today) =>
-        WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
-            .OrderBy(m => m.Date)
-            .Select(m => new Nudge(
-                NudgeKind.MissedSession, $"You missed {m.SessionName} on {m.Date:dddd}. Make it up this week?", m.SessionId));
+        weeklyTracks
+            .SelectMany(track => WeekScheduleRules.MissedInWeek(plan, track, schedules, breaks, workouts, today, today)
+                .Select(m => (Track: track, Missed: m)))
+            .OrderBy(x => x.Missed.Date)
+            .Select(x =>
+            {
+                var message = nameTrack
+                    ? $"You missed {x.Missed.SessionName} ({x.Track.Name}) on {x.Missed.Date:dddd}. Make it up this week?"
+                    : $"You missed {x.Missed.SessionName} on {x.Missed.Date:dddd}. Make it up this week?";
+                return new Nudge(NudgeKind.MissedSession, message, x.Missed.SessionId, TrackId: x.Track.Id);
+            });
 }

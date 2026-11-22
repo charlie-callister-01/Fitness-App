@@ -1,6 +1,7 @@
 using Core.Rules.PlanEditing;
 using Core.Model;
 using Core.Rules.Phases;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Storage;
 
@@ -28,13 +29,15 @@ public sealed record HomeOrbs(StreakOrb Streak, PhaseOrb? Phase, RaceOrb? Race)
         var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null) return null;
 
+        var main = TrackRules.Main(plan);
         var monday = WeekCalendar.MondayOf(today);
-        var streakResult = WeekRules.Streak(plan, snapshot.Workouts, snapshot.Breaks, today);
-        var thisWeekCount = WeekRules.CountedWorkouts(plan, snapshot.Workouts, monday);
+        var streakResult = WeekRules.Streak(plan, main, snapshot.Workouts, snapshot.Breaks, today);
+        var thisWeekCount = WeekRules.CountedWorkouts(plan, main, snapshot.Workouts, monday);
         var onBreak = BreakCalendar.IsBreakDay(snapshot.Breaks, today);
-        var streakOrb = new StreakOrb(streakResult.Current, thisWeekCount, plan.StreakMinWorkoutsPerWeek, onBreak);
+        var min = main.Rhythm is TrackRhythm.Weekly weekly ? weekly.StreakMinWorkoutsPerWeek : 0;
+        var streakOrb = new StreakOrb(streakResult.Current, thisWeekCount, min, onBreak);
 
-        var phasePosition = PhaseRules.Position(plan, today);
+        var phasePosition = PhaseRules.Position(plan, main, today);
         PhaseOrb? phaseOrb = phasePosition is { State: PhaseState.InPhase, WeekInPhase: { } weekInPhase, PhaseLengthWeeks: { } phaseLength }
             ? new PhaseOrb(weekInPhase, phaseLength)
             : null;

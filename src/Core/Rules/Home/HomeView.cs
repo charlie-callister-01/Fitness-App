@@ -19,4 +19,6 @@ public sealed record HomeView(
     WeightPanel Weight,
     bool ShowAlternatives,
     bool ShowLogPastWorkout,
-    bool ShowNudges);
+    bool ShowNudges,
+    IReadOnlyList<DailyTrackCard> DailyTracks,
+    IReadOnlyList<ExtraWeekLine> ExtraWeekLines);

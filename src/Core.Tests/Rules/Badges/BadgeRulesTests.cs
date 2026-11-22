@@ -154,6 +154,13 @@ public class BadgeRulesTests
     [InlineData("maxWeightKg")]
     [InlineData("")]
     [InlineData("no-such-exercise")]
+    [InlineData("streak:unknown")]
+    [InlineData("days:unknown")]
+    [InlineData("bestweek:unknown")]
+    [InlineData("streak:")]
+    [InlineData("days:")]
+    [InlineData("bestweek:")]
+    [InlineData("unknown:main")]
     public void An_unknown_metric_is_not_measurable_and_carries_its_name(string metric)
     {
         var p = P(metric, 100, Hist());
@@ -161,5 +168,119 @@ public class BadgeRulesTests
         Assert.Equal(metric, p.Metric);
         Assert.Equal(0, p.Percent);
         Assert.False(p.Reached);
+    }
+
+    [Fact]
+    public void Qualified_metrics_measure_a_weekly_Track_and_unqualified_metrics_measure_the_main_Track()
+    {
+        var (history, reordered) = MultiTrackHistories();
+
+        Assert.Equal(5, P("sessions", 10, history).Value);
+        Assert.Equal(2, P("streak", 4, history).Value);
+        Assert.Equal(3, P("bestweek", 4, history).Value);
+
+        Assert.Equal(3, P("streak:cardio", 3, history).Value);
+        Assert.True(P("streak:cardio", 3, history).Reached);
+        Assert.Equal(5, P("days:cardio", 10, history).Value);
+        Assert.Equal(2, P("bestweek:cardio", 4, history).Value);
+
+        // Reordering Tracks leaves qualified metrics measuring the named Track by ID.
+        Assert.Equal(3, P("streak:cardio", 3, reordered).Value);
+        Assert.Equal(5, P("days:cardio", 10, reordered).Value);
+        Assert.Equal(2, P("bestweek:cardio", 4, reordered).Value);
+        Assert.Equal(2, P("streak:main", 4, reordered).Value);
+        Assert.Equal(5, P("days:main", 10, reordered).Value);
+    }
+
+    [Fact]
+    public void Qualified_metrics_measure_a_daily_Track_and_bestweek_is_not_measurable()
+    {
+        var (history, _) = MultiTrackHistories();
+
+        Assert.Equal(4, P("streak:mobility", 4, history).Value);
+        Assert.True(P("streak:mobility", 4, history).Reached);
+        Assert.Equal(5, P("days:mobility", 10, history).Value);
+
+        var bestWeek = P("bestweek:mobility", 5, history);
+        Assert.False(bestWeek.IsMeasurable);
+        Assert.Equal("bestweek:mobility", bestWeek.Metric);
+        Assert.Equal(0, bestWeek.Value);
+        Assert.Equal(0, bestWeek.Percent);
+        Assert.False(bestWeek.Reached);
+    }
+
+    [Theory]
+    [InlineData("STREAK:Cardio", 3)]
+    [InlineData("DaYs:CARDIO", 5)]
+    [InlineData("BestWeek:CaRdIo", 2)]
+    [InlineData("STREAK:MOBILITY", 4)]
+    [InlineData("Days:Mobility", 5)]
+    public void Qualified_metrics_match_prefix_and_Track_ID_case_insensitively(string metric, double expected)
+    {
+        var (history, _) = MultiTrackHistories();
+        var progress = P(metric, 10, history);
+        Assert.True(progress.IsMeasurable);
+        Assert.Equal(expected, progress.Value);
+    }
+
+    private static (BadgeHistory Normal, BadgeHistory Reordered) MultiTrackHistories()
+    {
+        var main = new Track("main", "Main", new TrackRhythm.Weekly(3, 2, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), []);
+        var mobility = new Track("mobility", "Mobility", new TrackRhythm.Daily(75), []);
+        IReadOnlyList<Session> sessions =
+        [
+            PlanFixture.Session("s-main", DefaultDay.Monday, trackId: "main"),
+            PlanFixture.Session("s-cardio", DefaultDay.Tuesday, SessionType.Cardio, trackId: "cardio"),
+            PlanFixture.Session("s-mob", DefaultDay.Daily, SessionType.Mobility, trackId: "mobility"),
+        ];
+        var start = D(2026, 10, 26);
+        var plan = PlanFixture.Make(start: start, tracks: [main, cardio, mobility], sessions: sessions);
+        var reorderedPlan = plan with { Tracks = [cardio, main, mobility] };
+
+        Workout DoneSession(string id, DateOnly date, string sessionId) =>
+            new(id, date, sessionId, false, null, null, [],
+                [new WorkoutEntry("squat", EntryStatus.Done, null, null, null, [])], null);
+
+        Workout DailyWorkout(string id, DateOnly date, int doneRows, int totalRows)
+        {
+            var planned = Enumerable.Range(1, totalRows)
+                .Select(i => new SessionExercise($"ex{i}", 1, null, null, null))
+                .ToList();
+            var entries = Enumerable.Range(1, totalRows)
+                .Select(i => new WorkoutEntry($"ex{i}", i <= doneRows ? EntryStatus.Done : EntryStatus.Skipped,
+                    i <= doneRows ? null : "skip", null, null, []))
+                .ToList();
+            return new(id, date, "s-mob", false, null, null, planned, entries, null);
+        }
+
+        IReadOnlyList<Workout> workouts =
+        [
+            // Main track: 2 in week -2, 3 in week -1 => 5 sessions, streak 2, bestweek 3
+            DoneSession("m1", Mon.AddDays(-14), "s-main"),
+            DoneSession("m2", Mon.AddDays(-13), "s-main"),
+            DoneSession("m3", Mon.AddDays(-7), "s-main"),
+            DoneSession("m4", Mon.AddDays(-6), "s-main"),
+            DoneSession("m5", Mon.AddDays(-5), "s-main"),
+            // Cardio track: 1 in week -3, 1 in week -2, 2 in week -1, 1 in week 0 => 5 days, streak 4, bestweek 2
+            DoneSession("c1", Mon.AddDays(-21), "s-cardio"),
+            DoneSession("c2", Mon.AddDays(-14), "s-cardio"),
+            DoneSession("c3", Mon.AddDays(-7), "s-cardio"),
+            DoneSession("c4", Mon.AddDays(-6), "s-cardio"),
+            DoneSession("c5", Mon, "s-cardio"),
+            // Mobility track: 4 done days in a run (3/4 = 75% across a Break day), 1 failed day (2/4 = 50%), 1 earlier done day => days 5, streak 4
+            DailyWorkout("d0", D(2026, 11, 1), 3, 4),
+            DailyWorkout("d-fail", D(2026, 11, 10), 2, 4),
+            DailyWorkout("d1", D(2026, 11, 13), 3, 4),
+            DailyWorkout("d2", D(2026, 11, 14), 4, 4),
+            DailyWorkout("d3", D(2026, 11, 15), 3, 4),
+            // 2026-11-16 is a Break day (neutral)
+            DailyWorkout("d4", D(2026, 11, 17), 3, 4),
+        ];
+        IReadOnlyList<Break> breaks = [new("b1", D(2026, 11, 16), D(2026, 11, 16), "Rest")];
+
+        return (
+            new BadgeHistory(plan, [Squat, Pullup, Run, Waist], workouts, breaks, []),
+            new BadgeHistory(reorderedPlan, [Squat, Pullup, Run, Waist], workouts, breaks, []));
     }
 }

@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.Nudges;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Serialisation;
 using Core.Storage;
@@ -222,10 +223,10 @@ public class AppDataTests
         var storedLastBackup = (await Stored(store)).Metadata.LastBackupAt;
         Assert.Equal(lastBackup, storedLastBackup);
         Assert.Equal(
-            WeekRules.Streak(expectedPlan, everything.Workouts!, everything.Breaks!, today),
-            WeekRules.Streak(plan, snapshot.Workouts, snapshot.Breaks, today));
-        var missed = WeekScheduleRules.Missed(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, today);
-        Assert.Equal(WeekScheduleRules.Missed(expectedPlan, [], everything.Breaks!, everything.Workouts!, today), missed);
+            WeekRules.Streak(expectedPlan, TrackRules.Main(expectedPlan), everything.Workouts!, everything.Breaks!, today),
+            WeekRules.Streak(plan, TrackRules.Main(plan), snapshot.Workouts, snapshot.Breaks, today));
+        var missed = WeekScheduleRules.Missed(plan, TrackRules.Main(plan), snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, today);
+        Assert.Equal(WeekScheduleRules.Missed(expectedPlan, TrackRules.Main(expectedPlan), [], everything.Breaks!, everything.Workouts!, today), missed);
         Assert.NotEmpty(missed);
         var nudges = NudgeRules.Compute(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, storedLastBackup, today);
         Assert.Contains(nudges, n => n.Kind == NudgeKind.NoRecentBackup);

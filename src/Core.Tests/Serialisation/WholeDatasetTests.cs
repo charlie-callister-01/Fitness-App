@@ -29,10 +29,10 @@ public class WholeDatasetTests
         var tagged = rich.Exercises![0] with { Tags = new ExerciseTags(["quads", "Gesäß"], ["kettlebell"], ["squat"]), IsBenchmark = true };
         var exercises = rich.Exercises.Skip(1).Prepend(tagged).Concat(logKinds).ToList();
 
-        var sessionTypes = Enum.GetValues<SessionType>()
-            .Select(t => new Session($"s-{t}".ToLowerInvariant(), $"Session {t} ☕", DayOfWeek.Sunday, t, null, [new SessionExercise("ex-load", 1, 5, null, "Zürich")]))
-            .ToList();
         var plan = rich.Plans![0];
+        var sessionTypes = Enum.GetValues<SessionType>()
+            .Select(t => new Session($"s-{t}".ToLowerInvariant(), $"Session {t} ☕", plan.Tracks[0].Id, DefaultDay.Sunday, t, null, [new SessionExercise("ex-load", 1, 5, null, "Zürich")]))
+            .ToList();
         var plans = new List<Plan> { plan with { Sessions = plan.Sessions.Concat(sessionTypes).ToList() }, rich.Plans[1] };
 
         var everyBodyArea = new PainCheck("p-all", PainStatus.Reported, Enum.GetValues<BodyArea>(), PainSeverity.Sharp, "Ouch — ça fait mal", "ex-load");
@@ -129,7 +129,8 @@ public class WholeDatasetTests
             root["settings"]!["extra"] = 1;
             root["exercises"]![0]!["tags"]!["extra"] = 1;
             root["plans"]![0]!["extra"] = 1;
-            root["plans"]![0]!["phases"]![0]!["goals"]![0]!["extra"] = 1;
+            root["plans"]![0]!["tracks"]![0]!["extra"] = 1;
+            root["plans"]![0]!["tracks"]![0]!["phases"]![0]!["goals"]![0]!["extra"] = 1;
             root["plans"]![0]!["sessions"]![0]!["exercises"]![0]!["extra"] = 1;
             root["workouts"]![0]!["extra"] = 1;
             root["workouts"]![0]!["entries"]![0]!["sets"]![0]!["extra"] = 1;
@@ -146,7 +147,8 @@ public class WholeDatasetTests
         Assert.Equal(
             new[]
             {
-                "extra", "settings.extra", "exercises[0].tags.extra", "plans[0].extra", "plans[0].phases[0].goals[0].extra",
+                "extra", "settings.extra", "exercises[0].tags.extra", "plans[0].extra", "plans[0].tracks[0].extra",
+                "plans[0].tracks[0].phases[0].goals[0].extra",
                 "plans[0].sessions[0].exercises[0].extra", "workouts[0].extra", "workouts[0].entries[0].sets[0].extra",
                 "workouts[0].painCheck.extra", "weighIns[0].extra", "breaks[0].extra", "badges[0].extra", "guides[0].extra",
             }.Order(),

@@ -1,6 +1,7 @@
 # Editors (B4 + B5): Guides, Exercise library, Plans and Week view
 
 Covers design screens S-03, S-04, S-05, S-06, components C-20 (FormPatterns), flows F-04, F-08 and F-09. First wave is a Ui prefactor from the 22 Nov 2026 architecture review (see `docs/build-plan.md`, "Editors starts with a Ui prefactor").
+From stage A4.5 ([`a4-5-tracks.md`](a4-5-tracks.md)), the Plan, Week and Home behaviour is Track-aware (Core rules in A4.5 PR 1, screens in A4.5 PR 2).
 
 ## Problem Statement
 

@@ -17,7 +17,7 @@ public sealed class WorkoutLogKindsTests : BunitContext
     private async Task<AppData> SeedAsync(LogKind kind)
     {
         var plan = Plan([
-            new("s", "Kinds", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("x", 1, null, null, null)]),
+            Session("s", "Kinds", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("x", 1, null, null, null)]),
         ]);
         var workout = WorkoutStart.Create(plan, plan.Sessions[0], Today, new CountingIds(), new FixedClock(Now)) with { Id = Id };
         var data = await AppData.OpenAsync(new InMemoryDataStore());

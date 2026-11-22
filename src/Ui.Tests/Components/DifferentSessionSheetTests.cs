@@ -6,8 +6,8 @@ namespace Ui.Tests.Components;
 
 public sealed class DifferentSessionSheetTests : BunitContext
 {
-    private static readonly Session Lower = new("lower", "L: Lower", DayOfWeek.Monday, SessionType.Strength, null, []);
-    private static readonly Session Run = new("run", "Easy run", DayOfWeek.Friday, SessionType.Cardio, null, []);
+    private static readonly Session Lower = new("lower", "L: Lower", "t", DefaultDay.Monday, SessionType.Strength, null, []);
+    private static readonly Session Run = new("run", "Easy run", "t", DefaultDay.Friday, SessionType.Cardio, null, []);
 
     public DifferentSessionSheetTests()
     {

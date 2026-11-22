@@ -32,7 +32,11 @@ public partial class DataSpecConformanceTests
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(e => $"{e.Path}: {e.Message}")));
         Assert.Empty(result.Warnings);
         var plan = Assert.Single(result.Document!.Plans!);
-        Assert.Equal((2, 2), (plan.Phases.Count, plan.Sessions.Count));
+        Assert.Equal(2, plan.Tracks.Count);
+        Assert.Equal((2, 1, 3), (plan.Tracks[0].Phases.Count, plan.Tracks[1].Phases.Count, plan.Sessions.Count));
+        Assert.Equal(new Core.Model.TrackRhythm.Daily(75), plan.Tracks[1].Rhythm);
+        Assert.Equal(("mobility", Core.Model.DefaultDay.Daily, Core.Model.SessionType.Mobility),
+            (plan.Sessions[2].TrackId, plan.Sessions[2].DefaultDay, plan.Sessions[2].Type));
     }
 
     [Fact]
