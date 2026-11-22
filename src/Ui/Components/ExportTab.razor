@@ -1,0 +1,92 @@
+@using Core.Exchange
+@using Core.Rules.Insight
+
+<div class="fa-export">
+    <section class="fa-panel fa-export__section" aria-labelledby="export-heading">
+        <h2 id="export-heading" class="fa-title fa-title--m">Export</h2>
+
+        <div class="fa-export__field">
+            <span class="fa-label">Date range</span>
+            <DateRangePicker Value="_range" Today="Page.Today" PlanStart="PlanStart" OnChanged="OnRangeChanged" />
+        </div>
+
+        <div class="fa-export__field" role="group" aria-label="Include in Export">
+            <span class="fa-label">Include</span>
+            <label class="fa-export__checkbox">
+                <input type="checkbox" aria-label="Workouts" checked="@_includeWorkouts" @onchange="e => ToggleWorkouts(IsChecked(e))" />
+                <span>Workouts</span>
+            </label>
+            <label class="fa-export__checkbox">
+                <input type="checkbox" aria-label="Plan" checked="@_includePlan" @onchange="e => TogglePlan(IsChecked(e))" />
+                <span>Plan</span>
+            </label>
+            <label class="fa-export__checkbox">
+                <input type="checkbox" aria-label="Exercises" checked="@_includeExercises" @onchange="e => ToggleExercises(IsChecked(e))" />
+                <span>Exercises</span>
+            </label>
+            <label class="fa-export__checkbox">
+                <input type="checkbox" aria-label="Guides" checked="@_includeGuides" @onchange="e => ToggleGuides(IsChecked(e))" />
+                <span>Guides</span>
+            </label>
+        </div>
+
+        <div class="fa-export__field">
+            <label class="fa-export__checkbox">
+                <input type="checkbox" aria-label="Health data (Weigh-ins and Pain checks)" checked="@_includeHealthData" @onchange="e => ToggleHealthData(IsChecked(e))" />
+                <span>Health data (Weigh-ins and Pain checks)</span>
+            </label>
+            <p class="fa-muted fa-export__hint">Off by default so body weight and pain notes stay out of LLM exports unless you choose them.</p>
+        </div>
+
+        <div class="fa-export__field" role="group" aria-labelledby="export-format-label">
+            <span id="export-format-label" class="fa-label">Format</span>
+            <div class="fa-chips">
+                <Button Variant="ButtonVariant.Secondary" Pressed="_format == ExportFormat.Markdown" OnClick="() => SetFormat(ExportFormat.Markdown)">Markdown</Button>
+                <Button Variant="ButtonVariant.Secondary" Pressed="_format == ExportFormat.Json" OnClick="() => SetFormat(ExportFormat.Json)">JSON</Button>
+            </div>
+        </div>
+
+        <p class="fa-well fa-export__summary" data-testid="export-summary">@SummaryText</p>
+
+        <div class="fa-export__actions">
+            <Button Variant="ButtonVariant.Primary" Glyph="IconName.Copy" OnClick="CopyAsync">Copy</Button>
+            <Button Variant="ButtonVariant.Secondary" Glyph="IconName.Download" OnClick="DownloadAsync">Download file</Button>
+            @if (_canShare)
+            {
+                <Button Variant="ButtonVariant.Secondary" Glyph="IconName.Share" OnClick="ShareAsync">Share</Button>
+            }
+        </div>
+
+        @if (_exportStatus is { Length: > 0 })
+        {
+            <p class="fa-export__status" data-testid="export-status" role="status">@_exportStatus</p>
+        }
+        @if (_exportError is { Length: > 0 })
+        {
+            <p class="fa-export__error" data-testid="export-error" role="alert">@_exportError</p>
+        }
+    </section>
+
+    <section class="fa-panel fa-export__section" aria-labelledby="backup-heading">
+        <h2 id="backup-heading" class="fa-title fa-title--m">Export everything (Backup)</h2>
+        <p class="fa-muted fa-export__hint">Includes all Plans, Workouts, Weigh-ins, Pain checks, Guides, Exercises, Settings, and Breaks as JSON.</p>
+
+        <div class="fa-export__row">
+            <span class="fa-label">Last backed up</span>
+            <span data-testid="backup-last-date">@LastBackupText</span>
+        </div>
+
+        <div class="fa-export__actions">
+            <Button Variant="ButtonVariant.Primary" Glyph="IconName.Backup" Disabled="WriteDisabled" OnClick="BackUpAsync">Export everything (Backup)</Button>
+        </div>
+
+        @if (_backupStatus is { Length: > 0 })
+        {
+            <p class="fa-export__status" data-testid="backup-status" role="status">@_backupStatus</p>
+        }
+        @if (_backupError is { Length: > 0 })
+        {
+            <p class="fa-export__error" data-testid="backup-error" role="alert">@_backupError</p>
+        }
+    </section>
+</div>

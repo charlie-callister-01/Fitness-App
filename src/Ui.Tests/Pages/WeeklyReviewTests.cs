@@ -145,12 +145,12 @@ public sealed class WeeklyReviewTests : BunitContext
     }
 
     [Fact]
-    public async Task The_export_button_is_hidden_and_a_plain_note_is_shown_until_Export_exists()
+    public async Task Export_for_the_LLM_links_to_the_7_day_Markdown_preset()
     {
         var cut = await RenderAsync(EarlierPlan());
 
-        Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Contains("Export"));
-        Assert.Contains("Export for the LLM arrives", cut.Find(".fa-review__exportnote").TextContent);
+        var link = cut.Find("a[href='backup?preset=llm']");
+        Assert.Contains("Export for the LLM", link.TextContent);
     }
 
     [Fact]

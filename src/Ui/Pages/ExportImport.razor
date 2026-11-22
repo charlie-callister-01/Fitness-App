@@ -1,6 +1,28 @@
 @page "/backup"
-
-<div class="fa-root">
+@* Export, Import, Backup and Prompt pack (design S-10, F-06): three tabs on /backup with query-string deep links. *@
+<div class="fa-root fa-backup">
     <h1 class="fa-title fa-title--l">Export and Import</h1>
-    <EmptyState Kind="EmptyStateKind.FirstRun" Title="Export, Import and Backup will live here" Message="They arrive in a later stage." />
+
+    <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+
+    <div class="fa-chips fa-backup__tabs" role="group" aria-label="Export and Import sections">
+        @foreach (var tab in Tabs)
+        {
+            var value = tab;
+            <Button Variant="ButtonVariant.Secondary" Pressed="_tab == value" OnClick="() => _tab = value">@value</Button>
+        }
+    </div>
+
+    @if (_tab == "Export")
+    {
+        <ExportTab Preset="@_preset" />
+    }
+    else if (_tab == "Import")
+    {
+        <EmptyState Kind="EmptyStateKind.FirstRun" Title="Import arrives next" Message="Paste or pick a file to preview and apply changes." />
+    }
+    else
+    {
+        <EmptyState Kind="EmptyStateKind.FirstRun" Title="Prompt pack arrives next" Message="Ready-made prompts for your LLM." />
+    }
 </div>

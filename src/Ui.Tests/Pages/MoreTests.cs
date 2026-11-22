@@ -47,21 +47,14 @@ public sealed class MoreTests : BunitContext
         Assert.Equal("/weight", ((RouteAttribute)Attribute.GetCustomAttribute(typeof(Weight), typeof(RouteAttribute))!).Template);
     }
 
-    [Theory]
-    [InlineData("Export and Import", "backup", typeof(ExportImport))]
-    public async Task More_LinksToEachSecondaryScreen_WhichIsARoutedPlaceholder(string label, string href, Type page)
+    // Export and Import is a real page now (see ExportImportTests), so it is no longer a placeholder.
+    [Fact]
+    public async Task More_LinksToExportImport_WhichHasItsOwnRoute()
     {
         var cut = await RenderMoreAsync();
 
-        var link = cut.FindAll("nav a").Single(a => a.TextContent.Trim() == label);
-        Assert.Equal(href, link.GetAttribute("href"));
-
-        var route = ((RouteAttribute)Attribute.GetCustomAttribute(page, typeof(RouteAttribute))!).Template;
-        Assert.Equal("/" + href, route);
-
-        var placeholder = Render(b => { b.OpenComponent(0, page); b.CloseComponent(); });
-        Assert.NotEmpty(placeholder.Find("h1").TextContent);
-        Assert.NotNull(placeholder.Find(".empty"));
+        Assert.Equal("backup", cut.FindAll("nav a").Single(a => a.TextContent.Trim() == "Export and Import").GetAttribute("href"));
+        Assert.Equal("/backup", ((RouteAttribute)Attribute.GetCustomAttribute(typeof(ExportImport), typeof(RouteAttribute))!).Template);
     }
 
     // Settings is a real page now (see SettingsTests), so it is no longer in the placeholder list above.
