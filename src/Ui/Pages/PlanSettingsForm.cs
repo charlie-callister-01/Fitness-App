@@ -211,23 +211,14 @@ public sealed record PlanSettingsForm
             return Invalid("The weight increment must be a number, more than 0.");
         }
 
-        if (plan.Tracks.FirstOrDefault(t => t.Id == selectedTrackId) is { } selectedTrack)
-        {
-            var selectedCheck = ValidateAndApplyTrack(plan, selectedTrack);
-            if (!selectedCheck.TryGet(out _, out var selectedReason))
-            {
-                problemTrack = selectedTrack;
-                return Invalid(selectedReason);
-            }
-        }
-
         var planSettings = new PlanSettings(start, Goal, goalDate, increment);
         if (!PlanSettingsRules.WithSettings(plan, planSettings).TryGet(out var current, out var planReason))
         {
             return Invalid(planReason);
         }
 
-        foreach (var track in plan.Tracks)
+        var orderedTracks = plan.Tracks.OrderByDescending(t => t.Id == selectedTrackId);
+        foreach (var track in orderedTracks)
         {
             if (!ValidateAndApplyTrack(current, track).TryGet(out var updated, out var trackReason))
             {

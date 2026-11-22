@@ -88,11 +88,6 @@ public sealed class PlanEditState
     public void SetSelectedTrackName(string name)
     {
         SelectedTrackForm.Name = name;
-        if (TrackEditRules.RenameTrack(Draft, SelectedTrack.Id, name).TryGet(out var renamed, out _))
-        {
-            Draft = renamed;
-        }
-
         foreach (var track in Draft.Tracks)
         {
             var trackName = Form.ForTrack(track).Name;
@@ -212,44 +207,18 @@ public sealed class PlanEditState
         var selectedTrack = SelectedTrack;
         var settings = Form.ApplyTo(Draft, selectedTrack.Id, out var settingsTrack);
 
-        var selectedPhasesProblem = PlanPhaseRules.ValidatePhases(Draft, selectedTrack.Id, selectedTrack.Phases);
-        var anyPhasesProblem = selectedPhasesProblem;
-        var phasesProblemTrack = selectedPhasesProblem is not null ? selectedTrack : null;
-        if (anyPhasesProblem is null)
-        {
-            foreach (var track in Draft.Tracks)
-            {
-                if (PlanPhaseRules.ValidatePhases(Draft, track.Id, track.Phases) is { } reason)
-                {
-                    anyPhasesProblem = reason;
-                    phasesProblemTrack = track;
-                    break;
-                }
-            }
-        }
+        var (anyPhasesProblem, phasesProblemTrack) = FirstTrackProblem(
+            selectedTrack,
+            t => PlanPhaseRules.ValidatePhases(Draft, t.Id, t.Phases));
+        var selectedPhasesProblem = phasesProblemTrack?.Id == selectedTrack.Id ? anyPhasesProblem : null;
 
-        string? selectedSessionsProblem = null;
-        string? anySessionsProblem = null;
-        Track? sessionsProblemTrack = null;
-        foreach (var session in Draft.Sessions)
-        {
-            if (session.Exercises.Select(r => RowProblem(session.Id, r)).FirstOrDefault(p => p is not null) is not { } reason)
-            {
-                continue;
-            }
-
-            var message = $"{session.Name}: {reason}";
-            if (session.TrackId == selectedTrack.Id && selectedSessionsProblem is null)
-            {
-                selectedSessionsProblem = message;
-            }
-
-            if (anySessionsProblem is null || session.TrackId == selectedTrack.Id && sessionsProblemTrack?.Id != selectedTrack.Id)
-            {
-                anySessionsProblem = message;
-                sessionsProblemTrack = TrackRules.TrackOf(Draft, session) ?? selectedTrack;
-            }
-        }
+        var (anySessionsProblem, sessionsProblemTrack) = FirstTrackProblem(
+            selectedTrack,
+            t => Draft.Sessions
+                .Where(s => s.TrackId == t.Id)
+                .Select(s => s.Exercises.Select(r => RowProblem(s.Id, r)).FirstOrDefault(p => p is not null) is { } reason ? $"{s.Name}: {reason}" : null)
+                .FirstOrDefault(p => p is not null));
+        var selectedSessionsProblem = sessionsProblemTrack?.Id == selectedTrack.Id ? anySessionsProblem : null;
 
         var phasesProblem = selectedPhasesProblem ?? anyPhasesProblem;
         var sessionsProblem = selectedSessionsProblem ?? anySessionsProblem;
@@ -294,6 +263,19 @@ public sealed class PlanEditState
         }
 
         return new PlanEditSnapshot(null, phasesProblem, sessionsProblem, composed, preview, problemTab);
+    }
+
+    private (string? Problem, Track? Track) FirstTrackProblem(Track selectedTrack, Func<Track, string?> check)
+    {
+        foreach (var track in Draft.Tracks.OrderByDescending(t => t.Id == selectedTrack.Id))
+        {
+            if (check(track) is { } problem)
+            {
+                return (problem, track);
+            }
+        }
+
+        return (null, null);
     }
 
     private string FormatProblemTab(string tab, Track? track) =>

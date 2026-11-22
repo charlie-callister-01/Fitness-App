@@ -136,6 +136,7 @@ public class GuideHistoryViewTests
 
         var place = GuideHistoryView.Build(Squat, [], plan, Mon.AddDays(3)).Place!;
 
+        Assert.Equal("Mobility Block", place.Phase!.Focus);
         Assert.Equal(4, Assert.Single(place.Placements).Row.Sets);
     }
 

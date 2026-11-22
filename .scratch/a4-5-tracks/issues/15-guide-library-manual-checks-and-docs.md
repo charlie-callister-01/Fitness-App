@@ -18,7 +18,7 @@
 - [x] bUnit tests: Guide header and Library headings name Tracks with two Tracks and are unchanged with one.
 - [x] The manual-checks section is written and unticked.
 - [x] `dotnet build` 0 warnings; all tests green; counts recorded.
-- [ ] Docs, handoff and PR body written; both reviews and their fixes done.
+- [x] Docs, handoff and PR body written; both reviews and their fixes done.
 
 ## Comments
 - **Guide & Library Track context (`GuideHistoryView.cs`, `GuidePage.razor.cs`):**

@@ -44,14 +44,23 @@ public static class GuideHistoryView
             return null;
         }
 
-        var phase = PhaseRules.CurrentPhase(plan, TrackRules.Main(plan), today);
         var multiTrack = plan.Tracks.Count > 1;
         var placements = plan.Sessions
             .Select(s => (Session: s, Row: PhaseRules.ExerciseRows(plan, s.Id, today).FirstOrDefault(r => r.ExerciseId == exercise.Id)))
             .Where(x => x.Row is not null)
             .Select(x => new GuidePlacement(x.Session, x.Row!, FormatSessionLabel(plan, x.Session, multiTrack)))
             .ToList();
-        return placements.Count == 0 ? null : new GuidePlace(placements, phase);
+        if (placements.Count == 0)
+        {
+            return null;
+        }
+
+        var phase = placements
+            .Select(p => TrackRules.TrackOf(plan, p.Session))
+            .OfType<Track>()
+            .Select(t => PhaseRules.CurrentPhase(plan, t, today))
+            .FirstOrDefault(p => p is not null);
+        return new GuidePlace(placements, phase);
     }
 
     private static string FormatSessionLabel(Plan plan, Session session, bool multiTrack)
