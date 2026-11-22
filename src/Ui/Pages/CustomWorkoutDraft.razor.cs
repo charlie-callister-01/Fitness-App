@@ -33,16 +33,12 @@ public sealed partial class CustomWorkoutDraft : IDisposable
     [Parameter]
     public string? SessionId { get; set; }
 
-
     private Session? MakeUpSession =>
         SessionId is null ? null : Page.ActivePlan?.Sessions.FirstOrDefault(s => s.Id == SessionId);
 
     private bool UnknownSession => SessionId is not null && MakeUpSession is null;
 
     private string Title => MakeUpSession is { } session ? $"Make up {session.Name}" : "Custom workout";
-
-
-
 
     private PickerRequest PickerRequest
     {

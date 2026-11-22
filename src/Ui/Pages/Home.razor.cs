@@ -38,11 +38,7 @@ public sealed partial class Home : IDisposable
 
     private NudgeDismissals Dismissals => new(Preferences);
 
-
-
-
     private UnitConverter Converter => new(Data.Snapshot.Settings);
-
 
     private string DateText => _view.Header.PhaseLabel.Length == 0
         ? _view.Header.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)
@@ -51,7 +47,6 @@ public sealed partial class Home : IDisposable
     private IReadOnlyList<Session> UndoneSessions => [.. _view.UndoneSessions.Select(s => s.Session)];
 
     private IReadOnlyList<Session> PlanSessions => Page.ActivePlan?.Sessions ?? [];
-
 
     private string LatestWeightText =>
         _view.Weight.Latest is { } latest ? Converter.DisplayWeight(latest.WeightKg).ToString("0.0", CultureInfo.InvariantCulture) : "";

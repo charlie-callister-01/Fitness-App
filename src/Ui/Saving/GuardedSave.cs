@@ -60,8 +60,11 @@ public sealed class GuardedSave(AppData data, SaveFailureNotice notice)
     /// <summary>A save is running.</summary>
     public bool IsBusy { get; private set; }
 
+    /// <summary>This window can write (it is not read-only or failed).</summary>
+    public bool CanWrite => data.Health.CanWrite;
+
     /// <summary>Whether a tap should save: nothing is saving and this window can write.</summary>
-    public bool CanAct => !IsBusy && data.Health.CanWrite;
+    public bool CanAct => !IsBusy && CanWrite;
 
     /// <summary>Raised when a save starts (after <see cref="IsBusy"/> is set, before the work runs), so a screen can show it as saving.</summary>
     public event Action? Started;
@@ -84,7 +87,7 @@ public sealed class GuardedSave(AppData data, SaveFailureNotice notice)
             return new SaveResult(SaveStatus.Busy);
         }
 
-        if (requireWrite && !data.Health.CanWrite)
+        if (requireWrite && !CanWrite)
         {
             return new SaveResult(SaveStatus.ReadOnly);
         }

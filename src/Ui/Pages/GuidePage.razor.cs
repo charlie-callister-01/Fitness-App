@@ -28,6 +28,7 @@ public sealed partial class GuidePage : IAsyncDisposable
     private string? _pendingTarget;
     private bool _notesOpen;
     private string _notes = "";
+    private string _notesBaseline = "";
     private bool _videoOffline;
     private string? _landedFor;
 
@@ -48,7 +49,7 @@ public sealed partial class GuidePage : IAsyncDisposable
 
     private Guide? StoredGuide => Data.Snapshot.Guides.FirstOrDefault(g => g.ExerciseId == ExerciseId);
 
-    private bool HasUnsavedEdits => _editing && _draft != _baseline;
+    private bool HasUnsavedEdits => (_editing && _draft != _baseline) || (_notesOpen && _notes != _notesBaseline);
 
     private UnitConverter Converter => new(Data.Snapshot.Settings);
 
@@ -164,6 +165,7 @@ public sealed partial class GuidePage : IAsyncDisposable
     {
         _confirmDiscard = false;
         _editing = false;
+        _notesOpen = false;
         _message = null;
         if (_pendingTarget is { } target)
         {
@@ -174,30 +176,38 @@ public sealed partial class GuidePage : IAsyncDisposable
 
     private async Task SaveSectionsAsync()
     {
-        switch (GuideEdits.WithSections(StoredGuide, ExerciseId, _draft.ToSections()))
+        var edit = GuideEdits.WithSections(StoredGuide, ExerciseId, _draft.ToSections());
+        if (edit is GuideEditResult.Invalid invalid)
         {
-            case GuideEditResult.Invalid invalid:
-                _message = invalid.Message;
-                return;
-            case GuideEditResult.Valid valid:
-                _message = null;
-                var result = await _save.CommitAsync(Change.Put(valid.Guide));
-                if (result.IsSaved)
-                {
-                    _editing = false;
-                }
+            _message = invalid.Message;
+            return;
+        }
 
-                break;
+        _message = null;
+        if (edit is GuideEditResult.Valid valid && (await _save.CommitAsync(Change.Put(valid.Guide))).IsSaved)
+        {
+            _editing = false;
         }
     }
 
     private void StartNotes()
     {
-        _notes = StoredGuide?.PersonalNotes ?? "";
+        _notesBaseline = StoredGuide?.PersonalNotes ?? "";
+        _notes = _notesBaseline;
         _notesOpen = true;
     }
 
-    private void CloseNotes() => _notesOpen = false;
+    private void CloseNotes()
+    {
+        if (_notes != _notesBaseline)
+        {
+            _pendingTarget = null;
+            _confirmDiscard = true;
+            return;
+        }
+
+        _notesOpen = false;
+    }
 
     private async Task SaveNotesAsync()
     {

@@ -2,6 +2,7 @@ using AngleSharp.Dom;
 using Bunit;
 using Core.Model;
 using Core.Storage;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Ui.Pages;
 using Ui.Saving;
@@ -131,6 +132,42 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
         Assert.Empty(cut.FindAll("[role='dialog']"));
         Assert.Equal("42", Weight(cut, 2).GetAttribute("value"));
         Assert.Equal("Goblet squat", cut.Find(".fa-exercise__name").TextContent);
+    }
+
+    // ---- Round trip to the full Guide
+
+    private void LeaveLog(string target)
+    {
+        Services.GetRequiredService<NavigationManager>().NavigateTo(target);
+        DisposeComponentsAsync().GetAwaiter().GetResult();
+    }
+
+    [Fact]
+    public async Task Leaving_to_Home_and_reopening_starts_at_the_first_incomplete_Exercise()
+    {
+        var cut = await OpenAsync(SquatGuide());
+        cut.FindAll(".pager__chip")[1].Click();
+        var second = cut.Find(".fa-exercise__name").TextContent;
+
+        LeaveLog("");
+        var back = Render<WorkoutLog>(p => p.Add(l => l.WorkoutId, "w-now"));
+
+        Assert.NotEqual(second, back.Find(".fa-exercise__name").TextContent);
+        Assert.Equal("Goblet squat", back.Find(".fa-exercise__name").TextContent);
+    }
+
+    [Fact]
+    public async Task Going_from_the_Guide_to_Home_drops_what_was_kept()
+    {
+        var cut = await OpenAsync(SquatGuide());
+        cut.FindAll(".pager__chip")[1].Click();
+        var second = cut.Find(".fa-exercise__name").TextContent;
+
+        LeaveLog($"exercises/{Squat}/guide");
+        Services.GetRequiredService<NavigationManager>().NavigateTo("");
+        var back = Render<WorkoutLog>(p => p.Add(l => l.WorkoutId, "w-now"));
+
+        Assert.NotEqual(second, back.Find(".fa-exercise__name").TextContent);
     }
 
     // ---- Rest timer

@@ -65,10 +65,6 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private Workout? FinishedWorkout =>
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: not null } finished ? finished : null;
 
-
-
-    /// <summary>Plain wording for why this window cannot save, or null when it can.</summary>
-
     protected override void OnInitialized()
     {
         Page = new PageContext(Data, Clock);
@@ -92,7 +88,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _session.Dispose();
         if (_landedFor is { Length: > 0 } landed)
         {
-            KeptStates.Keep(landed, State);
+            KeptStates.KeepIfOnGuide(landed, State);
         }
     }
 
