@@ -1,0 +1,31 @@
+@* C-19 ProgressBar: label left, value right and always shown, a 12px bar filled in the state colour. The value text is also the
+   accessible value text, so a screen reader hears it and colour is never the only signal. *@
+<div class="fa-pbar fa-pbar--@StateCss">
+    <div class="fa-pbar__head">
+        <span class="fa-label fa-pbar__label">@Label</span>
+        <span class="fa-pbar__value">@Value</span>
+    </div>
+    <div class="fa-pbar__track" role="progressbar" aria-label="@Label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Clamped" aria-valuetext="@Value">
+        <div class="fa-pbar__fill" style="width: @(Clamped)%"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    /// <summary>The value text shown on the right, such as "22 of 24" or "75%".</summary>
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = "";
+
+    /// <summary>How full the bar is, 0 to 100. Values outside are drawn as 0 or 100.</summary>
+    [Parameter]
+    public int Percent { get; set; }
+
+    [Parameter]
+    public ProgressBarState State { get; set; } = ProgressBarState.Active;
+
+    private int Clamped => Math.Clamp(Percent, 0, 100);
+
+    private string StateCss => State.ToString().ToLowerInvariant();
+}

@@ -1,0 +1,86 @@
+@using System.Globalization
+@using Core.Rules.Insight
+@using Core.Storage
+@using Core.Rules.Units
+@using Core.Time
+@implements IDisposable
+@* Benchmarks tab of Progress (design S-07): each benchmark Exercise with its latest test against the previous, a ▲ when better, a ProgressBar
+   toward the target where a Badge sets one, and the next test date. What is drawn comes from the Core BenchmarkList. *@
+<div class="fa-bench">
+    @if (_view.IsEmpty)
+    {
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No benchmarks yet" Message="Mark an Exercise as a Benchmark in the Plan editor and its test results will show here." />
+    }
+    else
+    {
+        <p class="fa-muted fa-bench__next">@(_view.NextDue is { } due ? $"Next test: {due.ToString("ddd d MMM", CultureInfo.InvariantCulture)}" : "No benchmark test is scheduled.")</p>
+
+        <ul class="fa-bench__list">
+            @foreach (var row in _view.Rows)
+            {
+                <li class="fa-bench__row fa-well">
+                    <h3 class="fa-title fa-title--m fa-bench__name">@row.Name</h3>
+                    @if (row.NeverTested)
+                    {
+                        <p class="fa-muted fa-bench__never">Never tested</p>
+                    }
+                    else
+                    {
+                        <p class="fa-bench__latest">
+                            <span class="fa-bench__result">@row.LatestText</span>
+                            <span class="fa-muted">@row.LatestDate!.Value.ToString("d MMM yyyy", CultureInfo.InvariantCulture)</span>
+                            @switch (row.Trend)
+                            {
+                                case BenchmarkTrend.Better:
+                                    <span class="fa-chip fa-chip--pr fa-bench__trend fa-bench__trend--better"><span class="fa-chip__glyph" aria-hidden="true">▲</span><span class="fa-chip__word">Better</span></span>
+                                    break;
+                                case BenchmarkTrend.Worse:
+                                    <span class="fa-chip fa-chip--missed fa-bench__trend fa-bench__trend--worse"><span class="fa-chip__glyph" aria-hidden="true">▼</span><span class="fa-chip__word">Worse</span></span>
+                                    break;
+                                case BenchmarkTrend.Same:
+                                    <span class="fa-chip fa-chip--skipped fa-bench__trend fa-bench__trend--same"><span class="fa-chip__glyph" aria-hidden="true">=</span><span class="fa-chip__word">Same</span></span>
+                                    break;
+                            }
+                        </p>
+                        <p class="fa-muted fa-bench__previous">@(row.PreviousText is { } previous ? $"Previous: {previous}" : "First test, nothing to compare yet")</p>
+                    }
+                    @if (row.TargetPercent is { } percent)
+                    {
+                        <ProgressBar Label="Target" Value="@($"{percent}%")" Percent="percent" State="row.TargetReached ? ProgressBarState.Done : ProgressBarState.Active" />
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Inject] private AppData Data { get; set; } = default!;
+
+    [Inject] private IClock Clock { get; set; } = default!;
+
+    private BenchmarkListView _view = new([], null);
+
+    protected override void OnInitialized()
+    {
+        Data.Changed += OnDataChanged;
+        Rebuild();
+    }
+
+    public void Dispose() => Data.Changed -= OnDataChanged;
+
+    private void OnDataChanged() => _ = InvokeAsync(() =>
+    {
+        Rebuild();
+        StateHasChanged();
+    });
+
+    private void Rebuild()
+    {
+        var snapshot = Data.Snapshot;
+        var context = new Ui.Pages.PageContext(Data, Clock);
+        _view = BenchmarkList.Build(
+            context.ActivePlan, snapshot.Exercises, snapshot.Badges, snapshot.Workouts, snapshot.Breaks, snapshot.WeighIns,
+            snapshot.WeekSchedules, context.Today, new UnitConverter(snapshot.Settings));
+    }
+}
