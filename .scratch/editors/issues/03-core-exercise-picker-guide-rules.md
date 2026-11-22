@@ -12,8 +12,14 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each rule has Core tests covering valid, invalid and boundary inputs (duplicate names, empty names, bad links, no Guide yet, fewer than three results).
-- [ ] The picker choice rules match the current behaviour of the Swap, Add and Custom workout pickers (existing results are unchanged) and are tested without rendering.
-- [ ] No Ui file is edited; `dotnet build` has 0 warnings and all tests pass.
+- [x] Each rule has Core tests covering valid, invalid and boundary inputs (duplicate names, empty names, bad links, no Guide yet, fewer than three results).
+- [x] The picker choice rules match the current behaviour of the Swap, Add and Custom workout pickers (existing results are unchanged) and are tested without rendering.
+- [x] No Ui file is edited; `dotnet build` has 0 warnings and all tests pass.
+
+**Notes from implementation**
+- Log kinds offered: 11 (all but the two body measurements). The design's "nine" cannot be matched from the design text, so the spec default stands.
+- The New Exercise cue has no field on `Exercise`, so a typed cue comes back as a Guide with that Cue (`NewExerciseResult.Valid.Guide`); the page saves it with the Exercise.
+- Picker rules are `ExercisePickerRules.Choose(PickerRequest, query)`; no Ui file was edited, so the pickers keep their own code until ticket 05 moves them onto it.
+- `ExercisePerformance.Recent` was added (Snapshot's Last now uses it).

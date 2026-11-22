@@ -88,20 +88,25 @@ public static class ExercisePerformance
     public static ExerciseSnapshot Snapshot(Exercise exercise, IEnumerable<Workout> history, Plan? plan, UnitConverter? units)
     {
         var all = history.ToList();
-        var lastVisit = Visits(exercise, all).LastOrDefault();
-        var last = lastVisit is null
-            ? null
-            : new LastResult(
-                lastVisit.Workout.Id,
-                lastVisit.Workout.Date,
-                lastVisit.Sets,
-                lastVisit.Rpe,
-                PickBest(CandidatesOf(exercise.LogKind, lastVisit))?.Set);
+        var last = Recent(exercise, all, 1).FirstOrDefault();
         var best = Best(exercise, all);
         var row = plan?.Sessions.SelectMany(s => s.Exercises).FirstOrDefault(r => r.ExerciseId == exercise.Id);
         var target = plan is null ? null : TargetRules.For(exercise.LogKind, last, best, plan, row, units ?? new UnitConverter(WeightUnit.Kg, DistanceUnit.Km, plan.WeightIncrementKg));
         return new ExerciseSnapshot(exercise.Id, last, best, target);
     }
+
+    /// <summary>
+    /// The last <paramref name="count"/> times the Exercise was actually done (done or swapped in, never skipped), newest first,
+    /// each with its Sets, RPE and best Set.
+    /// </summary>
+    public static IReadOnlyList<LastResult> Recent(Exercise exercise, IEnumerable<Workout> history, int count) =>
+    [
+        .. Visits(exercise, history)
+            .Reverse()
+            .Take(count)
+            .Select(v => new LastResult(
+                v.Workout.Id, v.Workout.Date, v.Sets, v.Rpe, PickBest(CandidatesOf(exercise.LogKind, v))?.Set)),
+    ];
 
     private static ProgressPoint? DayPoint(LogKind kind, DateOnly date, IReadOnlyList<WorkoutSet> sets)
     {
