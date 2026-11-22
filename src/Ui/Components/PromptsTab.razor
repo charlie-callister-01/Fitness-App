@@ -1,0 +1,73 @@
+<div class="fa-prompts">
+    <section class="fa-panel fa-prompts__card" aria-labelledby="prompt-analyse-heading">
+        <h2 id="prompt-analyse-heading" class="fa-title fa-title--m">Analyse my training</h2>
+        <p class="fa-muted fa-prompts__desc">Copies your last 12 weeks of training, weight, and pain data with your Exercise library so an LLM can review your progress.</p>
+        <div class="fa-prompts__actions">
+            <Button Variant="ButtonVariant.Primary" Glyph="IconName.Copy" OnClick="CopyAnalyseAsync">Copy prompt</Button>
+        </div>
+        @if (_statusCard == PromptCard.Analyse)
+        {
+            <p class="fa-prompts__status" role="status">@_statusMessage</p>
+        }
+        @if (_errorCard == PromptCard.Analyse)
+        {
+            <p class="fa-prompts__error" role="alert">@_errorMessage</p>
+        }
+    </section>
+
+    <section class="fa-panel fa-prompts__card" aria-labelledby="prompt-plan-heading">
+        <h2 id="prompt-plan-heading" class="fa-title fa-title--m">Write me a Plan</h2>
+        <p class="fa-muted fa-prompts__desc">Copies the Plan format, a worked example, and your Exercise library so an LLM can write a Plan you can import.</p>
+        <div class="fa-prompts__actions">
+            <Button Variant="ButtonVariant.Primary" Glyph="IconName.Copy" OnClick="CopyPlanAsync">Copy prompt</Button>
+        </div>
+        @if (_statusCard == PromptCard.Plan)
+        {
+            <p class="fa-prompts__status" role="status">@_statusMessage</p>
+        }
+        @if (_errorCard == PromptCard.Plan)
+        {
+            <p class="fa-prompts__error" role="alert">@_errorMessage</p>
+        }
+    </section>
+
+    <section class="fa-panel fa-prompts__card" aria-labelledby="prompt-guides-heading">
+        <h2 id="prompt-guides-heading" class="fa-title fa-title--m">Write Guides</h2>
+        <p class="fa-muted fa-prompts__desc">Copies the Guide format and your chosen Exercises so an LLM can write Guides to import into your library.</p>
+
+        @if (_exercises.Count > 0)
+        {
+            <div class="fa-prompts__exercises" role="group" aria-label="Exercises to include">
+                <span class="fa-label">Exercises</span>
+                @foreach (var exercise in _exercises)
+                {
+                    var id = exercise.Id;
+                    var hasGuide = HasGuide(id);
+                    <label class="fa-prompts__checkbox">
+                        <input type="checkbox"
+                               aria-label="@exercise.Name"
+                               checked="@_selectedGuideExercises.Contains(id)"
+                               @onchange="e => ToggleGuideExercise(id, IsChecked(e))" />
+                        <span>@exercise.Name</span>
+                        @if (hasGuide)
+                        {
+                            <span class="fa-muted">(has Guide)</span>
+                        }
+                    </label>
+                }
+            </div>
+        }
+
+        <div class="fa-prompts__actions">
+            <Button Variant="ButtonVariant.Primary" Glyph="IconName.Copy" OnClick="CopyGuidesAsync">Copy prompt</Button>
+        </div>
+        @if (_statusCard == PromptCard.Guides)
+        {
+            <p class="fa-prompts__status" role="status">@_statusMessage</p>
+        }
+        @if (_errorCard == PromptCard.Guides)
+        {
+            <p class="fa-prompts__error" role="alert">@_errorMessage</p>
+        }
+    </section>
+</div>
