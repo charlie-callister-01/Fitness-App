@@ -115,28 +115,37 @@ public static class CalendarViewBuilder
             var session = plan.Sessions.FirstOrDefault(s => s.Id == shown.SessionId);
             var state = partial ? CalendarDayState.Partial : CalendarDayState.Done;
             return new CalendarDay(date, state, session?.Type, prCount, isToday,
-                Label(date, session?.Name ?? "Custom workout", partial ? "partial" : "done", prCount, isToday), shown.Id);
+                Label(date, session?.Name ?? "Custom workout", state, prCount, isToday), shown.Id);
         }
 
         if (BreakCalendar.IsBreakDay(breaks, date))
-            return new CalendarDay(date, CalendarDayState.BreakDay, null, 0, isToday, Label(date, null, "Break", 0, isToday), null);
+            return new CalendarDay(date, CalendarDayState.BreakDay, null, 0, isToday, Label(date, null, CalendarDayState.BreakDay, 0, isToday), null);
 
         if (missed.TryGetValue(date, out var miss))
         {
             var type = plan.Sessions.FirstOrDefault(s => s.Id == miss.SessionId)?.Type;
-            return new CalendarDay(date, CalendarDayState.Missed, type, 0, isToday, Label(date, miss.SessionName, "missed", 0, isToday), null);
+            return new CalendarDay(date, CalendarDayState.Missed, type, 0, isToday, Label(date, miss.SessionName, CalendarDayState.Missed, 0, isToday), null);
         }
 
         return date >= today
-            ? new CalendarDay(date, CalendarDayState.Future, null, 0, isToday, Label(date, null, "upcoming", 0, isToday), null)
-            : new CalendarDay(date, CalendarDayState.Empty, null, 0, isToday, Label(date, null, "nothing planned", 0, isToday), null);
+            ? new CalendarDay(date, CalendarDayState.Future, null, 0, isToday, Label(date, null, CalendarDayState.Future, 0, isToday), null)
+            : new CalendarDay(date, CalendarDayState.Empty, null, 0, isToday, Label(date, null, CalendarDayState.Empty, 0, isToday), null);
     }
 
     /// <summary>"Wed 18 Nov: Session C, done, 1 PR".</summary>
-    private static string Label(DateOnly date, string? name, string state, int prs, bool isToday)
+    private static string Label(DateOnly date, string? name, CalendarDayState state, int prs, bool isToday)
     {
+        var word = state switch
+        {
+            CalendarDayState.Done => "done",
+            CalendarDayState.Partial => "partial",
+            CalendarDayState.Missed => "missed",
+            CalendarDayState.BreakDay => "Break",
+            CalendarDayState.Future => "upcoming",
+            _ => "nothing planned",
+        };
         var text = InsightFormat.WeekdayDay(date) + ": ";
-        text += name is null ? state : $"{name}, {state}";
+        text += name is null ? word : $"{name}, {word}";
         if (prs > 0) text += prs == 1 ? ", 1 PR" : $", {prs} PRs";
         return isToday ? text + ", today" : text;
     }

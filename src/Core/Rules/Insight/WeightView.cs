@@ -48,10 +48,8 @@ public static class WeightViewBuilder
                 i == lowestIndex))
             .ToList();
 
-        var weeks = ordered
-            .GroupBy(w => WeekCalendar.MondayOf(w.Date))
-            .OrderByDescending(g => g.Key)
-            .Select(g => new WeightWeekRow(g.Key, units.DisplayWeight(g.Average(w => w.WeightKg)), g.Count()))
+        var weeks = WeightPanelRules.ByWeek(weighIns)
+            .Select(w => new WeightWeekRow(w.WeekStart, units.DisplayWeight(w.AverageKg), w.Count))
             .ToList();
 
         double? change = ordered.Count >= 2 ? units.DisplayWeight(ordered[^1].WeightKg) - units.DisplayWeight(ordered[0].WeightKg) : null;

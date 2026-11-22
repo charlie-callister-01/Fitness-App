@@ -30,8 +30,6 @@ public static class ExerciseGroups
         LogKind.BodyMeasurementKg or LogKind.BodyMeasurementCm => ExerciseGroup.Body,
         _ => null,
     };
-
-    public static string Label(ExerciseGroup group) => group.ToString();
 }
 
 /// <summary>

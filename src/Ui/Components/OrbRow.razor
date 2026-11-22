@@ -1,7 +1,7 @@
 @using Core.Rules.Home
 @* The three orbs on Home: Streak always, Phase and Race when the Plan has them. Each is a button: the Streak opens the Calendar, the others Progress. *@
 <div class="fa-orbrow">
-    <button type="button" class="fa-orbrow__orb" @onclick="OpenStreak">
+    <button type="button" class="fa-orbrow__orb" @onclick="() => OnOpenCalendar.InvokeAsync()">
         <StatusOrb Value="@Orbs.Streak.Current.ToString()" Fraction="Orbs.Streak.Fraction" Caption="Streak (weeks)"
                    AccessibleName="@StreakName" Greyed="Orbs.Streak.OnBreak" />
     </button>
@@ -28,11 +28,9 @@
     [Parameter]
     public EventCallback OnOpenProgress { get; set; }
 
-    /// <summary>The Streak orb opens the Calendar; without a handler it falls back to OnOpenProgress.</summary>
+    /// <summary>The Streak orb opens the Calendar.</summary>
     [Parameter]
     public EventCallback OnOpenCalendar { get; set; }
-
-    private Task OpenStreak() => OnOpenCalendar.HasDelegate ? OnOpenCalendar.InvokeAsync() : OnOpenProgress.InvokeAsync();
 
     private string StreakName =>
         $"Streak: {Orbs.Streak.Current} weeks{(Orbs.Streak.OnBreak ? ", on a Break" : "")}";

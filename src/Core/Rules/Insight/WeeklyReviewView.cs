@@ -104,8 +104,7 @@ public static class WeeklyReviewBuilder
     {
         double? Average(DateOnly weekMonday)
         {
-            var inWeek = weighIns.Where(w => WeekCalendar.InWeek(weekMonday, w.Date)).ToList();
-            return inWeek.Count == 0 ? null : units.DisplayWeight(inWeek.Average(w => w.WeightKg));
+            return WeightPanelRules.WeekAverageKg(weighIns, weekMonday) is { } kg ? units.DisplayWeight(kg) : null;
         }
 
         return (Average(monday), Average(WeekCalendar.AddWeeks(monday, -1)));

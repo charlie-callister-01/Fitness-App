@@ -39,13 +39,13 @@
             @foreach (var group in GroupChips)
             {
                 var value = group;
-                <Button Variant="ButtonVariant.Secondary" Pressed="_group == value" OnClick="() => _group = value">@ExerciseGroups.Label(value)</Button>
+                <Button Variant="ButtonVariant.Secondary" Pressed="_group == value" OnClick="() => _group = value">@value</Button>
             }
         </div>
 
         @if (Shown.Count == 0 && _group is not null)
         {
-            <p class="fa-muted">Nothing logged in @ExerciseGroups.Label(_group!.Value) yet.</p>
+            <p class="fa-muted">Nothing logged in @_group yet.</p>
         }
 
         <div class="fa-twocol fa-progress__charts">
