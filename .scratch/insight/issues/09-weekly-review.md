@@ -2,7 +2,7 @@
 
 Spec: `docs/specs/insight-b6-b8.md` (S-09, F-07). Stories 55-62.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Blocked by:** 05 Weight screen (weight view).
 
@@ -10,7 +10,7 @@ Spec: `docs/specs/insight-b6-b8.md` (S-09, F-07). Stories 55-62.
 
 New pure Core weekly review view built on the existing consistency, Streak, Missed, PR, weight and Pain rules.
 
-- [ ] Core view has Core.Tests: each verdict, Target hit, Break week, past week, no Weigh-ins, no data, week boundaries
-- [ ] Page bUnit tests via `PageFixture`: each verdict, week selector, rows, export button hidden or present
-- [ ] Both Themes, both Modes, 360 px
-- [ ] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 09 Weekly review`
+- [x] Core view has Core.Tests: each verdict, Target hit, Break week, past week, no Weigh-ins, no data, week boundaries
+- [x] Page bUnit tests via `PageFixture`: each verdict, week selector, rows, export button hidden or present
+- [x] Both Themes, both Modes, 360 px
+- [x] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 09 Weekly review`
