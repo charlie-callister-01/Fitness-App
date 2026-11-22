@@ -2,7 +2,7 @@
 
 Spec: `docs/specs/insight-b6-b8.md` (S-08, C-17 weight variant). Stories 30-38.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Blocked by:** 01 Progress tab with Exercise charts (LineChart).
 
@@ -10,8 +10,8 @@ Spec: `docs/specs/insight-b6-b8.md` (S-08, C-17 weight variant). Stories 30-38.
 
 New pure Core weight view: rolling-average series, lowest Weigh-in, now, change since start, current-week average and weekly table. The three headline numbers come from the existing weight panel rules so Home and Weight cannot disagree. Extend the LineChart with the weight variant.
 
-- [ ] Core view has Core.Tests: fewer than 7 entries, one entry, gaps, ties for lowest, week boundaries, a weight Badge goal and none, unit conversion
-- [ ] A test proves Weight and Home headline numbers agree on the same data
-- [ ] LineChart weight variant and Table toggle; bUnit tests for the page: empty, populated, Log weight adds a new Weigh-in, read-only app, save failure notice
-- [ ] Both Themes, both Modes, 360 px
-- [ ] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 05 Weight screen`
+- [x] Core view has Core.Tests: fewer than 7 entries, one entry, gaps, ties for lowest, week boundaries, a weight Badge goal and none, unit conversion
+- [x] A test proves Weight and Home headline numbers agree on the same data
+- [x] LineChart weight variant and Table toggle; bUnit tests for the page: empty, populated, Log weight adds a new Weigh-in, read-only app, save failure notice
+- [x] Both Themes, both Modes, 360 px
+- [x] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 05 Weight screen`

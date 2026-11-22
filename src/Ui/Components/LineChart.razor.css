@@ -100,3 +100,17 @@
     padding: var(--space-1) var(--space-2);
     border-bottom: 1px solid var(--border);
 }
+.fa-chart__goal {
+    stroke: var(--text-muted);
+    stroke-width: 2;
+}
+
+.fa-chart__ring {
+    fill: none;
+    stroke: var(--pr);
+    stroke-width: 2;
+}
+
+.fa-chart__dot--small {
+    opacity: 0.7;
+}

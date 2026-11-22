@@ -1,5 +1,74 @@
 @using Core.Rules.Insight
 @* C-17 LineChart: one Exercise over time as inline SVG. It draws a prepared series; the Core view decides points, PRs, gaps and Phases. *@
+@if (Weight is not null)
+{
+    <section class="fa-chart-card fa-chart-card--weight" aria-label="Weight">
+        <header class="fa-chart-card__header">
+            <h3 class="fa-title fa-title--m">Weight</h3>
+            <Button Variant="ButtonVariant.Secondary" Pressed="_wTable" OnClick="ToggleWeightTable">@(_wTable ? "Chart" : "Table")</Button>
+        </header>
+    
+        @if (_wTable)
+        {
+            <table class="fa-chart-table">
+                <caption class="fa-muted">@WeightBest</caption>
+                <thead><tr><th scope="col">Date</th><th scope="col">@Weight.UnitLabel</th><th scope="col">7-entry avg</th></tr></thead>
+                <tbody>
+                    @foreach (var p in Weight.Points.Reverse())
+                    {
+                        <tr>
+                            <td>@DateText(p.Date)</td>
+                            <td>@Value(p.Value)</td>
+                            <td>@Value(p.Rolling)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <svg class="fa-chart" viewBox="0 0 358 220" role="group" aria-label="@($"Weight chart. {WeightBest}")" preserveAspectRatio="xMidYMid meet">
+                @foreach (var g in WeightGrid())
+                {
+                    <line class="fa-chart__grid" x1="@N(Left)" x2="@N(PlotRight)" y1="@N(WY(g))" y2="@N(WY(g))" />
+                    <!text class="fa-chart__axis" x="@N(Left - 6)" y="@N(WY(g) + 4)" text-anchor="end">@Value(g)</!text>
+                }
+                <!text class="fa-chart__axis" x="@N(Left)" y="@N(Height - 18)" text-anchor="start">@DateText(Weight.Points[0].Date)</!text>
+                <!text class="fa-chart__axis" x="@N(PlotRight)" y="@N(Height - 18)" text-anchor="end">@DateText(Weight.Points[^1].Date)</!text>
+                <!text class="fa-chart__best" x="@N(Left)" y="18">@WeightBest</!text>
+                @if (Weight.Goal is { } goal)
+                {
+                    <line class="fa-chart__goal" x1="@N(Left)" x2="@N(PlotRight)" y1="@N(WY(goal))" y2="@N(WY(goal))" stroke-dasharray="6 4" />
+                    <!text class="fa-chart__axis fa-chart__goal-label" x="@N(PlotRight)" y="@N(WY(goal) - 4)" text-anchor="end">Goal @Value(goal)</!text>
+                }
+                <polyline class="fa-chart__line" points="@WeightLine" />
+                @for (var i = 0; i < Weight.Points.Count; i++)
+                {
+                    var index = i;
+                    var point = Weight.Points[i];
+                    <g class="fa-chart__point fa-chart__point--weigh-in @(point.IsLowest ? "fa-chart__point--lowest" : "")" role="button" tabindex="0" aria-label="@WeightPointLabel(i)"
+                       @onclick="() => SelectWeight(index)" @onkeydown="e => OnWeightKey(e, index)">
+                        <circle class="fa-chart__hit" cx="@N(WX(i))" cy="@N(WY(point.Value))" r="14" />
+                        @if (point.IsLowest)
+                        {
+                            <circle class="fa-chart__ring" cx="@N(WX(i))" cy="@N(WY(point.Value))" r="8" />
+                        }
+                        <circle class="fa-chart__dot fa-chart__dot--small" cx="@N(WX(i))" cy="@N(WY(point.Value))" r="3" />
+                    </g>
+                }
+            </svg>
+        }
+    
+        <p class="fa-chart__tip fa-muted" role="status">
+            @if (!_wTable && _wSelected is { } s)
+            {
+                @WeightPointLabel(s)
+            }
+        </p>
+    </section>
+}
+else
+{
 <section class="fa-chart-card" aria-label="@Series.Name">
     <header class="fa-chart-card__header">
         <h3 class="fa-title fa-title--m">@Series.Name</h3>
@@ -64,3 +133,4 @@
         }
     </p>
 </section>
+}

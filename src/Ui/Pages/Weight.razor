@@ -1,6 +1,47 @@
 @page "/weight"
+@using Core.Rules.Insight
+@* Weight (design S-08): three stats, the weight LineChart, a weekly averages table and the Log weight sheet. Everything shown comes from the Core
+   WeightView; this page holds the sheet. A Weigh-in never counts toward the Streak. *@
+<div class="fa-root fa-weight">
+    <header class="fa-weight__header">
+        <h1 class="fa-title fa-title--l">Weight</h1>
+        <Button Variant="ButtonVariant.Secondary" OnClick="OnLogWeight">Log weight</Button>
+    </header>
 
-<div class="fa-root">
-    <h1 class="fa-title fa-title--l">Weight</h1>
-    <EmptyState Kind="EmptyStateKind.NoHistory" Title="Your weight history will live here" Message="The chart and weigh-ins arrive in a later stage." />
+    @if (_view.IsEmpty)
+    {
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Weigh-ins yet" Message="Log your weight and the trend will chart here."
+                    ActionLabel="Log weight" OnAction="OnLogWeight" />
+    }
+    else
+    {
+        <dl class="fa-weight__stats">
+            <div class="fa-well fa-weight__stat"><dt class="fa-muted">Now</dt><dd class="fa-weight__now">@Show(_view.Now)</dd></div>
+            <div class="fa-well fa-weight__stat"><dt class="fa-muted">Change since start</dt><dd class="fa-weight__change">@ChangeText</dd></div>
+            <div class="fa-well fa-weight__stat"><dt class="fa-muted">This week's average</dt><dd class="fa-weight__average">@Show(_view.WeekAverage)</dd></div>
+        </dl>
+
+        <LineChart Weight="_view" />
+
+        <section class="fa-weight__weeks" aria-label="Weekly averages">
+            <h2 class="fa-title fa-title--m">Weekly averages</h2>
+            <table class="fa-chart-table">
+                <thead><tr><th scope="col">Week of</th><th scope="col">Average</th><th scope="col">Weigh-ins</th></tr></thead>
+                <tbody>
+                    @foreach (var row in _view.Weeks)
+                    {
+                        <tr>
+                            <td>@row.WeekStart.ToString("ddd d MMM", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@Num(row.Average) @_view.UnitLabel</td>
+                            <td>@row.Count</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    }
+
+    <LogWeightSheet Open="_weightOpen" InitialText="@LatestWeightText" LastText="@LastWeightText" UnitLabel="@_view.UnitLabel"
+                    Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Message="@_weightMessage"
+                    OnSave="SaveWeightAsync" OnClose="CloseWeight" />
 </div>
