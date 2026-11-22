@@ -4,6 +4,7 @@ using Core.Model;
 using Core.Rules.Rearrangement;
 using Core.Rules.Schedule;
 using Core.Rules.Weeks;
+using Core.Storage;
 
 namespace Core.Rules.PlanEditing;
 
@@ -62,6 +63,14 @@ public sealed record WeekDraft(DateOnly Monday, IReadOnlyList<DraftRow> Rows, IR
     }
 }
 
+/// <summary>What moving a Session changes, to commit together: the Plan (new default day) and/or the week's Week schedule. Null means no change to that record.</summary>
+public sealed record SessionMoveChanges(Plan? ChangedPlan, WeekSchedule? ChangedSchedule)
+{
+    /// <summary>The records to commit in one save.</summary>
+    public IReadOnlyList<Change> ToChanges() =>
+        [.. new[] { ChangedPlan is { } plan ? Change.Put(plan) : null, ChangedSchedule is { } schedule ? Change.Put(schedule) : null }.OfType<Change>()];
+}
+
 /// <summary>The rules behind the Week view: moving a Session, adding a Break, and the suggested week.</summary>
 public static class WeekEditRules
 {
@@ -90,6 +99,32 @@ public static class WeekEditRules
         }
 
         return new PlanEditResult<WeekSchedule>.Valid(new WeekSchedule(monday, moves));
+    }
+
+    /// <summary>
+    /// Moves a Session to <paramref name="date"/> in one save. This week only: the week's Week schedule with the move. Make it the default
+    /// day: the Plan with the new default day, plus (when the week already holds a move for that Session, which would still win over the
+    /// new default) the week's Week schedule with that move cleared. Commit whatever is not null together.
+    /// </summary>
+    public static PlanEditResult<SessionMoveChanges> MoveSession(
+        Plan plan, IReadOnlyList<WeekSchedule> schedules, string sessionId, DateOnly monday, DateOnly date, bool makeDefaultDay)
+    {
+        if (!makeDefaultDay)
+        {
+            return MoveThisWeek(plan, schedules, sessionId, monday, date)
+                .Match<PlanEditResult<SessionMoveChanges>>(
+                    schedule => new PlanEditResult<SessionMoveChanges>.Valid(new SessionMoveChanges(null, schedule)),
+                    message => new PlanEditResult<SessionMoveChanges>.Invalid(message));
+        }
+
+        if (!MakeDefaultDay(plan, sessionId, date.DayOfWeek).TryGet(out var newPlan, out var reason))
+        {
+            return new PlanEditResult<SessionMoveChanges>.Invalid(reason);
+        }
+
+        var hasMove = schedules.FirstOrDefault(s => s.WeekStart == monday)?.Moves.Any(m => m.SessionId == sessionId) == true;
+        var cleared = hasMove && MoveThisWeek(newPlan, schedules, sessionId, monday, date).TryGet(out var schedule, out _) ? schedule : null;
+        return new PlanEditResult<SessionMoveChanges>.Valid(new SessionMoveChanges(newPlan, cleared));
     }
 
     /// <summary>The Plan with the Session's default day changed ("Make this the default day").</summary>

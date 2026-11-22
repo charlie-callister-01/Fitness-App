@@ -242,4 +242,48 @@ public class WeekEditRulesTests
 
         Assert.Empty(missed);
     }
+
+    // MoveSession (one save)
+
+    [Fact]
+    public void MoveSession_this_week_only_changes_just_the_schedule()
+    {
+        var changes = Valid(WeekEditRules.MoveSession(Standard, [], "push", Mon, Mon.AddDays(4), makeDefaultDay: false));
+
+        Assert.Null(changes.ChangedPlan);
+        Assert.Equal(new WeekSchedule(Mon, [new SessionMove("push", Mon.AddDays(4))]), changes.ChangedSchedule, ScheduleComparer);
+    }
+
+    [Fact]
+    public void MoveSession_as_the_default_day_changes_the_Plan_and_leaves_the_schedule_alone_when_the_week_has_no_move()
+    {
+        var changes = Valid(WeekEditRules.MoveSession(Standard, [], "push", Mon, Mon.AddDays(4), makeDefaultDay: true));
+
+        Assert.Equal(DayOfWeek.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Null(changes.ChangedSchedule);
+    }
+
+    [Fact]
+    public void MoveSession_as_the_default_day_clears_the_Sessions_move_for_that_week_and_keeps_the_others()
+    {
+        WeekSchedule existing = new(Mon, [new SessionMove("push", Mon.AddDays(2)), new SessionMove("pull", Mon.AddDays(4))]);
+
+        var changes = Valid(WeekEditRules.MoveSession(Standard, [existing], "push", Mon, Mon.AddDays(4), makeDefaultDay: true));
+
+        Assert.Equal(DayOfWeek.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Equal(new WeekSchedule(Mon, [new SessionMove("pull", Mon.AddDays(4))]), changes.ChangedSchedule, ScheduleComparer);
+        Assert.Equal(2, changes.ToChanges().Count);
+    }
+
+    [Fact]
+    public void MoveSession_refuses_a_Session_that_is_gone_and_a_day_outside_the_week()
+    {
+        Assert.Equal("That Session is no longer in the Plan.", Reason(WeekEditRules.MoveSession(Standard, [], "gone", Mon, Mon, false)));
+        Assert.Equal("That Session is no longer in the Plan.", Reason(WeekEditRules.MoveSession(Standard, [], "gone", Mon, Mon, true)));
+        Assert.Equal("Pick a day in this week.", Reason(WeekEditRules.MoveSession(Standard, [], "push", Mon, Mon.AddDays(8), false)));
+    }
+
+    // WeekSchedule holds a list, so it compares by reference; compare its week and moves.
+    private static readonly IEqualityComparer<WeekSchedule?> ScheduleComparer = EqualityComparer<WeekSchedule?>.Create(
+        (a, b) => a is not null && b is not null && a.WeekStart == b.WeekStart && a.Moves.SequenceEqual(b.Moves));
 }
