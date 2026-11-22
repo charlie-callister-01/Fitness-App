@@ -35,7 +35,7 @@
         <input class="fa-planform__control" type="text" inputmode="decimal" disabled="@Disabled" @bind="State.Form.WeightIncrement" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
     </label>
 
-    @if (State.SettingsProblem is { } problem)
+    @if (State.Snapshot.SettingsProblem is { } problem)
     {
         <p class="fa-well fa-planform__problem" role="alert">@problem</p>
     }

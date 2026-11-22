@@ -476,7 +476,8 @@ public sealed class PlanEditorTests : BunitContext
 
     [Theory]
     [InlineData("Sets", "0", "Sets must be at least 1.")]
-    [InlineData("Sets", "lots", "Sets must be at least 1.")]
+    [InlineData("Sets", "lots", "Enter a whole number.")]
+    [InlineData("Reps", "8x", "Enter a whole number.")]
     [InlineData("Reps", "0", "Reps must be at least 1.")]
     [InlineData("Highest Reps", "4", "The highest Reps cannot be below Reps.")]
     public async Task Invalid_sets_or_reps_show_a_message_and_hold_Save_back(string field, string value, string expected)
@@ -506,7 +507,36 @@ public sealed class PlanEditorTests : BunitContext
     }
 
     [Fact]
-    public async Task Marking_a_row_as_a_Benchmark_exercise_changes_the_library_Exercise()
+    public async Task Text_that_is_not_a_number_stays_as_typed_and_the_row_keeps_its_last_good_number()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+
+        Field(cut, "Sets").Change("lots");
+
+        Assert.Equal("lots", Field(cut, "Sets").GetAttribute("value"));
+        Assert.Contains("Enter a whole number.", cut.Find("[role='alert']").TextContent);
+        Assert.Contains("3 x 8", cut.FindAll(".fa-row__sets")[0].TextContent);
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+        Field(cut, "Sets").Change("4");
+        Assert.Empty(cut.FindAll("[role='alert']"));
+        Assert.Equal("4", Field(cut, "Sets").GetAttribute("value"));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Each_row_has_a_link_to_its_Guide()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+
+        Assert.Equal($"exercises/{Squat}/guide", cut.Find("a[aria-label='Guide for Goblet squat']").GetAttribute("href"));
+    }
+
+    [Fact]
+    public async Task Ticking_Benchmark_waits_for_Save_and_Discard_leaves_the_library_unchanged()
     {
         var data = await OpenWithAsync(Plan());
         var cut = OpenSessions(data);
@@ -514,9 +544,73 @@ public sealed class PlanEditorTests : BunitContext
         cut.Find("button[aria-label='Edit Goblet squat']").Click();
         cut.Find(".fa-row__check input").Change(true);
 
+        Assert.False(data.Snapshot.Exercises.Single(e => e.Id == Squat).IsBenchmark);
+        Assert.True(cut.Find(".fa-row__check input").HasAttribute("checked"));
+        Assert.False(SaveButton(cut).HasAttribute("disabled"));
+
+        Services.GetRequiredService<NavigationManager>().NavigateTo("plans");
+        cut.WaitForAssertion(() => Assert.Contains("Discard changes?", cut.Markup));
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Discard").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("plans", CurrentPath));
+        Assert.False(data.Snapshot.Exercises.Single(e => e.Id == Squat).IsBenchmark);
+    }
+
+    [Fact]
+    public async Task Save_commits_the_Plan_and_the_Benchmark_flag_together_once()
+    {
+        var data = await OpenWithAsync(Plan());
+        var cut = OpenSessions(data);
+        var commits = 0;
+        data.Changed += () => commits++;
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        cut.Find(".fa-row__check input").Change(true);
+        Field(cut, "Sets").Change("5");
+        SaveButton(cut).Click();
+
         cut.WaitForAssertion(() => Assert.True(data.Snapshot.Exercises.Single(e => e.Id == Squat).IsBenchmark));
-        Assert.False(data.Snapshot.Exercises.Single(e => e.Id == Lunge).IsBenchmark);
+        Assert.Equal(5, data.Snapshot.Plans.Single().Sessions[0].Exercises[0].Sets);
+        Assert.Equal(1, commits);
         Assert.True(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task A_Benchmark_tick_alone_can_be_saved()
+    {
+        var data = await OpenWithAsync(Plan());
+        var before = data.Snapshot.Plans.Single();
+        var cut = OpenSessions(data);
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        cut.Find(".fa-row__check input").Change(true);
+        SaveButton(cut).Click();
+
+        cut.WaitForAssertion(() => Assert.True(data.Snapshot.Exercises.Single(e => e.Id == Squat).IsBenchmark));
+        Assert.Equal(before, data.Snapshot.Plans.Single());
+        cut.WaitForAssertion(() => Assert.True(SaveButton(cut).HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public async Task Ticking_and_unticking_Benchmark_leaves_nothing_to_save()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+
+        cut.Find("button[aria-label='Edit Goblet squat']").Click();
+        cut.Find(".fa-row__check input").Change(true);
+        cut.Find(".fa-row__check input").Change(false);
+
+        Assert.True(SaveButton(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task The_Session_sheet_is_not_read_only_just_because_a_save_is_running()
+    {
+        var cut = OpenSessions(await OpenWithAsync(Plan()));
+
+        cut.Find("button[aria-label='Edit Session Lower']").Click();
+
+        Assert.DoesNotContain("read-only", cut.Find("[role='dialog']").TextContent);
     }
 
     [Fact]

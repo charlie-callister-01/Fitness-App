@@ -144,48 +144,21 @@ public sealed partial class Week : IDisposable
             return;
         }
 
-        var snapshot = Data.Snapshot;
         var monday = WeekCalendar.MondayOf(Page.Today);
-        var changes = new List<Change>();
-        if (_makeDefault)
+        var result = WeekEditRules.MoveSession(plan, Data.Snapshot.WeekSchedules, row.SessionId, monday, _moveDate, _makeDefault);
+        if (!result.TryGet(out var move, out var reason))
         {
-            var planResult = WeekEditRules.MakeDefaultDay(plan, row.SessionId, _moveDate.DayOfWeek);
-            if (planResult is not PlanEditResult<Plan>.Valid newPlan)
-            {
-                _moveMessage = Reason(planResult);
-                return;
-            }
-
-            changes.Add(Change.Put(newPlan.Value));
-
-            // A move already made for this week would still win over the new default day, so it goes in the same save.
-            var hasMove = snapshot.WeekSchedules.FirstOrDefault(s => s.WeekStart == monday)?.Moves.Any(m => m.SessionId == row.SessionId) == true;
-            if (hasMove && WeekEditRules.MoveThisWeek(newPlan.Value, snapshot.WeekSchedules, row.SessionId, monday, _moveDate) is PlanEditResult<WeekSchedule>.Valid cleared)
-            {
-                changes.Add(Change.Put(cleared.Value));
-            }
-        }
-        else
-        {
-            var result = WeekEditRules.MoveThisWeek(plan, snapshot.WeekSchedules, row.SessionId, monday, _moveDate);
-            if (result is not PlanEditResult<WeekSchedule>.Valid schedule)
-            {
-                _moveMessage = Reason(result);
-                return;
-            }
-
-            changes.Add(Change.Put(schedule.Value));
+            _moveMessage = reason;
+            return;
         }
 
         _moveMessage = null;
-        var saved = await _save.CommitAsync(changes);
+        var saved = await _save.CommitAsync(move.ToChanges());
         if (saved.IsSaved)
         {
             _moveRow = null;
         }
     }
-
-    private static string Reason<T>(PlanEditResult<T> result) => (result as PlanEditResult<T>.Invalid)?.Message ?? "";
 
     // Add a Break.
 
@@ -209,14 +182,14 @@ public sealed partial class Week : IDisposable
         }
 
         var result = WeekEditRules.CreateBreak(from, to, _reason, Data.Snapshot.Breaks, Ids);
-        if (result is not PlanEditResult<Break>.Valid created)
+        if (!result.TryGet(out var created, out var reason))
         {
-            _breakMessage = Reason(result);
+            _breakMessage = reason;
             return;
         }
 
         _breakMessage = null;
-        var saved = await _save.CommitAsync(Change.Put(created.Value));
+        var saved = await _save.CommitAsync(Change.Put(created));
         if (saved.IsSaved)
         {
             _breakOpen = false;

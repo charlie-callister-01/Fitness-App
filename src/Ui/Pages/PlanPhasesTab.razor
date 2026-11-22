@@ -90,7 +90,7 @@
         }
     </ul>
 
-    @if (State.PhasesProblem is { } problem)
+    @if (State.Snapshot.PhasesProblem is { } problem)
     {
         <p class="fa-well fa-phases__problem" role="alert">@problem</p>
     }
@@ -122,7 +122,7 @@
             return weeks;
         }
 
-        var (start, end) = PlanEditRules.PhaseDates(State.Preview, phase);
+        var (start, end) = PlanPhaseRules.PhaseDates(State.Snapshot.Preview, phase);
         return $"{weeks} · {start.ToString("d MMM", CultureInfo.InvariantCulture)} to {end.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}";
     }
 

@@ -7,7 +7,7 @@ using static Core.Tests.Rules.TestData.HistoryBuilder;
 
 namespace Core.Tests.Rules.PlanEditing;
 
-public class PlanEditRulesTests
+public class PlanEditingRulesTests
 {
     private static Phase Ph(string id, string focus, int start, int end) => new(id, focus, start, end, [], []);
 
@@ -37,7 +37,7 @@ public class PlanEditRulesTests
     [InlineData("squat", 50, 0)]
     public void A_Phase_goal_without_an_Exercise_or_with_impossible_numbers_is_refused(string exerciseId, double kg, int reps)
     {
-        var reason = PlanEditRules.ValidatePhases([WithGoal(exerciseId, kg, reps)]);
+        var reason = PlanPhaseRules.ValidatePhases([WithGoal(exerciseId, kg, reps)]);
 
         Assert.NotNull(reason);
         Assert.Contains("Strength", reason);
@@ -46,7 +46,7 @@ public class PlanEditRulesTests
     [Fact]
     public void A_Phase_goal_with_zero_weight_is_allowed()
     {
-        Assert.Null(PlanEditRules.ValidatePhases([WithGoal("pullup", 0, 8)]));
+        Assert.Null(PlanPhaseRules.ValidatePhases([WithGoal("pullup", 0, 8)]));
     }
 
     // Settings
@@ -56,7 +56,7 @@ public class PlanEditRulesTests
     {
         var plan = Plan();
 
-        var changed = Valid(PlanEditRules.WithSettings(plan, Settings(plan) with { Goal = "  ", WeeklyTarget = 4, StreakCountsCustomWorkouts = true }));
+        var changed = Valid(PlanSettingsRules.WithSettings(plan, Settings(plan) with { Goal = "  ", WeeklyTarget = 4, StreakCountsCustomWorkouts = true }));
 
         Assert.Null(changed.Goal);
         Assert.Equal(4, changed.WeeklyTarget);
@@ -71,7 +71,7 @@ public class PlanEditRulesTests
     {
         var plan = Plan();
 
-        Assert.Contains(expected, Reason(PlanEditRules.WithSettings(plan, Settings(plan) with { WeeklyTarget = target, StreakMinWorkoutsPerWeek = streak })));
+        Assert.Contains(expected, Reason(PlanSettingsRules.WithSettings(plan, Settings(plan) with { WeeklyTarget = target, StreakMinWorkoutsPerWeek = streak })));
     }
 
     [Fact]
@@ -79,27 +79,27 @@ public class PlanEditRulesTests
     {
         var plan = Plan();
 
-        Assert.Contains("goal date", Reason(PlanEditRules.WithSettings(plan, Settings(plan) with { GoalDate = Mon.AddDays(-1) })));
-        Assert.Equal(Mon, Valid(PlanEditRules.WithSettings(plan, Settings(plan) with { GoalDate = Mon })).GoalDate);
+        Assert.Contains("goal date", Reason(PlanSettingsRules.WithSettings(plan, Settings(plan) with { GoalDate = Mon.AddDays(-1) })));
+        Assert.Equal(Mon, Valid(PlanSettingsRules.WithSettings(plan, Settings(plan) with { GoalDate = Mon })).GoalDate);
     }
 
     [Fact]
     public void A_weight_increment_of_zero_is_refused() =>
-        Assert.Contains("increment", Reason(PlanEditRules.WithSettings(Plan(), Settings(Plan()) with { WeightIncrementKg = 0 })));
+        Assert.Contains("increment", Reason(PlanSettingsRules.WithSettings(Plan(), Settings(Plan()) with { WeightIncrementKg = 0 })));
 
     // Phases
 
     [Fact]
     public void Phases_that_follow_each_other_from_week_one_are_valid_in_any_order()
     {
-        Assert.Null(PlanEditRules.ValidatePhases([Ph("b", "Build", 5, 8), Ph("a", "Foundation", 1, 4)]));
-        Assert.Null(PlanEditRules.ValidatePhases([]));
+        Assert.Null(PlanPhaseRules.ValidatePhases([Ph("b", "Build", 5, 8), Ph("a", "Foundation", 1, 4)]));
+        Assert.Null(PlanPhaseRules.ValidatePhases([]));
     }
 
     [Fact]
     public void Overlapping_Phases_are_refused_naming_both()
     {
-        var reason = PlanEditRules.ValidatePhases([Ph("a", "Foundation", 1, 4), Ph("b", "Build", 4, 8)]);
+        var reason = PlanPhaseRules.ValidatePhases([Ph("a", "Foundation", 1, 4), Ph("b", "Build", 4, 8)]);
 
         Assert.Contains("Foundation", reason);
         Assert.Contains("Build", reason);
@@ -108,14 +108,14 @@ public class PlanEditRulesTests
 
     [Fact]
     public void A_Phase_that_ends_before_it_starts_is_refused_naming_it() =>
-        Assert.Contains("Build", PlanEditRules.ValidatePhases([Ph("a", "Foundation", 1, 4), Ph("b", "Build", 8, 5)]));
+        Assert.Contains("Build", PlanPhaseRules.ValidatePhases([Ph("a", "Foundation", 1, 4), Ph("b", "Build", 8, 5)]));
 
     [Fact]
     public void A_gap_between_Phases_or_before_the_first_is_refused()
     {
-        Assert.Contains("in no Phase", PlanEditRules.ValidatePhases([Ph("a", "Foundation", 1, 4), Ph("b", "Build", 6, 8)]));
-        Assert.Contains("start at week 1", PlanEditRules.ValidatePhases([Ph("b", "Build", 2, 8)]));
-        Assert.Contains("week 1 or later", PlanEditRules.ValidatePhases([Ph("b", "Build", 0, 8)]));
+        Assert.Contains("in no Phase", PlanPhaseRules.ValidatePhases([Ph("a", "Foundation", 1, 4), Ph("b", "Build", 6, 8)]));
+        Assert.Contains("start at week 1", PlanPhaseRules.ValidatePhases([Ph("b", "Build", 2, 8)]));
+        Assert.Contains("week 1 or later", PlanPhaseRules.ValidatePhases([Ph("b", "Build", 0, 8)]));
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public class PlanEditRulesTests
     {
         var plan = Plan();
 
-        var sorted = Valid(PlanEditRules.WithPhases(plan, [Ph("b", "Build", 5, 8), Ph("a", "Foundation", 1, 4)]));
-        var refused = PlanEditRules.WithPhases(plan, [Ph("a", "Foundation", 1, 5), Ph("b", "Build", 5, 8)]);
+        var sorted = Valid(PlanPhaseRules.WithPhases(plan, [Ph("b", "Build", 5, 8), Ph("a", "Foundation", 1, 4)]));
+        var refused = PlanPhaseRules.WithPhases(plan, [Ph("a", "Foundation", 1, 5), Ph("b", "Build", 5, 8)]);
 
         Assert.Equal(["a", "b"], sorted.Phases.Select(p => p.Id));
         Assert.Contains("overlaps", Reason(refused));
@@ -135,13 +135,21 @@ public class PlanEditRulesTests
     {
         var plan = PlanFixture.Make(start: Mon.AddDays(2), phases: [Ph("p", "Build", 2, 3)]);
 
-        var (start, end) = PlanEditRules.PhaseDates(plan, plan.Phases[0]);
+        var (start, end) = PlanPhaseRules.PhaseDates(plan, plan.Phases[0]);
 
         Assert.Equal(Mon.AddDays(7), start);
         Assert.Equal(Mon.AddDays(20), end);
     }
 
     // Rows
+
+    [Theory]
+    [InlineData(3, 8, null, "3 x 8")]
+    [InlineData(3, 8, 8, "3 x 8")]
+    [InlineData(3, 8, 12, "3 x 8 to 12")]
+    [InlineData(2, null, null, "2 sets")]
+    public void A_row_summary_reads_as_sets_and_reps(int sets, int? reps, int? max, string expected) =>
+        Assert.Equal(expected, SessionRowRules.Summary(new SessionExercise("x", sets, reps, max, null)));
 
     [Theory]
     [InlineData(3, 8, null, null)]
@@ -153,7 +161,7 @@ public class PlanEditRulesTests
     [InlineData(3, null, 8, "highest")]
     public void Row_numbers_are_validated(int sets, int? reps, int? max, string? expected)
     {
-        var reason = PlanEditRules.ValidateRow(new SessionExercise("x", sets, reps, max, null));
+        var reason = SessionRowRules.ValidateRow(new SessionExercise("x", sets, reps, max, null));
 
         if (expected is null)
         {
@@ -166,13 +174,13 @@ public class PlanEditRulesTests
     }
 
     [Fact]
-    public void A_max_equal_to_Reps_is_allowed() => Assert.Null(PlanEditRules.ValidateRow(Row("x", reps: 8, max: 8)));
+    public void A_max_equal_to_Reps_is_allowed() => Assert.Null(SessionRowRules.ValidateRow(Row("x", reps: 8, max: 8)));
 
     [Fact]
     public void ValidateRows_reports_the_first_bad_row()
     {
-        Assert.Null(PlanEditRules.ValidateRows([Row("a"), Row("b")]));
-        Assert.Contains("Sets", PlanEditRules.ValidateRows([Row("a"), Row("b", sets: 0), Row("c", reps: 0)]));
+        Assert.Null(SessionRowRules.ValidateRows([Row("a"), Row("b")]));
+        Assert.Contains("Sets", SessionRowRules.ValidateRows([Row("a"), Row("b", sets: 0), Row("c", reps: 0)]));
     }
 
     [Fact]
@@ -180,11 +188,11 @@ public class PlanEditRulesTests
     {
         var rows = new[] { Row("a"), Row("b"), Row("c") };
 
-        Assert.Equal(["b", "a", "c"], Ids(PlanEditRules.MoveUp(rows, 1)));
-        Assert.Equal(["a", "c", "b"], Ids(PlanEditRules.MoveDown(rows, 1)));
-        Assert.Equal(["a", "b", "c"], Ids(PlanEditRules.MoveUp(rows, 0)));
-        Assert.Equal(["a", "b", "c"], Ids(PlanEditRules.MoveDown(rows, 2)));
-        Assert.Equal(["a", "b", "c"], Ids(PlanEditRules.MoveDown(rows, 9)));
+        Assert.Equal(["b", "a", "c"], Ids(SessionRowRules.MoveUp(rows, 1)));
+        Assert.Equal(["a", "c", "b"], Ids(SessionRowRules.MoveDown(rows, 1)));
+        Assert.Equal(["a", "b", "c"], Ids(SessionRowRules.MoveUp(rows, 0)));
+        Assert.Equal(["a", "b", "c"], Ids(SessionRowRules.MoveDown(rows, 2)));
+        Assert.Equal(["a", "b", "c"], Ids(SessionRowRules.MoveDown(rows, 9)));
     }
 
     [Fact]
@@ -192,11 +200,11 @@ public class PlanEditRulesTests
     {
         var rows = new[] { Row("a"), Row("b") };
 
-        var one = PlanEditRules.Remove(rows, 0);
+        var one = SessionRowRules.Remove(rows, 0);
 
         Assert.Equal(["b"], Ids(one));
-        Assert.Empty(PlanEditRules.Remove(one, 0));
-        Assert.Equal(["a", "b"], Ids(PlanEditRules.Remove(rows, 5)));
+        Assert.Empty(SessionRowRules.Remove(one, 0));
+        Assert.Equal(["a", "b"], Ids(SessionRowRules.Remove(rows, 5)));
     }
 
     [Fact]
@@ -204,11 +212,11 @@ public class PlanEditRulesTests
     {
         var rows = new[] { Row("a") };
 
-        var added = PlanEditRules.AddFromLibrary(rows, "b");
+        var added = SessionRowRules.AddFromLibrary(rows, "b");
 
         Assert.Equal(["a", "b"], Ids(added));
         Assert.Equal((3, 8), (added[1].Sets, added[1].Reps));
-        Assert.Equal(["a", "b"], Ids(PlanEditRules.AddFromLibrary(added, "a")));
+        Assert.Equal(["a", "b"], Ids(SessionRowRules.AddFromLibrary(added, "a")));
     }
 
     [Fact]
@@ -216,7 +224,7 @@ public class PlanEditRulesTests
     {
         var plan = Plan();
 
-        var changed = PlanEditRules.WithRows(plan, "lower", [Row("squat")]);
+        var changed = SessionRowRules.WithRows(plan, "lower", [Row("squat")]);
 
         Assert.Equal(["squat"], Ids(changed.Sessions[0].Exercises));
         Assert.Equal(plan.Sessions[1], changed.Sessions[1]);
@@ -229,11 +237,11 @@ public class PlanEditRulesTests
     {
         var plan = Plan();
 
-        var changed = Valid(PlanEditRules.EditSession(plan, "upper", "  Push  ", DayOfWeek.Thursday, SessionType.Cardio));
+        var changed = Valid(SessionRowRules.EditSession(plan, "upper", "  Push  ", DayOfWeek.Thursday, SessionType.Cardio));
 
         Assert.Equal(("Push", DayOfWeek.Thursday, SessionType.Cardio), (changed.Sessions[1].Name, changed.Sessions[1].DefaultDay, changed.Sessions[1].Type));
         Assert.Equal(plan.Sessions[0], changed.Sessions[0]);
-        Assert.Contains("name", Reason(PlanEditRules.EditSession(plan, "upper", " ", DayOfWeek.Thursday, SessionType.Cardio)));
+        Assert.Contains("name", Reason(SessionRowRules.EditSession(plan, "upper", " ", DayOfWeek.Thursday, SessionType.Cardio)));
     }
 
     [Fact]
@@ -241,7 +249,7 @@ public class PlanEditRulesTests
     {
         var plan = PlanFixture.Make(sessions: [PlanFixture.Session("t", DayOfWeek.Saturday, SessionType.Test, benchmarkEveryWeeks: 6)]);
 
-        var changed = Valid(PlanEditRules.EditSession(plan, "t", "Test", DayOfWeek.Saturday, SessionType.Strength));
+        var changed = Valid(SessionRowRules.EditSession(plan, "t", "Test", DayOfWeek.Saturday, SessionType.Strength));
 
         Assert.Null(changed.Sessions[0].BenchmarkIntervalWeeks);
     }
@@ -251,13 +259,13 @@ public class PlanEditRulesTests
     {
         var plan = Plan();
 
-        var changed = Valid(PlanEditRules.AddSession(plan, " Run ", DayOfWeek.Friday, SessionType.Cardio, new SequentialIdGenerator("s")));
+        var changed = Valid(SessionRowRules.AddSession(plan, " Run ", DayOfWeek.Friday, SessionType.Cardio, new SequentialIdGenerator("s")));
 
         var added = changed.Sessions[^1];
         Assert.Equal(3, changed.Sessions.Count);
         Assert.Equal(("s-1", "Run", DayOfWeek.Friday, SessionType.Cardio), (added.Id, added.Name, added.DefaultDay, added.Type));
         Assert.Empty(added.Exercises);
-        Assert.Contains("name", Reason(PlanEditRules.AddSession(plan, "", DayOfWeek.Friday, SessionType.Cardio, new SequentialIdGenerator("s"))));
+        Assert.Contains("name", Reason(SessionRowRules.AddSession(plan, "", DayOfWeek.Friday, SessionType.Cardio, new SequentialIdGenerator("s"))));
     }
 
     // Plans
@@ -268,7 +276,7 @@ public class PlanEditRulesTests
         var phase = Ph("p1", "Build", 1, 4) with { SessionOverrides = [new SessionOverride("lower", [Row("squat", sets: 5)])] };
         var plan = Plan() with { Phases = [phase], IsActive = true };
 
-        var copy = PlanEditRules.Copy(plan, " Variation ", new SequentialIdGenerator("n"));
+        var copy = Valid(PlanLifecycleRules.Copy(plan, " Variation ", new SequentialIdGenerator("n")));
 
         Assert.False(copy.IsActive);
         Assert.Equal("Variation", copy.Name);
@@ -285,7 +293,7 @@ public class PlanEditRulesTests
     [Fact]
     public void All_the_ids_in_a_copy_are_different_from_each_other()
     {
-        var copy = PlanEditRules.Copy(Plan(), "Copy", new SequentialIdGenerator("n"));
+        var copy = Valid(PlanLifecycleRules.Copy(Plan(), "Copy", new SequentialIdGenerator("n")));
 
         var all = new[] { copy.Id }.Concat(copy.Sessions.Select(s => s.Id)).Concat(copy.Phases.Select(p => p.Id)).ToList();
         Assert.Equal(all.Count, all.Distinct().Count());
@@ -294,13 +302,13 @@ public class PlanEditRulesTests
     [Fact]
     public void A_new_Plan_from_scratch_is_inactive_and_empty_and_a_blank_name_is_refused()
     {
-        var plan = Valid(PlanEditRules.FromScratch(" Offseason ", Mon, new SequentialIdGenerator("n")));
+        var plan = Valid(PlanLifecycleRules.FromScratch(" Offseason ", Mon, new SequentialIdGenerator("n")));
 
         Assert.Equal(("n-1", "Offseason", false, Mon), (plan.Id, plan.Name, plan.IsActive, plan.StartDate));
         Assert.Empty(plan.Sessions);
         Assert.Empty(plan.Phases);
-        Assert.Null(PlanEditRules.ValidatePhases(plan.Phases));
-        Assert.Contains("name", Reason(PlanEditRules.FromScratch("", Mon, new SequentialIdGenerator("n"))));
+        Assert.Null(PlanPhaseRules.ValidatePhases(plan.Phases));
+        Assert.Contains("name", Reason(PlanLifecycleRules.FromScratch("", Mon, new SequentialIdGenerator("n"))));
     }
 
     [Fact]
@@ -311,7 +319,7 @@ public class PlanEditRulesTests
         var third = Plan() with { Id = "c", IsActive = false };
         IReadOnlyList<Plan> plans = [current, other, third];
 
-        var changed = PlanEditRules.MakeActive(plans, "b");
+        var changed = PlanLifecycleRules.MakeActive(plans, "b");
 
         Assert.Equal(["a", "b"], changed.Select(p => p.Id).Order());
         var after = plans.Select(p => changed.FirstOrDefault(c => c.Id == p.Id) ?? p).ToList();
@@ -323,8 +331,8 @@ public class PlanEditRulesTests
     {
         IReadOnlyList<Plan> plans = [Plan() with { Id = "a", IsActive = true }, Plan() with { Id = "b", IsActive = false }];
 
-        Assert.Empty(PlanEditRules.MakeActive(plans, "a"));
-        Assert.Empty(PlanEditRules.MakeActive(plans, "zzz"));
+        Assert.Empty(PlanLifecycleRules.MakeActive(plans, "a"));
+        Assert.Empty(PlanLifecycleRules.MakeActive(plans, "zzz"));
     }
 
     // Going forward only
@@ -335,7 +343,7 @@ public class PlanEditRulesTests
         var plan = Plan();
         var workout = Logged(Mon, "lower") with { Planned = [Row("squat", sets: 3), Row("lunge")] };
 
-        var changed = PlanEditRules.WithRows(plan, "lower", [Row("deadlift", sets: 5)]);
+        var changed = SessionRowRules.WithRows(plan, "lower", [Row("deadlift", sets: 5)]);
 
         Assert.Equal(["deadlift"], Ids(changed.Sessions[0].Exercises));
         Assert.Equal(["squat", "lunge"], Ids(workout.Planned));

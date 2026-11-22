@@ -69,14 +69,14 @@ public sealed partial class Plans : IDisposable
     /// <summary>The previous Plan stops being active in the same save, so there is never none or two.</summary>
     private async Task MakeActiveAsync(string planId)
     {
-        var changed = PlanEditRules.MakeActive(Data.Snapshot.Plans, planId);
+        var changed = PlanLifecycleRules.MakeActive(Data.Snapshot.Plans, planId);
         if (changed.Count > 0)
         {
             await _save.CommitAsync([.. changed.Select(plan => Change.Put(plan))]);
         }
     }
 
-    private Task FromScratchAsync() => CreateAsync(PlanEditRules.FromScratch(_newName, Page.Today, Ids));
+    private Task FromScratchAsync() => CreateAsync(PlanLifecycleRules.FromScratch(_newName, Page.Today, Ids));
 
     private Task CopyAsync()
     {
@@ -86,25 +86,23 @@ public sealed partial class Plans : IDisposable
             return Task.CompletedTask;
         }
 
-        return CreateAsync(string.IsNullOrWhiteSpace(_newName)
-            ? new PlanEditResult<Plan>.Invalid("Give the Plan a name.")
-            : new PlanEditResult<Plan>.Valid(PlanEditRules.Copy(source, _newName, Ids)));
+        return CreateAsync(PlanLifecycleRules.Copy(source, _newName, Ids));
     }
 
     private async Task CreateAsync(PlanEditResult<Plan> result)
     {
-        if (result is not PlanEditResult<Plan>.Valid created)
+        if (!result.TryGet(out var created, out var reason))
         {
-            _newMessage = ((PlanEditResult<Plan>.Invalid)result).Message;
+            _newMessage = reason;
             return;
         }
 
         _newMessage = null;
-        var saved = await _save.CommitAsync(Change.Put(created.Value));
+        var saved = await _save.CommitAsync(Change.Put(created));
         if (saved.IsSaved)
         {
             _newOpen = false;
-            Navigation.NavigateTo($"plans/{created.Value.Id}");
+            Navigation.NavigateTo($"plans/{created.Id}");
         }
         else if (saved.Status == SaveStatus.Failed)
         {

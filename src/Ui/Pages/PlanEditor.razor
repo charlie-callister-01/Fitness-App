@@ -34,12 +34,12 @@
                 <PlanPhasesTab State="_state" Disabled="Disabled" OnEdited="OnEdited" />
                 break;
             default:
-                <PlanSessionsTab State="_state" Disabled="Disabled" OnEdited="OnEdited" />
+                <PlanSessionsTab State="_state" Page="Page" Saving="_save.IsBusy" OnEdited="OnEdited" />
                 break;
         }
 
         <div class="fa-planeditor__save">
-            @if (_state.ProblemTab is { } problemTab)
+            @if (_state.Snapshot.ProblemTab is { } problemTab)
             {
                 <p class="fa-muted" role="status">Fix the problem on the @problemTab tab to save.</p>
             }
@@ -48,7 +48,7 @@
                 <p class="fa-muted" role="status">Saved.</p>
             }
 
-            <Button Variant="ButtonVariant.Primary" Disabled="@(Disabled || !_state.IsDirty || !_state.IsValid)" OnClick="SaveAsync">Save</Button>
+            <Button Variant="ButtonVariant.Primary" Disabled="@(Disabled || !_state.IsDirty || _state.Snapshot.Composed is null)" OnClick="SaveAsync">Save</Button>
         </div>
 
         <FormSheet Open="@(_leaveTarget is not null)" Title="Discard changes?" CancelLabel="" OnClose="KeepEditing">

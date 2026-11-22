@@ -107,3 +107,10 @@
     margin: 0;
     color: var(--pr-text);
 }
+
+.fa-row__guide {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    align-self: flex-start;
+}

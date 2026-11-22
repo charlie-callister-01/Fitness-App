@@ -1,3 +1,4 @@
+using Core.Rules.PlanEditing;
 using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
@@ -71,15 +72,17 @@ public sealed partial class PlanEditor : IDisposable
 
     private async Task SaveAsync()
     {
-        if (_state?.Compose() is not { } plan)
+        if (_state is not { Snapshot.Composed: { } plan } state)
         {
             return;
         }
 
-        var result = await _save.CommitAsync(Change.Put(plan));
-        if (result.IsSaved)
+        // The Plan and the Benchmark flags ticked on its Sessions go in one commit; it either all lands or none of it does.
+        var changes = PlanSaveRules.Changes(plan, state.Saved, Data.Snapshot.Exercises, state.BenchmarkOverrides);
+        var saved = changes.Count == 0 || (await _save.CommitAsync(changes)).IsSaved;
+        if (saved)
         {
-            _state.MarkSaved(plan);
+            state.MarkSaved(plan);
             _justSaved = true;
         }
     }

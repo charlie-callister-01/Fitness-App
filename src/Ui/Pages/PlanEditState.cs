@@ -4,13 +4,19 @@ using Core.Rules.PlanEditing;
 namespace Ui.Pages;
 
 /// <summary>
-/// The Plan being edited, shared by the Plan editor's tabs: the last saved Plan, the draft the owner is changing, and the Settings
-/// fields as typed. Nothing is stored until the page commits <see cref="Compose"/>; leaving drops the draft. Each tab changes only its
-/// own part (Settings through <see cref="Form"/>, Phases and Sessions through <see cref="Change"/>), and the page asks here whether
-/// there is anything to save.
+/// The Plan being edited, shared by the Plan editor's tabs: the last saved Plan, the draft the owner is changing, the Settings fields as
+/// typed, the Benchmark flags ticked and any number text that is not a number. Nothing is stored until the page commits
+/// <see cref="PlanEditSnapshot.Composed"/> (and the flags); leaving drops the draft. Each tab changes only its own part, and the page
+/// asks <see cref="Snapshot"/> whether there is anything wrong and <see cref="IsDirty"/> whether there is anything to save.
 /// </summary>
 public sealed class PlanEditState
 {
+    private readonly Dictionary<string, bool> _benchmarks = [];
+    private PlanEditSnapshot? _snapshot;
+    private Plan? _snapshotDraft;
+    private PlanSettingsForm? _snapshotForm;
+    private int _snapshotInputs;
+
     public PlanEditState(Plan saved)
     {
         Saved = saved;
@@ -27,52 +33,59 @@ public sealed class PlanEditState
     /// <summary>The Settings tab's fields as typed.</summary>
     public PlanSettingsForm Form { get; private set; }
 
+    /// <summary>Row number boxes holding text that is not a number.</summary>
+    public RowNumberInputs Inputs { get; } = new();
+
+    /// <summary>Benchmark flags the owner has changed, Exercise id to the flag wanted. They are saved with the Plan, not before.</summary>
+    public IReadOnlyDictionary<string, bool> BenchmarkOverrides => _benchmarks;
+
     /// <summary>Replaces the draft with a changed copy (a tab's edit to Phases or Sessions).</summary>
     public void Change(Func<Plan, Plan> change) => Draft = change(Draft);
 
-    /// <summary>The reason the Settings cannot be saved, or null.</summary>
-    public string? SettingsProblem => Form.Read(Draft) is PlanEditResult<PlanSettings>.Invalid invalid ? invalid.Message : null;
+    /// <summary>Whether the Exercise shows as a Benchmark exercise: the owner's tick if there is one, else what the library says.</summary>
+    public bool IsBenchmark(string exerciseId, bool libraryValue) => _benchmarks.GetValueOrDefault(exerciseId, libraryValue);
 
-    /// <summary>The reason the Phases cannot be saved, or null.</summary>
-    public string? PhasesProblem => PlanEditRules.ValidatePhases(Draft.Phases);
+    /// <summary>Ticks or unticks the Benchmark flag. Setting it back to what the library holds drops the override.</summary>
+    public void SetBenchmark(string exerciseId, bool wanted, bool libraryValue)
+    {
+        if (wanted == libraryValue)
+        {
+            _benchmarks.Remove(exerciseId);
+        }
+        else
+        {
+            _benchmarks[exerciseId] = wanted;
+        }
+    }
 
-    /// <summary>The tab to open to fix the first problem, or null when there is none.</summary>
-    public string? ProblemTab => SettingsProblem is not null ? "Settings" : PhasesProblem is not null ? "Phases" : SessionsProblem is not null ? "Sessions" : null;
+    /// <summary>The reason this row cannot be saved (text that is not a number, or its numbers), or null.</summary>
+    public string? RowProblem(string sessionId, SessionExercise row) =>
+        Inputs.HasUnreadable(sessionId, row.ExerciseId) ? RowNumberInputs.Message : SessionRowRules.ValidateRow(row);
 
-    /// <summary>The reason the Sessions cannot be saved (a row with bad Sets or Reps, named by its Session), or null.</summary>
-    public string? SessionsProblem => Draft.Sessions
-        .Select(s => PlanEditRules.ValidateRows(s.Exercises) is { } reason ? $"{s.Name}: {reason}" : null)
-        .FirstOrDefault(r => r is not null);
+    /// <summary>The editor read once; the same reading is returned until the draft, the Settings fields or the typed numbers change.</summary>
+    public PlanEditSnapshot Snapshot
+    {
+        get
+        {
+            if (_snapshot is null || !ReferenceEquals(_snapshotDraft, Draft) || _snapshotForm != Form || _snapshotInputs != Inputs.Version)
+            {
+                _snapshot = Read();
+                _snapshotDraft = Draft;
+                _snapshotForm = Form with { };
+                _snapshotInputs = Inputs.Version;
+            }
 
-    public bool IsValid => ProblemTab is null;
+            return _snapshot;
+        }
+    }
 
     /// <summary>Something differs from what is saved.</summary>
     public bool IsDirty =>
         Form != PlanSettingsForm.From(Saved)
         || !Draft.Phases.SequenceEqual(Saved.Phases)
-        || !Draft.Sessions.SequenceEqual(Saved.Sessions);
-
-    /// <summary>
-    /// The Plan to save: the draft with the Settings read from the form and the Phases in week order. Null while there is a problem.
-    /// </summary>
-    public Plan? Compose()
-    {
-        if (SessionsProblem is not null
-            || Form.Read(Draft) is not PlanEditResult<PlanSettings>.Valid settings
-            || PlanEditRules.WithSettings(Draft, settings.Value) is not PlanEditResult<Plan>.Valid withSettings
-            || PlanEditRules.WithPhases(withSettings.Value, Draft.Phases) is not PlanEditResult<Plan>.Valid composed)
-        {
-            return null;
-        }
-
-        return composed.Value;
-    }
-
-    /// <summary>
-    /// The Plan as the owner sees it now, for showing dates: the draft with the start date from the form when that is readable. Unlike
-    /// <see cref="Compose"/> it works while there are problems.
-    /// </summary>
-    public Plan Preview => Form.Read(Draft) is PlanEditResult<PlanSettings>.Valid settings ? Draft with { StartDate = settings.Value.StartDate } : Draft;
+        || !Draft.Sessions.SequenceEqual(Saved.Sessions)
+        || _benchmarks.Count > 0
+        || Inputs.Any;
 
     /// <summary>A save went through: the composed Plan is now the saved one and the draft starts over from it.</summary>
     public void MarkSaved(Plan saved)
@@ -80,5 +93,32 @@ public sealed class PlanEditState
         Saved = saved;
         Draft = saved;
         Form = PlanSettingsForm.From(saved);
+        _benchmarks.Clear();
+        Inputs.Clear();
+    }
+
+    private PlanEditSnapshot Read()
+    {
+        var settings = Form.Read(Draft);
+        var phasesProblem = PlanPhaseRules.ValidatePhases(Draft.Phases);
+        var sessionsProblem = Draft.Sessions
+            .Select(s => s.Exercises.Select(r => RowProblem(s.Id, r)).FirstOrDefault(p => p is not null) is { } reason ? $"{s.Name}: {reason}" : null)
+            .FirstOrDefault(p => p is not null);
+
+        if (!settings.TryGet(out var read, out var settingsProblem))
+        {
+            return new PlanEditSnapshot(settingsProblem, phasesProblem, sessionsProblem, null, Draft);
+        }
+
+        var preview = Draft with { StartDate = read.StartDate };
+        Plan? composed = null;
+        if (sessionsProblem is null
+            && PlanSettingsRules.WithSettings(Draft, read).TryGet(out var withSettings, out _)
+            && PlanPhaseRules.WithPhases(withSettings, Draft.Phases).TryGet(out var withPhases, out _))
+        {
+            composed = withPhases;
+        }
+
+        return new PlanEditSnapshot(null, phasesProblem, sessionsProblem, composed, preview);
     }
 }

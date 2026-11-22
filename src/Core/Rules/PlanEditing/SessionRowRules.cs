@@ -27,6 +27,15 @@ public static class SessionRowRules
         return null;
     }
 
+    /// <summary>A row in a few words: "3 x 8", "3 x 8 to 12" or, with no Reps, "3 sets".</summary>
+    public static string Summary(SessionExercise row) => (row.Reps, row.RepsMax) switch
+    {
+        (null, _) => $"{row.Sets} sets",
+        (var reps, null) => $"{row.Sets} x {reps}",
+        (var reps, var max) when max == reps => $"{row.Sets} x {reps}",
+        (var reps, var max) => $"{row.Sets} x {reps} to {max}",
+    };
+
     /// <summary>The first reason any row cannot be saved, or null when all can.</summary>
     public static string? ValidateRows(IEnumerable<SessionExercise> rows) => rows.Select(ValidateRow).FirstOrDefault(r => r is not null);
 

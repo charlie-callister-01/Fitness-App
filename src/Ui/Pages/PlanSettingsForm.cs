@@ -72,9 +72,8 @@ public sealed record PlanSettingsForm
         }
 
         var settings = new PlanSettings(start, Goal, goalDate, target, minimum, CustomWorkoutsCount, increment);
-        return PlanEditRules.WithSettings(plan, settings) is PlanEditResult<Plan>.Invalid refused
-            ? Invalid(refused.Message)
-            : new PlanEditResult<PlanSettings>.Valid(settings);
+        return PlanSettingsRules.WithSettings(plan, settings)
+            .Match<PlanEditResult<PlanSettings>>(_ => new PlanEditResult<PlanSettings>.Valid(settings), Invalid);
     }
 
     private static PlanEditResult<PlanSettings> Invalid(string message) => new PlanEditResult<PlanSettings>.Invalid(message);

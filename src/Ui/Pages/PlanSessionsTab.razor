@@ -1,14 +1,6 @@
-@using System.Globalization
-@using Core.Ids
 @using Core.Model
-@using Core.Rules.Editing
 @using Core.Rules.Library
 @using Core.Rules.PlanEditing
-@using Core.Storage
-@using Ui.Saving
-@inject AppData Data
-@inject IIdGenerator Ids
-@inject SaveFailureNotice Notice
 @* The Plan editor's Sessions tab (design S-05, C-20, F-04): a section per Session with its Exercise rows. A row shows a decorative drag
    handle, the name and "3 x 8"; Edit expands it in place (Sets, Reps, highest Reps, Cue, Benchmark) and Move up, Move down and Remove are
    text buttons, so reordering never needs a pointer. A Session's name, default day and type change in a sheet, which is also how a new
@@ -41,16 +33,17 @@
                 {
                     var index = i;
                     var row = session.Exercises[i];
-                    var name = NameOf(row.ExerciseId);
+                    var exercise = Lookup(row.ExerciseId);
+                    var name = exercise.Name;
                     var key = sessionId + "|" + row.ExerciseId;
                     var open = _expandedKey == key;
-                    var problem = PlanEditRules.ValidateRow(row);
+                    var problem = State.RowProblem(sessionId, row);
                     <li class="fa-row">
                         <div class="fa-row__summary">
                             <span class="fa-row__handle" aria-hidden="true">&#8942;&#8942;</span>
                             <div class="fa-row__text">
                                 <p class="fa-row__name">@name</p>
-                                <p class="fa-muted fa-row__sets">@Summary(row)</p>
+                                <p class="fa-muted fa-row__sets">@SessionRowRules.Summary(row)</p>
                             </div>
                             <Button Variant="ButtonVariant.Secondary" AccessibleName="@(open ? $"Close {name}" : $"Edit {name}")" OnClick="() => Toggle(key)">@(open ? "Done" : "Edit")</Button>
                         </div>
@@ -61,15 +54,15 @@
                                 <div class="fa-row__triple">
                                     <label class="fa-row__field">
                                         <span class="fa-label">Sets</span>
-                                        <input class="fa-row__control" type="number" inputmode="numeric" disabled="@Disabled" value="@row.Sets" @onchange="e => SetSets(sessionId, index, e)" />
+                                        <input class="fa-row__control" type="text" inputmode="numeric" disabled="@Disabled" value="@NumberText(sessionId, row, RowNumber.Sets)" @onchange="e => SetNumber(sessionId, row.ExerciseId, index, RowNumber.Sets, e)" />
                                     </label>
                                     <label class="fa-row__field">
                                         <span class="fa-label">Reps</span>
-                                        <input class="fa-row__control" type="number" inputmode="numeric" disabled="@Disabled" value="@row.Reps" @onchange="e => SetReps(sessionId, index, e, max: false)" />
+                                        <input class="fa-row__control" type="text" inputmode="numeric" disabled="@Disabled" value="@NumberText(sessionId, row, RowNumber.Reps)" @onchange="e => SetNumber(sessionId, row.ExerciseId, index, RowNumber.Reps, e)" />
                                     </label>
                                     <label class="fa-row__field">
                                         <span class="fa-label">Highest Reps</span>
-                                        <input class="fa-row__control" type="number" inputmode="numeric" disabled="@Disabled" value="@row.RepsMax" @onchange="e => SetReps(sessionId, index, e, max: true)" />
+                                        <input class="fa-row__control" type="text" inputmode="numeric" disabled="@Disabled" value="@NumberText(sessionId, row, RowNumber.HighestReps)" @onchange="e => SetNumber(sessionId, row.ExerciseId, index, RowNumber.HighestReps, e)" />
                                     </label>
                                 </div>
                                 <label class="fa-row__field">
@@ -77,13 +70,14 @@
                                     <input class="fa-row__control" type="text" disabled="@Disabled" value="@row.Cue" @oninput="e => SetCue(sessionId, index, e)" />
                                 </label>
                                 <label class="fa-row__check">
-                                    <input type="checkbox" disabled="@(Disabled || !ExerciseKnown(row.ExerciseId))" checked="@IsBenchmark(row.ExerciseId)" @onchange="e => SetBenchmarkAsync(row.ExerciseId, e)" />
+                                    <input type="checkbox" disabled="@(Disabled || !exercise.InLibrary)" checked="@exercise.IsBenchmark" @onchange="e => SetBenchmark(row.ExerciseId, exercise.LibraryBenchmark, e)" />
                                     <span>Benchmark exercise</span>
                                 </label>
+                                <a class="fa-row__guide" href="@($"exercises/{row.ExerciseId}/guide")" aria-label="@($"Guide for {name}")">Guide</a>
                                 <div class="fa-row__actions">
                                     <Button Variant="ButtonVariant.Secondary" Disabled="@(Disabled || index == 0)" AccessibleName="@($"Move {name} up")" OnClick="() => Move(sessionId, index, up: true)">Move up</Button>
                                     <Button Variant="ButtonVariant.Secondary" Disabled="@(Disabled || index == session.Exercises.Count - 1)" AccessibleName="@($"Move {name} down")" OnClick="() => Move(sessionId, index, up: false)">Move down</Button>
-                                    <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" AccessibleName="@($"Remove {name}")" OnClick="() => Remove(sessionId, index)">Remove</Button>
+                                    <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" AccessibleName="@($"Remove {name}")" OnClick="() => Remove(sessionId, row.ExerciseId, index)">Remove</Button>
                                 </div>
                             </div>
                         }
@@ -105,16 +99,16 @@
 
 <ExercisePicker Open="@(_pickerSessionId is not null)" Title="Add Exercise" Request="PickerRequestForOpenSession" OnPick="AddFromPickerAsync" OnClose="ClosePicker" />
 
-<FormSheet Open="_sheetOpen" Title="@(_editingSessionId is null ? "Add Session" : "Edit Session")" CanWrite="!Disabled" ReadOnlyMessage="The Plan can't be changed right now."
-           Message="@_sheetMessage" OnClose="CloseSessionSheet">
+<FormSheet Open="_sheetOpen" Title="@(_sheet.EditingSessionId is null ? "Add Session" : "Edit Session")" Saving="Saving" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage"
+           Message="@_sheet.Message" OnClose="CloseSessionSheet">
     <ChildContent>
         <label class="fa-row__field">
             <span class="fa-label">Name</span>
-            <input class="fa-row__control" type="text" @bind="_name" @bind:event="oninput" />
+            <input class="fa-row__control" type="text" @bind="_sheet.Name" @bind:event="oninput" />
         </label>
         <label class="fa-row__field">
             <span class="fa-label">Default day</span>
-            <select class="fa-row__control" @bind="_day">
+            <select class="fa-row__control" @bind="_sheet.Day">
                 @foreach (var day in Days)
                 {
                     <option value="@day">@day</option>
@@ -123,7 +117,7 @@
         </label>
         <label class="fa-row__field">
             <span class="fa-label">Type</span>
-            <select class="fa-row__control" @bind="_type">
+            <select class="fa-row__control" @bind="_sheet.Type">
                 @foreach (var type in Enum.GetValues<SessionType>())
                 {
                     <option value="@type">@type</option>
@@ -132,157 +126,7 @@
         </label>
     </ChildContent>
     <Actions>
-        <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="ApplySessionSheet">@(_editingSessionId is null ? "Add Session" : "Done")</Button>
+        <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="ApplySessionSheet">@(_sheet.EditingSessionId is null ? "Add Session" : "Done")</Button>
     </Actions>
 </FormSheet>
 
-@code {
-    private static readonly DayOfWeek[] Days =
-        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
-
-    private GuardedSave _save = default!;
-    private string? _expandedKey;
-    private string? _pickerSessionId;
-    private bool _sheetOpen;
-    private string? _editingSessionId;
-    private string _name = "";
-    private DayOfWeek _day = DayOfWeek.Monday;
-    private SessionType _type = SessionType.Strength;
-    private string? _sheetMessage;
-
-    [Parameter, EditorRequired]
-    public PlanEditState State { get; set; } = default!;
-
-    /// <summary>The whole editor cannot be changed (read-only window or a save running).</summary>
-    [Parameter]
-    public bool Disabled { get; set; }
-
-    /// <summary>Something in the tab changed, so the page can re-check Save.</summary>
-    [Parameter]
-    public EventCallback OnEdited { get; set; }
-
-    protected override void OnInitialized() => _save = new GuardedSave(Data, Notice);
-
-    private PickerRequest PickerRequestForOpenSession =>
-        PickerRequest.ForPlanEditor(
-            Data.Snapshot.Exercises,
-            State.Draft.Sessions.FirstOrDefault(s => s.Id == _pickerSessionId)?.Exercises.Select(r => r.ExerciseId).ToList() ?? []);
-
-    private string NameOf(string exerciseId) => Data.Snapshot.Exercises.FirstOrDefault(e => e.Id == exerciseId)?.Name ?? exerciseId;
-
-    private bool ExerciseKnown(string exerciseId) => Data.Snapshot.Exercises.Any(e => e.Id == exerciseId);
-
-    private bool IsBenchmark(string exerciseId) => Data.Snapshot.Exercises.FirstOrDefault(e => e.Id == exerciseId)?.IsBenchmark ?? false;
-
-    private static string Summary(SessionExercise row) => (row.Reps, row.RepsMax) switch
-    {
-        (null, _) => $"{row.Sets} sets",
-        (var reps, null) => $"{row.Sets} x {reps}",
-        (var reps, var max) when max == reps => $"{row.Sets} x {reps}",
-        (var reps, var max) => $"{row.Sets} x {reps} to {max}",
-    };
-
-    private void Toggle(string key) => _expandedKey = _expandedKey == key ? null : key;
-
-    private Task ChangeRows(string sessionId, Func<IReadOnlyList<SessionExercise>, IReadOnlyList<SessionExercise>> change)
-    {
-        State.Change(plan => PlanEditRules.WithRows(plan, sessionId, change(plan.Sessions.First(s => s.Id == sessionId).Exercises)));
-        return OnEdited.InvokeAsync();
-    }
-
-    private Task ChangeRow(string sessionId, int index, Func<SessionExercise, SessionExercise> change) =>
-        ChangeRows(sessionId, rows => [.. rows.Select((r, i) => i == index ? change(r) : r)]);
-
-    // A blank number is "none"; text that is not a whole number becomes 0, which the rules refuse with a message.
-    private static int? ReadNumber(ChangeEventArgs e) =>
-        string.IsNullOrWhiteSpace(e.Value?.ToString()) ? null
-        : int.TryParse(e.Value!.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : 0;
-
-    private Task SetSets(string sessionId, int index, ChangeEventArgs e) =>
-        ChangeRow(sessionId, index, r => r with { Sets = ReadNumber(e) ?? 0 });
-
-    private Task SetReps(string sessionId, int index, ChangeEventArgs e, bool max)
-    {
-        var reps = ReadNumber(e);
-        return ChangeRow(sessionId, index, r => max ? r with { RepsMax = reps } : r with { Reps = reps });
-    }
-
-    private Task SetCue(string sessionId, int index, ChangeEventArgs e)
-    {
-        var cue = e.Value?.ToString();
-        return ChangeRow(sessionId, index, r => r with { Cue = string.IsNullOrWhiteSpace(cue) ? null : cue });
-    }
-
-    private Task Move(string sessionId, int index, bool up) =>
-        ChangeRows(sessionId, rows => up ? PlanEditRules.MoveUp(rows, index) : PlanEditRules.MoveDown(rows, index));
-
-    private Task Remove(string sessionId, int index)
-    {
-        _expandedKey = null;
-        return ChangeRows(sessionId, rows => PlanEditRules.Remove(rows, index));
-    }
-
-    // The Benchmark flag belongs to the Exercise in the library, not to this Plan, so it is saved at once (guarded) rather than with Save.
-    private async Task SetBenchmarkAsync(string exerciseId, ChangeEventArgs e)
-    {
-        if (Data.Snapshot.Exercises.FirstOrDefault(x => x.Id == exerciseId) is not { } exercise)
-        {
-            return;
-        }
-
-        await _save.CommitAsync(Change.Put(ExerciseEdits.WithBenchmark(exercise, e.Value is true)));
-    }
-
-    private async Task AddFromPickerAsync(string exerciseId)
-    {
-        if (_pickerSessionId is not { } sessionId)
-        {
-            return;
-        }
-
-        _pickerSessionId = null;
-        await ChangeRows(sessionId, rows => PlanEditRules.AddFromLibrary(rows, exerciseId));
-    }
-
-    private void ClosePicker() => _pickerSessionId = null;
-
-    private void OpenAddSessionSheet()
-    {
-        _editingSessionId = null;
-        _name = "";
-        _day = DayOfWeek.Monday;
-        _type = SessionType.Strength;
-        _sheetMessage = null;
-        _sheetOpen = true;
-    }
-
-    private void OpenSessionSheet(string sessionId)
-    {
-        var session = State.Draft.Sessions.First(s => s.Id == sessionId);
-        _editingSessionId = sessionId;
-        _name = session.Name;
-        _day = session.DefaultDay;
-        _type = session.Type;
-        _sheetMessage = null;
-        _sheetOpen = true;
-    }
-
-    private void CloseSessionSheet() => _sheetOpen = false;
-
-    private async Task ApplySessionSheet()
-    {
-        var result = _editingSessionId is { } id
-            ? PlanEditRules.EditSession(State.Draft, id, _name, _day, _type)
-            : PlanEditRules.AddSession(State.Draft, _name, _day, _type, Ids);
-        if (result is PlanEditResult<Plan>.Invalid invalid)
-        {
-            _sheetMessage = invalid.Message;
-            return;
-        }
-
-        var changed = ((PlanEditResult<Plan>.Valid)result).Value;
-        State.Change(_ => changed);
-        _sheetOpen = false;
-        await OnEdited.InvokeAsync();
-    }
-}
