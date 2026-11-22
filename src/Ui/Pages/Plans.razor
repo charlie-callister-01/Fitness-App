@@ -4,10 +4,13 @@
 <div class="fa-root fa-plans">
     <header class="fa-plans__header">
         <h1 class="fa-title fa-title--l">Plans</h1>
-        @if (PlanList.Count > 0)
-        {
-            <Button Variant="ButtonVariant.Primary" Disabled="!Page.CanWrite" OnClick="OpenNew">New Plan</Button>
-        }
+        <div class="fa-plans__actions">
+            <Button Variant="ButtonVariant.Secondary" Href="backup?tab=import&kind=plan">Import a Plan</Button>
+            @if (PlanList.Count > 0)
+            {
+                <Button Variant="ButtonVariant.Primary" Disabled="!Page.CanWrite" OnClick="OpenNew">New Plan</Button>
+            }
+        </div>
     </header>
 
     <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />

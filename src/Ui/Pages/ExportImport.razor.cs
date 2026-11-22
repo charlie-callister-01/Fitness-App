@@ -1,3 +1,4 @@
+using Core.Exchange;
 using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
@@ -5,7 +6,7 @@ using Microsoft.AspNetCore.Components;
 namespace Ui.Pages;
 
 /// <summary>
-/// Export, Import, Backup, and Prompt pack shell (design S-10). Honours <c>?tab=</c> and <c>?preset=</c> query parameters.
+/// Export, Import, Backup, and Prompt pack shell (design S-10). Honours <c>?tab=</c>, <c>?preset=</c>, and <c>?kind=</c> query parameters.
 /// </summary>
 public sealed partial class ExportImport : IDisposable
 {
@@ -14,6 +15,7 @@ public sealed partial class ExportImport : IDisposable
     private PageContext Page = default!;
     private string _tab = "Export";
     private string? _preset;
+    private ImportKind? _kind;
 
     [Inject] private AppData Data { get; set; } = default!;
     [Inject] private IClock Clock { get; set; } = default!;
@@ -34,7 +36,17 @@ public sealed partial class ExportImport : IDisposable
     {
         _tab = TabQuery.Pick(Navigation.Uri, Tabs, "Export");
         _preset = QueryValue(Navigation.Uri, "preset");
+        _kind = ParseKind(QueryValue(Navigation.Uri, "kind"));
     }
+
+    private static ImportKind? ParseKind(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "backup" or "restore" => ImportKind.Restore,
+        "plan" => ImportKind.Plan,
+        "merge" => ImportKind.Merge,
+        "guides" or "guide" => ImportKind.Guides,
+        _ => null,
+    };
 
     private static string? QueryValue(string uri, string key) =>
         new Uri(uri).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)

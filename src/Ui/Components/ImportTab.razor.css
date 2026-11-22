@@ -1,0 +1,49 @@
+.fa-import {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.fa-import h2,
+.fa-import h3 {
+    margin: 0;
+}
+
+.fa-import__section {
+    gap: var(--space-3);
+}
+
+.fa-import__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fa-import__textarea {
+    width: 100%;
+    min-height: 160px;
+    padding: var(--space-2);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    color: var(--text);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-body);
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.fa-import__file {
+    min-height: var(--tap-min);
+    color: var(--text);
+}
+
+.fa-import__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.fa-import__hint {
+    margin: 0;
+}

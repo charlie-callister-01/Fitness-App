@@ -55,7 +55,10 @@
             @if (!GuideContent.HasContent(StoredGuide))
             {
                 <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Guide yet" Message="@($"Write a Guide for {Exercise.Name}: how to set up, how to do it and what to watch for.")" />
-                <Button Variant="ButtonVariant.Primary" Disabled="!Page.CanWrite" OnClick="StartEdit">Write a Guide</Button>
+                <div class="fa-guidepage__actions">
+                    <Button Variant="ButtonVariant.Primary" Disabled="!Page.CanWrite" OnClick="StartEdit">Write a Guide</Button>
+                    <Button Variant="ButtonVariant.Secondary" Href="backup?tab=import&kind=guides">Import Guides</Button>
+                </div>
             }
             else
             {
