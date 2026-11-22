@@ -1,0 +1,106 @@
+@using System.Globalization
+@using Core.Rules.Insight
+@* C-15 DateRangePicker: a field showing the range in words; tapping opens a sheet with the presets and, for Custom, two native date inputs.
+   A start after the end shows an inline message and is not applied. It resolves ranges with RangeResolver and raises OnChanged; it keeps
+   nothing, so any screen (Progress now, Export later) can use it. *@
+<button type="button" class="fa-rangefield" aria-haspopup="dialog" aria-label="@("Date range: " + Value.Text + ". Change")" @onclick="OpenSheet">
+    <Icon Name="IconName.Calendar" />
+    <span class="fa-rangefield__text">@Value.Text</span>
+</button>
+
+<Sheet Open="_open" Title="Date range" OnClose="Close">
+    <div class="fa-rangechoices" role="group" aria-label="Date range choices">
+        @foreach (var preset in Presets)
+        {
+            var value = preset;
+            <Button Variant="ButtonVariant.Secondary" Pressed="_selected == value" OnClick="() => Choose(value)">@RangeResolver.PresetLabel(value)</Button>
+        }
+    </div>
+
+    @if (_selected == RangePreset.Custom)
+    {
+        <label class="fa-rangedate">
+            <span class="fa-label">Start</span>
+            <input class="fa-rangedate__control" type="date" aria-label="Start date" value="@_start" @onchange="e => _start = (string?)e.Value" />
+        </label>
+        <label class="fa-rangedate">
+            <span class="fa-label">End</span>
+            <input class="fa-rangedate__control" type="date" aria-label="End date" value="@_end" @onchange="e => _end = (string?)e.Value" />
+        </label>
+        @if (_error is { Length: > 0 })
+        {
+            <p class="fa-well fa-rangeerror" role="alert">@_error</p>
+        }
+    }
+
+    <div class="fa-rangeactions">
+        @if (_selected == RangePreset.Custom)
+        {
+            <Button Variant="ButtonVariant.Primary" OnClick="ApplyCustom">Apply</Button>
+        }
+        <Button Variant="ButtonVariant.Secondary" OnClick="Close">Close</Button>
+    </div>
+</Sheet>
+
+@code {
+    private const string DateFormat = "yyyy-MM-dd";
+
+    private bool _open;
+    private RangePreset _selected;
+    private string? _start;
+    private string? _end;
+    private string? _error;
+
+    /// <summary>The range now in force, shown in the field.</summary>
+    [Parameter, EditorRequired]
+    public RangeChoice Value { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<RangePreset> Presets { get; set; } = [RangePreset.Last4Weeks, RangePreset.Last12Weeks, RangePreset.WholePlan, RangePreset.Custom];
+
+    [Parameter, EditorRequired]
+    public DateOnly Today { get; set; }
+
+    [Parameter]
+    public DateOnly? PlanStart { get; set; }
+
+    [Parameter]
+    public EventCallback<RangeChoice> OnChanged { get; set; }
+
+    private void OpenSheet()
+    {
+        _selected = Value.Preset;
+        _start = Value.Range.From.ToString(DateFormat, CultureInfo.InvariantCulture);
+        _end = Value.Range.To.ToString(DateFormat, CultureInfo.InvariantCulture);
+        _error = null;
+        _open = true;
+    }
+
+    private void Close() => _open = false;
+
+    private async Task Choose(RangePreset preset)
+    {
+        _selected = preset;
+        _error = null;
+        if (preset == RangePreset.Custom) return;
+        await Apply(RangeResolver.Resolve(preset, Today, PlanStart), preset);
+    }
+
+    private async Task ApplyCustom() =>
+        await Apply(RangeResolver.Resolve(RangePreset.Custom, Today, PlanStart, Parse(_start), Parse(_end)), RangePreset.Custom);
+
+    private async Task Apply(RangeResult result, RangePreset preset)
+    {
+        if (result.Range is null)
+        {
+            _error = result.Error;
+            return;
+        }
+
+        _open = false;
+        await OnChanged.InvokeAsync(new RangeChoice(preset, result.Range));
+    }
+
+    private static DateOnly? Parse(string? text) =>
+        DateOnly.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
+}
