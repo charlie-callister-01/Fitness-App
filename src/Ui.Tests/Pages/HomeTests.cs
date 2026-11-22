@@ -278,7 +278,7 @@ public sealed class HomeTests : BunitContext
         cut.FindAll(".fa-weekstrip__tile")[0].Click();
         Assert.Equal("week", CurrentPath);
         cut.FindAll(".fa-orbrow__orb")[0].Click();
-        Assert.Equal("progress", CurrentPath);
+        Assert.Equal("progress?tab=calendar", CurrentPath);
     }
 
     [Fact]

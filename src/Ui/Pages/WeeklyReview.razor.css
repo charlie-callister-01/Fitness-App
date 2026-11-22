@@ -80,3 +80,16 @@
 .fa-review__exportnote {
     margin: 0;
 }
+
+.fa-review__sections {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+    .fa-review__sections {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+    }
+}

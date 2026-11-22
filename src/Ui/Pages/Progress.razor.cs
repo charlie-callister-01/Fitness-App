@@ -20,6 +20,8 @@ public sealed partial class Progress : IDisposable
 
     [Inject] private IClock Clock { get; set; } = default!;
 
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
     private ProgressListView List => _list;
 
     private DateOnly Today => new PageContext(Data, Clock).Today;
@@ -34,6 +36,7 @@ public sealed partial class Progress : IDisposable
 
     protected override void OnInitialized()
     {
+        _tab = TabQuery.Pick(Navigation.Uri, Tabs, "Progress");
         _range = new RangeChoice(RangePreset.Last12Weeks, RangeResolver.Resolve(RangePreset.Last12Weeks, Today, PlanStart).Range!);
         Data.Changed += OnDataChanged;
         Rebuild();

@@ -239,3 +239,31 @@ bUnit covers what each Editors page shows and stores over the in-memory store. I
 - [ ] 16. Suggested week: with a Break over a Session day, the draft shows changed rows highlighted and one summary line; Undo on a row, Cancel changes nothing, Apply stores it once. Nothing becomes Missed before its day has passed.
 - [ ] 17. Read-only: open a second window; Guide, library, Plans, Plan editor and Week show the reason and every save control is disabled.
 - [ ] 18. Offline: with airplane mode on, the library, Guide (apart from the video), Plan editor and Week view open and save.
+
+## Insight manual checks (B6 + B7 + B8)
+
+bUnit and Core tests cover what each Insight screen shows and stores. They cannot check CSS, the phone, native date inputs, the offline browser state or the desktop layout. `Web.BrowserTests` (Playwright) have not been run against Insight yet: run them once before merging. Visual targets are `docs/design/assets/mockups/S-07-*`, `S-08-*`, `S-09-*` and `S-13-*`.
+
+- [ ] 1. Looks nobody has checked yet: every Insight screen (Progress with its Benchmarks and Calendar tabs, Weight, Trophies with Badges, Bests and Calendar, Badge detail and editor, Weekly review, the UnlockToast) in Keep and Clean, both Modes, at 360 px. Charts, heatmap, Badge art, orbs and tap targets stay readable and nothing scrolls sideways except the Calendar panel.
+- [ ] 2. Home to Insight: the Streak orb opens Progress on its Calendar tab, the Phase and days-to-race orbs open Progress. On a Sunday, log your weight and the Today card shows "See your Weekly review"; before the weigh-in, or on any other day, it does not.
+- [ ] 3. Progress charts: groups, the date range presets and Custom (a start after the end shows an inline message), tap a point for the tooltip, the Table toggle, and PR rings. An Exercise with one entry says "needs 2 for a chart".
+- [ ] 4. Benchmarks: latest against previous, better or worse (lower is better for times), the target bar and the next test date.
+- [ ] 5. Calendar: the whole Plan scrolls; every state (done, Partial, Missed, Break, future, today, PR) is distinguishable without colour; tapping a day opens that Workout.
+- [ ] 6. Weight: three stats, the chart with the rolling line, goal line and lowest ring, the weekly averages table; Log weight adds a new Weigh-in and Home agrees.
+- [ ] 7. Badges: unlocked first, then closest; the detail lists the contributing events; add, edit and delete a Badge, and the live "Now / Unlocks when" line; export a backup and see the Badges in it. A failed save keeps the draft.
+- [ ] 8. UnlockToast: finish a Workout that unlocks a Badge; the toast shows for about 4 s, tapping opens the Badge; with reduced motion it appears and goes without animation.
+- [ ] 9. Weekly review: the current week, then Previous week back through past weeks; a Break week says so; the export note appears instead of the button until Export.
+- [ ] 10. Nudges (Home only, at most two): copy reads calmly: "Knee pain reported twice this week. Consider an easier variation." (no button, Dismiss only), "You missed Lower on Monday. Make it up this week?" (Make up), "One workout short of your target of 3 this week." (Pick a Session), "No Backup in 14 days. Make one so you don't lose your data." (Back up).
+- [ ] 11. Desktop (900 px and wider): Progress and Benchmarks charts sit two across, Weight puts the chart beside the weekly table, the Weekly review lists its sections two across, the Badge grid widens to six columns. Note anything the shell's 560 px column cap stops from showing.
+- [ ] 12. Read-only (second window open): charts and lists show; Badge saves and Log weight are disabled with the usual message.
+- [ ] 13. Offline (airplane mode): every Insight screen opens and Badge and Weigh-in saves work.
+
+### Decisions for the owner to confirm
+
+- Chart gap rule: a gap of more than 14 days between two points breaks the line.
+- Best of the week is the biggest relative jump over the previous Best.
+- Load Badge targets are stored as estimated 1RM (Epley), not as a weight and reps.
+- A benchmark's target comes from the first Badge that names the Exercise.
+- A past week's review says Behind, not On track, when the target was not reached.
+- Badge art is derived from the Badge's metric and target, not chosen by hand.
+- Nudge copy review (C-08): the repeated-pain Nudge now says "Consider an easier variation" (the design wording); it still has Dismiss only and no action button because there is no flow for it. Confirm that is acceptable against "one action".
