@@ -12,8 +12,10 @@
 
 **Blocked by:** 04, 06, 07.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Tests (`HomeViewBuilderTests` style): a two-Track Plan with a daily Track gives the main Track's Today card and orbs unchanged by the other Track; the daily card is not started, in progress and done at the right states; a Break marks it; an extra weekly Track gives its own week line; a one-Track Plan has empty lists and every existing Home test passes unchanged.
-- [ ] Today's card never offers a daily Session, and a Missed daily Session never appears.
-- [ ] `dotnet build` 0 warnings; Core and Ui tests green.
+**Notes:** Added HomeTrackRules (daily cards, extra weekly week lines, IsExtraTrackWorkout) and HomeView.DailyTracks / ExtraWeekLines. Main Track rules already took the main Track (ticket 04); the Today card now ignores in-progress/done Workouts of other Tracks so a daily Session never shows there. Daily card: Done at the Track's done percent, InProgress with an open Workout, else NotStarted; carries percent reached, daily Streak, Break flag. No Ui changes were needed (Home.razor.cs compiles unchanged). Tests: HomeViewTracksTests.
+
+- [x] Tests (`HomeViewBuilderTests` style): a two-Track Plan with a daily Track gives the main Track's Today card and orbs unchanged by the other Track; the daily card is not started, in progress and done at the right states; a Break marks it; an extra weekly Track gives its own week line; a one-Track Plan has empty lists and every existing Home test passes unchanged.
+- [x] Today's card never offers a daily Session, and a Missed daily Session never appears.
+- [x] `dotnet build` 0 warnings; Core and Ui tests green.
