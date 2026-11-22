@@ -258,12 +258,12 @@ bUnit and Core tests cover what each Insight screen shows and stores. They canno
 - [ ] 12. Read-only (second window open): charts and lists show; Badge saves and Log weight are disabled with the usual message.
 - [ ] 13. Offline (airplane mode): every Insight screen opens and Badge and Weigh-in saves work.
 
-### Decisions for the owner to confirm
+### Decisions confirmed by the owner (23 Nov 2026)
 
-- Chart gap rule: a gap of more than 14 days between two points breaks the line.
-- Best of the week is the biggest relative jump over the previous Best.
-- Load Badge targets are stored as estimated 1RM (Epley), not as a weight and reps.
-- A benchmark's target comes from the first Badge that names the Exercise.
-- A past week's review says Behind, not On track, when the target was not reached.
-- Badge art is derived from the Badge's metric and target, not chosen by hand.
-- Nudge copy review (C-08): the repeated-pain Nudge now says "Consider an easier variation" (the design wording); it still has Dismiss only and no action button because there is no flow for it. Confirm that is acceptable against "one action".
+- Chart gap rule: a gap of more than 14 days between two points breaks the line. Confirmed, keep 14.
+- Best of the week is the biggest relative jump over the previous Best. Confirmed; a first-ever result is already a baseline and never Best of the week.
+- Load Badge targets are stored as estimated 1RM (Epley), not as a weight and reps. Confirmed.
+- A benchmark's target comes from the first Badge that names the Exercise. Confirmed.
+- A past week's review says Behind, not On track, when the target was not reached. Confirmed.
+- Badge art is derived from the Badge's metric and target for now. Choosing art is shelved until after the A4.5 merge, then add an optional art field to the format in one go (see `.scratch/insight/FOLLOWUPS.md`).
+- Nudge copy review (C-08): the repeated-pain Nudge ("Consider an easier variation") still has Dismiss only. The owner wants it to get an action that shows easier variations; that is a follow-up ticket (`.scratch/insight/issues/11-pain-nudge-easier-variations-action.md`).
