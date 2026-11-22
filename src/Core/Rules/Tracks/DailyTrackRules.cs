@@ -84,12 +84,17 @@ public static class DailyTrackRules
         return new DailyTrackStatus(current, bestRun, doneDays.Count, doneDays.Contains(today));
     }
 
+    /// <summary>Whether <paramref name="workout"/> is still open (started and not ended, or an empty un-finished draft).</summary>
+    public static bool IsOpen(Workout workout) =>
+        workout.EndedAt is null && (workout.StartedAt is not null || workout.Entries.Count == 0);
+
     private static HashSet<string> SessionIdsOf(Plan plan, Track track) =>
         TrackRules.SessionsOf(plan, track).Select(s => s.Id).ToHashSet();
 
     private static bool Qualifies(Workout workout, HashSet<string> sessionIds, int dayDonePercent) =>
         workout.SessionId is { } sid
         && sessionIds.Contains(sid)
+        && !IsOpen(workout)
         && IsWorkoutDone(workout, dayDonePercent);
 
     private static int DoneRowCount(Workout workout) =>

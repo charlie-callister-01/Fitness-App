@@ -3,8 +3,8 @@
 Point a fresh chat at this file. Read `CLAUDE.md`, `docs/README.md` and `GLOSSARY.md` first, then `docs/specs/a4-5-tracks.md`, `docs/adr/0007-explicit-tracks-and-format-version-2.md` and the ticket you are working on. File lives at `.scratch/a4-5-tracks/HANDOFF.md`.
 
 ## State (22 Nov 2026)
-- The spec, ADR 0007, fifteen tickets and the docs are written. **Nothing is implemented; no ticket is done.** The spec replaces an earlier "implicit main track" version (never implemented).
-- Base: `main` after the Editors PR (#25) merged (Core 1309, Ui 597, Web 39 at the end of Editors; `dotnet build` must stay at 0 warnings). Work in a new worktree and branch per PR (for example `a4-5-pr1`, `a4-5-pr2`). Do not reuse old ones. Leave the untracked `Workflow/` folder in the repo root alone.
+- **PR 1 (tickets 01 to 10) is implemented on `feature/a4-5-pr1`** (1,479 Core, 611 Ui, 39 Web tests green; `dotnet build` 0 warnings). PR 2 (tickets 11 to 15) has not started yet and is queued after A5 (`docs/specs/a5-starter-data.md`) or Data and settings (B9 + B10).
+- Base: `chore/workflow-refit` (ahead of `main` after PR #26 merged). Work in a new worktree and branch per PR (for example `feature/a4-5-pr1`, `feature/a4-5-pr2`). Do not reuse old ones. Leave the untracked `Workflow/` folder in the repo root alone.
 - **One implementer at a time.** The owner is usage-constrained, so tickets are run sequentially in the order below and stages are not run in parallel (A5 and Data and settings are queued behind PR 1, not beside it).
 
 ## Order and blocking

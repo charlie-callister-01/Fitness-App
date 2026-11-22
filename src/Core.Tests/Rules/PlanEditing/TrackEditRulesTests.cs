@@ -125,6 +125,25 @@ public class TrackEditRulesTests
     }
 
     [Fact]
+    public void Moving_a_Track_that_would_leave_a_benchmark_Session_off_the_main_Track_is_refused()
+    {
+        var plan = PlanFixture.Make(
+            start: Mon,
+            tracks:
+            [
+                new Track("main", "Gym", new TrackRhythm.Weekly(3, 2, false), []),
+                new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 2, false), []),
+            ],
+            sessions:
+            [
+                PlanFixture.Session("bench", DefaultDay.Saturday, SessionType.Test, "Benchmark", benchmarkEveryWeeks: 4, trackId: "main"),
+            ]);
+
+        Assert.Contains("main Track", Reason(TrackEditRules.MoveDown(plan, "main")));
+        Assert.Contains("main Track", Reason(TrackEditRules.MoveUp(plan, "cardio")));
+    }
+
+    [Fact]
     public void Editing_a_Track_never_touches_past_Workouts()
     {
         var plan = MultiPlan();

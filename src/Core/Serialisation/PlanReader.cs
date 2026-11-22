@@ -66,17 +66,13 @@ internal static class PlanReader
         var header = ReadHeader(reader);
         var tracksAttempt = reader.Attempt(() => reader.ReadRecords("tracks", ReadTrack));
         var tracks = tracksAttempt.Value ?? [];
-        if (tracksAttempt.IsValid && tracks.Count == 0)
-        {
-            reader.Report("tracks", "missing_field", $"{reader.ChildPath("tracks")} is required and must contain at least one Track.");
-        }
 
         var sessions = reader.ReadRecords("sessions", ReadV2Session) ?? [];
         var plan = new Plan(
             header.Id, header.Name, header.IsActive, header.StartDate, header.Goal, header.GoalDate,
             header.WeightIncrementKg, tracks, sessions);
 
-        if (tracks.Count == 0)
+        if (!tracksAttempt.IsValid && tracks.Count == 0)
         {
             reader.Context.Findings.MarkTracksMissing(plan);
         }

@@ -15,4 +15,11 @@ public static class TrackRules
     /// <summary>The Sessions belonging to <paramref name="track"/>, in Plan order.</summary>
     public static IReadOnlyList<Session> SessionsOf(Plan plan, Track track) =>
         [.. plan.Sessions.Where(s => s.TrackId == track.Id)];
+
+    /// <summary>The Phases belonging to <paramref name="track"/>.</summary>
+    public static IReadOnlyList<Phase> PhasesOf(Track track) => track.Phases;
+
+    /// <summary>Whether <paramref name="session"/> belongs to a daily Track (or has a daily default day).</summary>
+    public static bool IsDaily(Plan plan, Session session) =>
+        TrackOf(plan, session)?.Rhythm is TrackRhythm.Daily || session.DefaultDay == DefaultDay.Daily;
 }

@@ -46,7 +46,7 @@ public static class GuideHistoryView
 
         var phase = PhaseRules.CurrentPhase(plan, TrackRules.Main(plan), today);
         var placements = plan.Sessions
-            .Select(s => (Session: s, Row: PhaseRules.ExerciseRows(plan, phase, s.Id).FirstOrDefault(r => r.ExerciseId == exercise.Id)))
+            .Select(s => (Session: s, Row: PhaseRules.ExerciseRows(plan, s.Id, today).FirstOrDefault(r => r.ExerciseId == exercise.Id)))
             .Where(x => x.Row is not null)
             .Select(x => new GuidePlacement(x.Session, x.Row!))
             .ToList();

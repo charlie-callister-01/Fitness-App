@@ -107,6 +107,12 @@ public static class TrackEditRules
             return Invalid("The main Track must be weekly, so a daily Track cannot be first.");
         }
 
+        if (reordered[0].Id != plan.Tracks[0].Id
+            && plan.Sessions.Any(s => s.TrackId == plan.Tracks[0].Id && s.BenchmarkIntervalWeeks is not null))
+        {
+            return Invalid("Only a Session on the main Track can have a benchmark interval.");
+        }
+
         return new PlanEditResult<Plan>.Valid(plan with { Tracks = reordered });
     }
 

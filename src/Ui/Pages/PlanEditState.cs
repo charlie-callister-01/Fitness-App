@@ -83,14 +83,10 @@ public sealed class PlanEditState
     /// <summary>Something differs from what is saved.</summary>
     public bool IsDirty =>
         Form != PlanSettingsForm.From(Saved)
-        || TracksDiffer(Draft.Tracks, Saved.Tracks)
+        || PlanSaveRules.TracksDiffer(Draft.Tracks, Saved.Tracks)
         || !Draft.Sessions.SequenceEqual(Saved.Sessions)
         || _benchmarks.Count > 0
         || Inputs.Any;
-
-    private static bool TracksDiffer(IReadOnlyList<Track> a, IReadOnlyList<Track> b) =>
-        a.Count != b.Count
-        || a.Zip(b).Any(pair => pair.First with { Phases = pair.Second.Phases } != pair.Second || !pair.First.Phases.SequenceEqual(pair.Second.Phases));
 
     /// <summary>A save went through: the composed Plan is now the saved one and the draft starts over from it.</summary>
     public void MarkSaved(Plan saved)
@@ -121,8 +117,8 @@ public sealed class PlanEditState
         Plan? composed = null;
         if (sessionsProblem is null
             && PlanSettingsRules.WithSettings(Draft, read.Plan).TryGet(out var withPlanSettings, out _)
-            && PlanSettingsRules.WithTrackSettings(TrackRules.Main(withPlanSettings), read.Track).TryGet(out var updatedMain, out _)
-            && PlanPhaseRules.WithPhases(withPlanSettings with { Tracks = [updatedMain, .. withPlanSettings.Tracks.Skip(1)] }, mainTrack.Id, mainPhases).TryGet(out var withPhases, out _))
+            && TrackEditRules.WithSettings(withPlanSettings, mainTrack.Id, read.Track).TryGet(out var withTrackSettings, out _)
+            && PlanPhaseRules.WithPhases(withTrackSettings, mainTrack.Id, mainPhases).TryGet(out var withPhases, out _))
         {
             composed = withPhases;
         }

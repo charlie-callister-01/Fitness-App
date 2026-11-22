@@ -1,3 +1,11 @@
 # Refactor backlog
 
 Findings from `/thermo-nuclear-code-quality-review` and architecture passes. Open items only; strike through or note when resolved.
+
+## From A4.5 PR 1 thermo-nuclear review (22 Nov 2026)
+
+1. **Unify `ParseFindings` (`src/Core/Serialisation/ReadContext.cs`):** `ParseFindings` holds 4 separate reference-identity `HashSet<T>` sets (`_phasesWithUnreadableWeeks`, `_plansWithMissingTracks`, `_tracksWithUnreadableCadence`, `_sessionsWithUnreadableDefaultDay`) and 8 mark/check methods across four disjoint record types (`Phase`, `Plan`, `Track`, `Session`). Collapse into a single `HashSet<object> _unreadable = new(ReferenceEqualityComparer.Instance)` with `MarkUnreadable` / `IsUnreadable`.
+2. **Unify Plan ID-graph remapping (`src/Core/Rules/PlanEditing/PlanLifecycleRules.cs` and `src/Core/Exchange/PlanImport.cs`):** `PlanLifecycleRules.Duplicate` and `PlanImport.Rebuild` both walk a `Plan` to mint new Track, Session and Phase IDs while rewiring `Session.TrackId` and `Phase.SessionOverrides[*].SessionId`. Extract a shared graph-remapping helper parameterized by the ID-allocation function.
+3. **Consolidate Session `TileState` and `doneThisWeek` queries (`src/Core/Rules/Home/HomeTrackRules.cs`, `HomeWeekRules.cs`, `HomeTodayRules.cs`, `WorkoutStart.cs`, `WeekScheduleRules.cs`, `WeekRearrangement.cs`):** `HomeTrackRules.StateOf` duplicates the finished-outcome / break / missed / upcoming tile-state decision tree in `HomeWeekRules.Strip`, and `doneThisWeek` (`workouts.Where(w => WeekCalendar.InWeek(monday, w.Date)).Select(w => w.SessionId).OfType<string>().ToHashSet()`) is rebuilt in five places.
+4. **Extract shared Streak run counter (`src/Core/Rules/Weeks/WeekRules.cs` and `src/Core/Rules/Tracks/DailyTrackRules.cs`):** `WeekRules.Runs` and `DailyTrackRules.Status` run the same current/best streak state machine over break-filtered periods where the open current period (`today` or `thisMonday`) can extend a run without breaking it.
+5. **Split `DocumentValidator` before it crosses 500 lines (`src/Core/Serialisation/DocumentValidator.cs`, currently 455 lines):** Extract Plan/Track/Phase/Session validation into `DocumentValidator.Plans.cs` (partial class) before the next schema addition pushes the file over 500 lines.

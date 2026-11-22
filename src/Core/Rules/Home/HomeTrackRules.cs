@@ -84,9 +84,9 @@ public static class HomeTrackRules
             .Where(w => w.Date == today && w.SessionId is { } id && ids.Contains(id))
             .ToList();
 
-        var open = todays.FirstOrDefault(w => w.EndedAt is null);
+        var open = todays.FirstOrDefault(DailyTrackRules.IsOpen);
         var percent = todays.Count == 0 ? 0 : todays.Max(DailyTrackRules.DonePercent);
-        var done = todays.Any(w => w.EndedAt is not null && DailyTrackRules.IsWorkoutDone(w, daily.DayDonePercent));
+        var done = todays.Any(w => !DailyTrackRules.IsOpen(w) && DailyTrackRules.IsWorkoutDone(w, daily.DayDonePercent));
         var state = done ? DailyTrackState.Done : open is not null ? DailyTrackState.InProgress : DailyTrackState.NotStarted;
         var status = DailyTrackRules.Status(plan, track, snapshot.Workouts, snapshot.Breaks, today);
 

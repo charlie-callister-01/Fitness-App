@@ -37,7 +37,8 @@ public static class PlanSaveRules
         || TracksDiffer(composed.Tracks, saved.Tracks)
         || !composed.Sessions.SequenceEqual(saved.Sessions);
 
-    private static bool TracksDiffer(IReadOnlyList<Track> a, IReadOnlyList<Track> b) =>
+    /// <summary>Whether two Track lists differ in order, fields or Phases.</summary>
+    public static bool TracksDiffer(IReadOnlyList<Track> a, IReadOnlyList<Track> b) =>
         a.Count != b.Count
         || a.Zip(b).Any(pair => pair.First with { Phases = pair.Second.Phases } != pair.Second || !pair.First.Phases.SequenceEqual(pair.Second.Phases));
 }

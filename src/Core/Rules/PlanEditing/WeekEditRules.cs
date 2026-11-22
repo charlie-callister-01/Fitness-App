@@ -88,7 +88,7 @@ public static class WeekEditRules
             return new PlanEditResult<WeekSchedule>.Invalid("That Session is no longer in the Plan.");
         }
 
-        if (IsDaily(plan, session))
+        if (TrackRules.IsDaily(plan, session))
         {
             return new PlanEditResult<WeekSchedule>.Invalid("A daily Session is on every day and cannot be moved.");
         }
@@ -141,7 +141,7 @@ public static class WeekEditRules
             return new PlanEditResult<Plan>.Invalid("That Session is no longer in the Plan.");
         }
 
-        if (IsDaily(plan, session))
+        if (TrackRules.IsDaily(plan, session))
         {
             return new PlanEditResult<Plan>.Invalid("A daily Session is on every day and its default day cannot be changed.");
         }
@@ -196,9 +196,6 @@ public static class WeekEditRules
             .ToList();
         return new WeekDraft(proposal.Monday, rows, proposal.Unplaced);
     }
-
-    private static bool IsDaily(Plan plan, Session session) =>
-        TrackRules.TrackOf(plan, session)?.Rhythm is TrackRhythm.Daily || session.DefaultDay == DefaultDay.Daily;
 
     private static string Text(DateOnly date) => date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
 }

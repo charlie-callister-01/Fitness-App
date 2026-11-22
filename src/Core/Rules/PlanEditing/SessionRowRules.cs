@@ -87,7 +87,7 @@ public static class SessionRowRules
         }
 
         var track = TrackRules.TrackOf(plan, existing);
-        var isDaily = track?.Rhythm is TrackRhythm.Daily || existing.DefaultDay == DefaultDay.Daily;
+        var isDaily = TrackRules.IsDaily(plan, existing);
         if (isDaily && day != DefaultDay.Daily)
         {
             return Invalid("A daily Session is on every day and its day cannot be changed.");
