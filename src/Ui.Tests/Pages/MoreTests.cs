@@ -38,8 +38,16 @@ public sealed class MoreTests : BunitContext
         return Render<More>();
     }
 
+    [Fact]
+    public async Task More_links_to_the_routed_Weight_screen()
+    {
+        var cut = await RenderMoreAsync();
+
+        Assert.Equal("weight", cut.FindAll("nav a").Single(a => a.TextContent.Trim() == "Weight").GetAttribute("href"));
+        Assert.Equal("/weight", ((RouteAttribute)Attribute.GetCustomAttribute(typeof(Weight), typeof(RouteAttribute))!).Template);
+    }
+
     [Theory]
-    [InlineData("Weight", "weight", typeof(Weight))]
     [InlineData("Weekly review", "weekly-review", typeof(WeeklyReview))]
     [InlineData("Export and Import", "backup", typeof(ExportImport))]
     [InlineData("Settings", "settings", typeof(SettingsPage))]

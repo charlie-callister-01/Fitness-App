@@ -23,8 +23,12 @@ public sealed partial class LineChart
     private bool _table;
 
     /// <summary>The series to draw. A chart never receives Workouts.</summary>
-    [Parameter, EditorRequired]
+    [Parameter]
     public ExerciseSeries Series { get; set; } = default!;
+
+    /// <summary>The weight variant (every Weigh-in a dot, the rolling average as the line, a ringed lowest, an optional goal line). When set, <see cref="Series"/> is not used.</summary>
+    [Parameter]
+    public WeightView? Weight { get; set; }
 
     internal sealed record Band(double X, double Width, int Index, string Focus);
 
