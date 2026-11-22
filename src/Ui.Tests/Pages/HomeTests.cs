@@ -213,7 +213,7 @@ public sealed class HomeTests : BunitContext
     [Fact]
     public async Task A_finished_Plan_shows_Plan_finished()
     {
-        var plan = Plan() with { Phases = [new Phase("p", "Foundation", 1, 1, [], [])] };
+        var plan = WithMainPhases(Plan(), [new Phase("p", "Foundation", 1, 1, [], [])]);
         var cut = await RenderHomeAsync(await OpenSeededAsync(plan: plan), Now.AddDays(21));
 
         Assert.Contains("Your Plan has finished", cut.Markup);
@@ -268,7 +268,7 @@ public sealed class HomeTests : BunitContext
     [Fact]
     public async Task The_strip_line_and_three_orbs_render_and_tapping_them_navigates()
     {
-        var plan = Plan() with { Phases = [new Phase("p", "Foundation", 1, 8, [], [])], GoalDate = Today.AddDays(100) };
+        var plan = WithMainPhases(Plan(), [new Phase("p", "Foundation", 1, 8, [], [])]) with { GoalDate = Today.AddDays(100) };
         var cut = await RenderHomeAsync(await OpenSeededAsync(plan: plan));
 
         Assert.Equal(7, cut.FindAll(".fa-weekstrip__tile").Count);

@@ -1,6 +1,7 @@
 using Core.Rules.PlanEditing;
 using Core.Model;
 using Core.Rules.Phases;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Storage;
 
@@ -32,7 +33,8 @@ public sealed record HomeOrbs(StreakOrb Streak, PhaseOrb? Phase, RaceOrb? Race)
         var streakResult = WeekRules.Streak(plan, snapshot.Workouts, snapshot.Breaks, today);
         var thisWeekCount = WeekRules.CountedWorkouts(plan, snapshot.Workouts, monday);
         var onBreak = BreakCalendar.IsBreakDay(snapshot.Breaks, today);
-        var streakOrb = new StreakOrb(streakResult.Current, thisWeekCount, plan.StreakMinWorkoutsPerWeek, onBreak);
+        var min = TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly weekly ? weekly.StreakMinWorkoutsPerWeek : 0;
+        var streakOrb = new StreakOrb(streakResult.Current, thisWeekCount, min, onBreak);
 
         var phasePosition = PhaseRules.Position(plan, today);
         PhaseOrb? phaseOrb = phasePosition is { State: PhaseState.InPhase, WeekInPhase: { } weekInPhase, PhaseLengthWeeks: { } phaseLength }

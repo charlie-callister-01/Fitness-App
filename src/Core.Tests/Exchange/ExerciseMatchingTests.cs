@@ -174,11 +174,12 @@ public class ExerciseMatchingTests
         Assert.Equal("gs", m.IdMap["goblet-squat"]);
         var d = m.Document;
         var plan = d.Plans![0];
+        var mainTrack = plan.Tracks[0];
         Assert.Equal("gs", plan.Sessions[0].Exercises[0].ExerciseId);
         Assert.Equal("farmers-carry", plan.Sessions[0].Exercises[1].ExerciseId);
-        Assert.Equal("gs", plan.Phases[0].Goals[0].ExerciseId);
+        Assert.Equal("gs", mainTrack.Phases[0].Goals[0].ExerciseId);
         Assert.Equal("run", plan.Sessions[1].Exercises[0].ExerciseId);
-        Assert.Equal("rdl", plan.Phases[1].SessionOverrides[0].Exercises[0].ExerciseId);
+        Assert.Equal("rdl", mainTrack.Phases[1].SessionOverrides[0].Exercises[0].ExerciseId);
         var workout = d.Workouts![0];
         Assert.Equal("gs", workout.Planned[0].ExerciseId);
         Assert.Equal("gs", workout.Entries[0].ExerciseId);

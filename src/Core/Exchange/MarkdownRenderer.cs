@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Core.Model;
 using Core.Rules.Performance;
+using Core.Rules.Tracks;
 
 namespace Core.Exchange;
 
@@ -63,8 +64,10 @@ internal static class MarkdownRenderer
                 text.AppendLine($"- Goal: {goal}{(plan.GoalDate is { } goalDate ? $" on {Date(goalDate)}" : "")}");
             }
 
-            text.AppendLine($"- Starts {Date(plan.StartDate)}; weekly target {plan.WeeklyTarget} Workouts");
-            foreach (var phase in plan.Phases)
+            var main = TrackRules.Main(plan);
+            var target = main.Rhythm is TrackRhythm.Weekly weekly ? weekly.WeeklyTarget : 0;
+            text.AppendLine($"- Starts {Date(plan.StartDate)}; weekly target {target} Workouts");
+            foreach (var phase in main.Phases)
             {
                 text.AppendLine($"- {PhaseText(phase, plan, names)}");
             }

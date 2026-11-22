@@ -119,12 +119,14 @@ public class NudgeRulesTests
     [Fact]
     public void Order_is_pain_then_missed_by_date_then_short_then_backup_without_duplicates()
     {
-        var plan = new HistoryBuilder().Plan with
+        var basePlan = new HistoryBuilder().Plan;
+        var trackId = basePlan.Tracks[0].Id;
+        var plan = basePlan with
         {
             Sessions =
             [
-                new Session("s-wed", "Wed", DayOfWeek.Wednesday, SessionType.Strength, null, []),
-                new Session("s-mon", "Mon", DayOfWeek.Monday, SessionType.Strength, null, []),
+                new Session("s-wed", "Wed", trackId, DefaultDay.Wednesday, SessionType.Strength, null, []),
+                new Session("s-mon", "Mon", trackId, DefaultDay.Monday, SessionType.Strength, null, []),
             ],
         };
         // Two counted Custom-free Workouts of an unrelated Session keep the target one short without clearing the misses.

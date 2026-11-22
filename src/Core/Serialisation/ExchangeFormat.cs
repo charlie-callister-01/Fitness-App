@@ -27,7 +27,8 @@ public static class ExchangeFormat
     /// </summary>
     public static string Write(ExchangeDocument document, bool indented = false)
     {
-        var body = JsonSerializer.SerializeToElement(document, ExchangeJsonContext.Default.ExchangeDocument);
+        var body = JsonSerializer.SerializeToElement(
+            V1ToV2Upgrader.ToV1Document(document), ExchangeJsonContext.Default.V1ExchangeDocument);
 
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions

@@ -99,7 +99,7 @@ public class WeekScheduleRulesTests
     public void A_test_session_with_a_zero_interval_is_not_a_benchmark_and_is_always_scheduled()
     {
         var plan = Plan();
-        var odd = new Session("odd", "Odd", DayOfWeek.Saturday, SessionType.Test, 0, []);
+        var odd = PlanFixture.Session("odd", DefaultDay.Saturday, SessionType.Test, name: "Odd", benchmarkEveryWeeks: 0);
         Assert.False(BenchmarkWeeks.IsBenchmark(odd));
         Assert.True(BenchmarkWeeks.IsScheduledInWeek(plan, odd, Start.AddDays(7)));
     }

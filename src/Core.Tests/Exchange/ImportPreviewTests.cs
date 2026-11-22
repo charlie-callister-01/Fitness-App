@@ -2,6 +2,7 @@ using Core.Exchange;
 using Core.Model;
 using Core.Serialisation;
 using Core.Storage;
+using Core.Tests.Rules.TestData;
 
 namespace Core.Tests.Exchange;
 
@@ -9,13 +10,14 @@ public class ImportPreviewTests
 {
     private static Exercise Ex(string id, string name) => new(id, name, LogKind.Load, null, false);
 
-    private static Session Sess(string id, string exerciseId = "squat") =>
-        new(id, $"Session {id}", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(exerciseId, 3, 5, null, null)]);
+    private static Session Sess(string id, string trackId, string exerciseId = "squat") =>
+        PlanFixture.Session(id, DefaultDay.Monday, SessionType.Strength, $"Session {id}", exercises: [new SessionExercise(exerciseId, 3, 5, null, null)], trackId: trackId);
 
     private static Phase Ph(string id, params SessionOverride[] overrides) => new(id, "Base", 1, 4, [], overrides);
 
     private static Plan MakePlan(string id, string name, bool active, string sessionId, string phaseId, string exerciseId = "squat", params SessionOverride[] overrides) =>
-        new(id, name, active, new DateOnly(2026, 12, 1), null, null, 3, 2, false, 2.5, [Ph(phaseId, overrides)], [Sess(sessionId, exerciseId)]);
+        PlanFixture.Make(id: id, name: name, isActive: active, start: new DateOnly(2026, 12, 1), incrementKg: 2.5,
+            phases: [Ph(phaseId, overrides)], sessions: [Sess(sessionId, $"{id}-main", exerciseId)]);
 
     private static ExchangeDocument Doc(IReadOnlyList<Exercise>? exercises = null, IReadOnlyList<Plan>? plans = null, IReadOnlyList<Guide>? guides = null) =>
         new(ExchangeFormat.CurrentVersion, null, null, exercises, null, Guides: guides, Plans: plans);
@@ -67,7 +69,7 @@ public class ImportPreviewTests
         Assert.Equal("current-2", added.Id);
         Assert.False(added.IsActive);
         Assert.Equal("s1-2", Assert.Single(added.Sessions).Id);
-        var phase = Assert.Single(added.Phases);
+        var phase = Assert.Single(added.Tracks[0].Phases);
         Assert.Equal("ph1-2", phase.Id);
         Assert.Equal("s1-2", Assert.Single(phase.SessionOverrides).SessionId);
         Assert.Single(Applied(preview).Plans, p => p.Id == "current");

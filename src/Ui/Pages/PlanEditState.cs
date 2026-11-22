@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.PlanEditing;
+using Core.Rules.Tracks;
 
 namespace Ui.Pages;
 
@@ -82,10 +83,14 @@ public sealed class PlanEditState
     /// <summary>Something differs from what is saved.</summary>
     public bool IsDirty =>
         Form != PlanSettingsForm.From(Saved)
-        || !Draft.Phases.SequenceEqual(Saved.Phases)
+        || TracksDiffer(Draft.Tracks, Saved.Tracks)
         || !Draft.Sessions.SequenceEqual(Saved.Sessions)
         || _benchmarks.Count > 0
         || Inputs.Any;
+
+    private static bool TracksDiffer(IReadOnlyList<Track> a, IReadOnlyList<Track> b) =>
+        a.Count != b.Count
+        || a.Zip(b).Any(pair => pair.First with { Phases = pair.Second.Phases } != pair.Second || !pair.First.Phases.SequenceEqual(pair.Second.Phases));
 
     /// <summary>A save went through: the composed Plan is now the saved one and the draft starts over from it.</summary>
     public void MarkSaved(Plan saved)
@@ -100,7 +105,8 @@ public sealed class PlanEditState
     private PlanEditSnapshot Read()
     {
         var settings = Form.Read(Draft);
-        var phasesProblem = PlanPhaseRules.ValidatePhases(Draft.Phases);
+        var mainPhases = TrackRules.Main(Draft).Phases;
+        var phasesProblem = PlanPhaseRules.ValidatePhases(mainPhases);
         var sessionsProblem = Draft.Sessions
             .Select(s => s.Exercises.Select(r => RowProblem(s.Id, r)).FirstOrDefault(p => p is not null) is { } reason ? $"{s.Name}: {reason}" : null)
             .FirstOrDefault(p => p is not null);
@@ -114,7 +120,7 @@ public sealed class PlanEditState
         Plan? composed = null;
         if (sessionsProblem is null
             && PlanSettingsRules.WithSettings(Draft, read).TryGet(out var withSettings, out _)
-            && PlanPhaseRules.WithPhases(withSettings, Draft.Phases).TryGet(out var withPhases, out _))
+            && PlanPhaseRules.WithPhases(withSettings, mainPhases).TryGet(out var withPhases, out _))
         {
             composed = withPhases;
         }

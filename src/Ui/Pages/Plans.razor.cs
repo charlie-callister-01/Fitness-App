@@ -52,7 +52,8 @@ public sealed partial class Plans : IDisposable
     private static string Summary(Plan plan)
     {
         var sessions = $"{plan.Sessions.Count} {(plan.Sessions.Count == 1 ? "Session" : "Sessions")}";
-        var phases = $"{plan.Phases.Count} {(plan.Phases.Count == 1 ? "Phase" : "Phases")}";
+        var phaseCount = Core.Rules.Tracks.TrackRules.Main(plan).Phases.Count;
+        var phases = $"{phaseCount} {(phaseCount == 1 ? "Phase" : "Phases")}";
         return PlanProgress.TotalWeeks(plan) is { } weeks ? $"{sessions} · {phases} · {weeks} {(weeks == 1 ? "week" : "weeks")}" : $"{sessions} · {phases}";
     }
 

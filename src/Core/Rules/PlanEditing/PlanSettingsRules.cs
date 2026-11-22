@@ -38,15 +38,21 @@ public static class PlanSettingsRules
             return Invalid("The weight increment must be more than 0.");
         }
 
+        var main = plan.Tracks[0];
+        var updatedMain = main with
+        {
+            Rhythm = new TrackRhythm.Weekly(
+                settings.WeeklyTarget,
+                settings.StreakMinWorkoutsPerWeek,
+                settings.StreakCountsCustomWorkouts),
+        };
         return new PlanEditResult<Plan>.Valid(plan with
         {
             StartDate = settings.StartDate,
             Goal = string.IsNullOrWhiteSpace(settings.Goal) ? null : settings.Goal.Trim(),
             GoalDate = settings.GoalDate,
-            WeeklyTarget = settings.WeeklyTarget,
-            StreakMinWorkoutsPerWeek = settings.StreakMinWorkoutsPerWeek,
-            StreakCountsCustomWorkouts = settings.StreakCountsCustomWorkouts,
             WeightIncrementKg = settings.WeightIncrementKg,
+            Tracks = [updatedMain, .. plan.Tracks.Skip(1)],
         });
     }
 

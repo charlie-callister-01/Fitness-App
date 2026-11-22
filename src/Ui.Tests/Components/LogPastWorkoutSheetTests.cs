@@ -7,7 +7,7 @@ namespace Ui.Tests.Components;
 public sealed class LogPastWorkoutSheetTests : BunitContext
 {
     private static readonly DateOnly Today = new(2026, 11, 18);
-    private static readonly Session Lower = new("lower", "L: Lower", DayOfWeek.Monday, SessionType.Strength, null, []);
+    private static readonly Session Lower = new("lower", "L: Lower", "t", DefaultDay.Monday, SessionType.Strength, null, []);
 
     public LogPastWorkoutSheetTests()
     {

@@ -144,7 +144,7 @@ public class HomeViewBuilderTests
     [Fact]
     public void Nudges_are_capped_at_two()
     {
-        var snapshot = DataSnapshot.Empty with { Plans = [MakePlan() with { WeeklyTarget = 1 }] };
+        var snapshot = DataSnapshot.Empty with { Plans = [PlanFixture.WithMainWeekly(MakePlan(), target: 1)] };
 
         var view = Build(snapshot, noBackup: true);
 

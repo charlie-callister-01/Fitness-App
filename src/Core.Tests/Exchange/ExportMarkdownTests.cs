@@ -143,7 +143,9 @@ public class ExportMarkdownTests
     {
         var snapshot = ExchangeTestData.Snapshot();
         var ids = snapshot.Exercises.Select(e => e.Id)
-            .Concat(snapshot.Plans.SelectMany(p => new[] { p.Id }.Concat(p.Phases.Select(ph => ph.Id)).Concat(p.Sessions.Select(s => s.Id))))
+            .Concat(snapshot.Plans.SelectMany(p => new[] { p.Id }
+                .Concat(p.Tracks.SelectMany(t => t.Phases).Select(ph => ph.Id))
+                .Concat(p.Sessions.Select(s => s.Id))))
             .Concat(snapshot.Workouts.SelectMany(w => new[] { w.Id }.Concat(w.Entries.SelectMany(e => e.Sets.Select(s => s.Id))).Concat(w.PainCheck is { } p ? [p.Id] : [])))
             .Concat(snapshot.WeighIns.Select(w => w.Id))
             .Where(id => id != "waist")

@@ -23,12 +23,13 @@ public class PlanRoundTripTests
         var plan = ExchangeFormat.Read(PlanTestData.RichJson()).Document!.Plans![0];
 
         Assert.Equal(new DateOnly(2027, 4, 24), plan.GoalDate);
-        Assert.Equal(3, plan.Phases.Count);
-        Assert.Equal(24, plan.Phases[0].Goals[0].WeightKg);
-        Assert.Equal("a-lower", plan.Phases[1].SessionOverrides[0].SessionId);
+        var main = Assert.Single(plan.Tracks);
+        Assert.Equal(3, main.Phases.Count);
+        Assert.Equal(24, main.Phases[0].Goals[0].WeightKg);
+        Assert.Equal("a-lower", main.Phases[1].SessionOverrides[0].SessionId);
         var squat = plan.Sessions[0].Exercises[0];
         Assert.Equal((8, 12, "Chest tall"), (squat.Reps, squat.RepsMax, squat.Cue));
-        Assert.Equal(DayOfWeek.Wednesday, plan.Sessions[1].DefaultDay);
+        Assert.Equal(DefaultDay.Wednesday, plan.Sessions[1].DefaultDay);
         Assert.Equal(4, plan.Sessions[2].BenchmarkIntervalWeeks);
     }
 

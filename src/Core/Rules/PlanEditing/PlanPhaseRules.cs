@@ -38,11 +38,17 @@ public static class PlanPhaseRules
         return findings.Count > 0 ? Sentence(findings[0]) : null;
     }
 
-    /// <summary>The Plan with <paramref name="phases"/> as its Phases, or the plain reason they are refused (see <see cref="ValidatePhases"/>).</summary>
-    public static PlanEditResult<Plan> WithPhases(Plan plan, IReadOnlyList<Phase> phases) =>
-        ValidatePhases(phases) is { } reason
-            ? new PlanEditResult<Plan>.Invalid(reason)
-            : new PlanEditResult<Plan>.Valid(plan with { Phases = [.. phases.OrderBy(p => p.StartWeek)] });
+    /// <summary>The Plan with <paramref name="phases"/> as its main Track's Phases, or the plain reason they are refused (see <see cref="ValidatePhases"/>).</summary>
+    public static PlanEditResult<Plan> WithPhases(Plan plan, IReadOnlyList<Phase> phases)
+    {
+        if (ValidatePhases(phases) is { } reason)
+        {
+            return new PlanEditResult<Plan>.Invalid(reason);
+        }
+
+        var updatedMain = plan.Tracks[0] with { Phases = [.. phases.OrderBy(p => p.StartWeek)] };
+        return new PlanEditResult<Plan>.Valid(plan with { Tracks = [updatedMain, .. plan.Tracks.Skip(1)] });
+    }
 
     private static string Sentence(PhaseRangeFinding finding)
     {

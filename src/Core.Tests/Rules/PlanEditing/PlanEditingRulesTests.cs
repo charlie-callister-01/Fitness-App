@@ -19,8 +19,11 @@ public class PlanEditingRulesTests
         PlanFixture.Session("upper", DayOfWeek.Wednesday, name: "Upper", exercises: [Row("press")]),
     ]);
 
-    private static PlanSettings Settings(Plan plan) =>
-        new(plan.StartDate, plan.Goal, plan.GoalDate, plan.WeeklyTarget, plan.StreakMinWorkoutsPerWeek, plan.StreakCountsCustomWorkouts, plan.WeightIncrementKg);
+    private static PlanSettings Settings(Plan plan)
+    {
+        var weekly = (TrackRhythm.Weekly)plan.Tracks[0].Rhythm;
+        return new(plan.StartDate, plan.Goal, plan.GoalDate, weekly.WeeklyTarget, weekly.StreakMinWorkoutsPerWeek, weekly.StreakCountsCustomWorkouts, plan.WeightIncrementKg);
+    }
 
     private static T Valid<T>(PlanEditResult<T> result) => Assert.IsType<PlanEditResult<T>.Valid>(result).Value;
 
@@ -59,8 +62,9 @@ public class PlanEditingRulesTests
         var changed = Valid(PlanSettingsRules.WithSettings(plan, Settings(plan) with { Goal = "  ", WeeklyTarget = 4, StreakCountsCustomWorkouts = true }));
 
         Assert.Null(changed.Goal);
-        Assert.Equal(4, changed.WeeklyTarget);
-        Assert.True(changed.StreakCountsCustomWorkouts);
+        var weekly = Assert.IsType<TrackRhythm.Weekly>(changed.Tracks[0].Rhythm);
+        Assert.Equal(4, weekly.WeeklyTarget);
+        Assert.True(weekly.StreakCountsCustomWorkouts);
         Assert.Equal(plan.Sessions, changed.Sessions);
     }
 
@@ -126,7 +130,7 @@ public class PlanEditingRulesTests
         var sorted = Valid(PlanPhaseRules.WithPhases(plan, [Ph("b", "Build", 5, 8), Ph("a", "Foundation", 1, 4)]));
         var refused = PlanPhaseRules.WithPhases(plan, [Ph("a", "Foundation", 1, 5), Ph("b", "Build", 5, 8)]);
 
-        Assert.Equal(["a", "b"], sorted.Phases.Select(p => p.Id));
+        Assert.Equal(["a", "b"], sorted.Tracks[0].Phases.Select(p => p.Id));
         Assert.Contains("overlaps", Reason(refused));
     }
 
@@ -135,7 +139,7 @@ public class PlanEditingRulesTests
     {
         var plan = PlanFixture.Make(start: Mon.AddDays(2), phases: [Ph("p", "Build", 2, 3)]);
 
-        var (start, end) = PlanPhaseRules.PhaseDates(plan, plan.Phases[0]);
+        var (start, end) = PlanPhaseRules.PhaseDates(plan, plan.Tracks[0].Phases[0]);
 
         Assert.Equal(Mon.AddDays(7), start);
         Assert.Equal(Mon.AddDays(20), end);
@@ -237,11 +241,11 @@ public class PlanEditingRulesTests
     {
         var plan = Plan();
 
-        var changed = Valid(SessionRowRules.EditSession(plan, "upper", "  Push  ", DayOfWeek.Thursday, SessionType.Cardio));
+        var changed = Valid(SessionRowRules.EditSession(plan, "upper", "  Push  ", DefaultDay.Thursday, SessionType.Cardio));
 
-        Assert.Equal(("Push", DayOfWeek.Thursday, SessionType.Cardio), (changed.Sessions[1].Name, changed.Sessions[1].DefaultDay, changed.Sessions[1].Type));
+        Assert.Equal(("Push", DefaultDay.Thursday, SessionType.Cardio), (changed.Sessions[1].Name, changed.Sessions[1].DefaultDay, changed.Sessions[1].Type));
         Assert.Equal(plan.Sessions[0], changed.Sessions[0]);
-        Assert.Contains("name", Reason(SessionRowRules.EditSession(plan, "upper", " ", DayOfWeek.Thursday, SessionType.Cardio)));
+        Assert.Contains("name", Reason(SessionRowRules.EditSession(plan, "upper", " ", DefaultDay.Thursday, SessionType.Cardio)));
     }
 
     [Fact]
@@ -249,7 +253,7 @@ public class PlanEditingRulesTests
     {
         var plan = PlanFixture.Make(sessions: [PlanFixture.Session("t", DayOfWeek.Saturday, SessionType.Test, benchmarkEveryWeeks: 6)]);
 
-        var changed = Valid(SessionRowRules.EditSession(plan, "t", "Test", DayOfWeek.Saturday, SessionType.Strength));
+        var changed = Valid(SessionRowRules.EditSession(plan, "t", "Test", DefaultDay.Saturday, SessionType.Strength));
 
         Assert.Null(changed.Sessions[0].BenchmarkIntervalWeeks);
     }
@@ -259,13 +263,13 @@ public class PlanEditingRulesTests
     {
         var plan = Plan();
 
-        var changed = Valid(SessionRowRules.AddSession(plan, " Run ", DayOfWeek.Friday, SessionType.Cardio, new SequentialIdGenerator("s")));
+        var changed = Valid(SessionRowRules.AddSession(plan, " Run ", DefaultDay.Friday, SessionType.Cardio, new SequentialIdGenerator("s")));
 
         var added = changed.Sessions[^1];
         Assert.Equal(3, changed.Sessions.Count);
-        Assert.Equal(("s-1", "Run", DayOfWeek.Friday, SessionType.Cardio), (added.Id, added.Name, added.DefaultDay, added.Type));
+        Assert.Equal(("s-1", "Run", DefaultDay.Friday, SessionType.Cardio), (added.Id, added.Name, added.DefaultDay, added.Type));
         Assert.Empty(added.Exercises);
-        Assert.Contains("name", Reason(SessionRowRules.AddSession(plan, "", DayOfWeek.Friday, SessionType.Cardio, new SequentialIdGenerator("s"))));
+        Assert.Contains("name", Reason(SessionRowRules.AddSession(plan, "", DefaultDay.Friday, SessionType.Cardio, new SequentialIdGenerator("s"))));
     }
 
     // Plans
@@ -274,7 +278,7 @@ public class PlanEditingRulesTests
     public void A_copy_has_fresh_ids_is_inactive_and_keeps_the_content()
     {
         var phase = Ph("p1", "Build", 1, 4) with { SessionOverrides = [new SessionOverride("lower", [Row("squat", sets: 5)])] };
-        var plan = Plan() with { Phases = [phase], IsActive = true };
+        var plan = PlanFixture.WithMainPhases(Plan(), [phase]) with { IsActive = true };
 
         var copy = Valid(PlanLifecycleRules.Copy(plan, " Variation ", new SequentialIdGenerator("n")));
 
@@ -282,11 +286,11 @@ public class PlanEditingRulesTests
         Assert.Equal("Variation", copy.Name);
         Assert.NotEqual(plan.Id, copy.Id);
         Assert.Empty(copy.Sessions.Select(s => s.Id).Intersect(plan.Sessions.Select(s => s.Id)));
-        Assert.Empty(copy.Phases.Select(p => p.Id).Intersect(plan.Phases.Select(p => p.Id)));
-        Assert.Equal(copy.Sessions[0].Id, copy.Phases[0].SessionOverrides[0].SessionId);
+        Assert.Empty(copy.Tracks[0].Phases.Select(p => p.Id).Intersect(plan.Tracks[0].Phases.Select(p => p.Id)));
+        Assert.Equal(copy.Sessions[0].Id, copy.Tracks[0].Phases[0].SessionOverrides[0].SessionId);
         Assert.Equal(plan.Sessions.Select(s => (s.Name, s.DefaultDay, Ids(s.Exercises))), copy.Sessions.Select(s => (s.Name, s.DefaultDay, Ids(s.Exercises))));
         Assert.Equal(plan.StartDate, copy.StartDate);
-        Assert.Equal(5, copy.Phases[0].SessionOverrides[0].Exercises[0].Sets);
+        Assert.Equal(5, copy.Tracks[0].Phases[0].SessionOverrides[0].Exercises[0].Sets);
         Assert.True(plan.IsActive);
     }
 
@@ -295,7 +299,7 @@ public class PlanEditingRulesTests
     {
         var copy = Valid(PlanLifecycleRules.Copy(Plan(), "Copy", new SequentialIdGenerator("n")));
 
-        var all = new[] { copy.Id }.Concat(copy.Sessions.Select(s => s.Id)).Concat(copy.Phases.Select(p => p.Id)).ToList();
+        var all = new[] { copy.Id }.Concat(copy.Tracks.Select(t => t.Id)).Concat(copy.Sessions.Select(s => s.Id)).Concat(copy.Tracks[0].Phases.Select(p => p.Id)).ToList();
         Assert.Equal(all.Count, all.Distinct().Count());
     }
 
@@ -306,8 +310,8 @@ public class PlanEditingRulesTests
 
         Assert.Equal(("n-1", "Offseason", false, Mon), (plan.Id, plan.Name, plan.IsActive, plan.StartDate));
         Assert.Empty(plan.Sessions);
-        Assert.Empty(plan.Phases);
-        Assert.Null(PlanPhaseRules.ValidatePhases(plan.Phases));
+        Assert.Empty(plan.Tracks[0].Phases);
+        Assert.Null(PlanPhaseRules.ValidatePhases(plan.Tracks[0].Phases));
         Assert.Contains("name", Reason(PlanLifecycleRules.FromScratch("", Mon, new SequentialIdGenerator("n"))));
     }
 

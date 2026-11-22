@@ -7,7 +7,85 @@ public enum SessionType
     Cardio,
     Body,
     Test,
+    Mobility,
 }
+
+/// <summary>When a Session normally falls: a day of the week on a weekly Track, or every day on a daily Track.</summary>
+public enum DefaultDay
+{
+    Sunday,
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Daily,
+}
+
+/// <summary>Cast-free conversions between <see cref="DayOfWeek"/> and <see cref="DefaultDay"/>.</summary>
+public static class DefaultDayExtensions
+{
+    public static DefaultDay ToDefaultDay(this DayOfWeek day) => day switch
+    {
+        DayOfWeek.Sunday => DefaultDay.Sunday,
+        DayOfWeek.Monday => DefaultDay.Monday,
+        DayOfWeek.Tuesday => DefaultDay.Tuesday,
+        DayOfWeek.Wednesday => DefaultDay.Wednesday,
+        DayOfWeek.Thursday => DefaultDay.Thursday,
+        DayOfWeek.Friday => DefaultDay.Friday,
+        DayOfWeek.Saturday => DefaultDay.Saturday,
+        _ => throw new ArgumentOutOfRangeException(nameof(day), day, null),
+    };
+
+    public static DayOfWeek? AsDayOfWeek(this DefaultDay day) => day switch
+    {
+        DefaultDay.Sunday => DayOfWeek.Sunday,
+        DefaultDay.Monday => DayOfWeek.Monday,
+        DefaultDay.Tuesday => DayOfWeek.Tuesday,
+        DefaultDay.Wednesday => DayOfWeek.Wednesday,
+        DefaultDay.Thursday => DayOfWeek.Thursday,
+        DefaultDay.Friday => DayOfWeek.Friday,
+        DefaultDay.Saturday => DayOfWeek.Saturday,
+        _ => null,
+    };
+}
+
+/// <summary>Whether a Track runs on a weekly target or a daily done threshold.</summary>
+public enum TrackCadence
+{
+    Weekly,
+    Daily,
+}
+
+/// <summary>The cadence-specific rules of a Track, so a weekly Track cannot carry daily rules or vice versa.</summary>
+public abstract record TrackRhythm
+{
+    private TrackRhythm()
+    {
+    }
+
+    public TrackCadence Cadence => this switch
+    {
+        Weekly => TrackCadence.Weekly,
+        Daily => TrackCadence.Daily,
+        _ => throw new InvalidOperationException(),
+    };
+
+    public sealed record Weekly(
+        int WeeklyTarget,
+        int StreakMinWorkoutsPerWeek,
+        bool StreakCountsCustomWorkouts) : TrackRhythm;
+
+    public sealed record Daily(int DayDonePercent = 75) : TrackRhythm;
+}
+
+/// <summary>A named training path inside a Plan with its own rhythm and optional Phases. The first Track is the main Track.</summary>
+public sealed record Track(
+    string Id,
+    string Name,
+    TrackRhythm Rhythm,
+    IReadOnlyList<Phase> Phases);
 
 /// <summary>
 /// One Exercise row in a Session (or in a Phase override). Array order is the row order.
@@ -21,11 +99,12 @@ public sealed record SessionExercise(
     int? RepsMax,
     string? Cue);
 
-/// <summary>A planned template in a Plan, usually tied to a day of the week.</summary>
+/// <summary>A planned template in a Plan, belonging to one Track and usually tied to a day of the week (or daily).</summary>
 public sealed record Session(
     string Id,
     string Name,
-    DayOfWeek DefaultDay,
+    string TrackId,
+    DefaultDay DefaultDay,
     SessionType Type,
     int? BenchmarkIntervalWeeks,
     IReadOnlyList<SessionExercise> Exercises);
@@ -41,7 +120,7 @@ public sealed record PhaseGoal(
     double WeightKg,
     int Reps);
 
-/// <summary>A block of weeks inside a Plan. Weeks are numbered from 1; both ends are inclusive.</summary>
+/// <summary>A block of weeks inside a Track. Weeks are numbered from 1 (Plan-wide); both ends are inclusive.</summary>
 public sealed record Phase(
     string Id,
     string Focus,
@@ -58,9 +137,6 @@ public sealed record Plan(
     DateOnly StartDate,
     string? Goal,
     DateOnly? GoalDate,
-    int WeeklyTarget,
-    int StreakMinWorkoutsPerWeek,
-    bool StreakCountsCustomWorkouts,
     double WeightIncrementKg,
-    IReadOnlyList<Phase> Phases,
+    IReadOnlyList<Track> Tracks,
     IReadOnlyList<Session> Sessions);

@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Tracks;
 
 namespace Core.Rules.Weeks;
 
@@ -46,7 +47,8 @@ public static class WeekRules
 
         var bestWeekCount = weeks.Select(w => w.Count).DefaultIfEmpty(0).Max();
         var streakWeeks = weeks.Where(w => !BreakCalendar.TouchesWeek(breaks, w.Monday));
-        var (current, bestRun) = Runs(streakWeeks, plan.StreakMinWorkoutsPerWeek, thisMonday);
+        var min = TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly weekly ? weekly.StreakMinWorkoutsPerWeek : 0;
+        var (current, bestRun) = Runs(streakWeeks, min, thisMonday);
         return new StreakResult(current, bestRun, bestWeekCount);
     }
 
@@ -83,9 +85,10 @@ public static class WeekRules
     public static ConsistencyMessage Consistency(Plan plan, IReadOnlyList<Workout> workouts, IReadOnlyList<Break> breaks, DateOnly today)
     {
         var done = CountedWorkouts(plan, workouts, WeekCalendar.MondayOf(today));
-        var remaining = Math.Max(0, plan.WeeklyTarget - done);
+        var target = TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly weekly ? weekly.WeeklyTarget : 0;
+        var remaining = Math.Max(0, target - done);
         if (remaining == 0)
-            return new(ConsistencyKind.TargetHit, $"Target hit: {done} of {plan.WeeklyTarget} done this week.");
+            return new(ConsistencyKind.TargetHit, $"Target hit: {done} of {target} done this week.");
 
         var daysLeft = 0;
         for (var day = today; day <= WeekCalendar.SundayOf(today); day = day.AddDays(1))
@@ -109,7 +112,7 @@ public static class WeekRules
     private static bool IsCounted(Plan plan, Workout w)
     {
         if (!w.Entries.Any(e => e.Status is EntryStatus.Done or EntryStatus.Swapped)) return false;
-        if (w.SessionId is null) return plan.StreakCountsCustomWorkouts;
+        if (w.SessionId is null) return TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly { StreakCountsCustomWorkouts: true };
         var session = plan.Sessions.FirstOrDefault(s => s.Id == w.SessionId);
         return session is not { Type: SessionType.Test, BenchmarkIntervalWeeks: not null };
     }

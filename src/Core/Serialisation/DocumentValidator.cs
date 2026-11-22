@@ -219,8 +219,9 @@ internal static class DocumentValidator
         private void CheckPhases(Plan plan, int planIndex)
         {
             var planSessionIds = plan.Sessions.Select(s => s.Id).ToHashSet();
-            var findings = PhaseRanges.Check(plan.Phases, _findings.AreWeeksUnreadable);
-            foreach (var (phase, i) in Indexed(plan.Phases))
+            var phases = plan.Tracks.FirstOrDefault()?.Phases ?? [];
+            var findings = PhaseRanges.Check(phases, _findings.AreWeeksUnreadable);
+            foreach (var (phase, i) in Indexed(phases))
             {
                 var path = $"plans[{planIndex}].phases[{i}]";
                 CheckUnique(RecordKind.Phase, $"{path}.id", "id", phase.Id);

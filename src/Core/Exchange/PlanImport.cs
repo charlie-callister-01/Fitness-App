@@ -47,7 +47,10 @@ internal sealed class PlanImport : IImportKind
     }
 
     private static IEnumerable<string> IdsOf(Plan plan) =>
-        plan.Sessions.Select(s => s.Id).Concat(plan.Phases.Select(p => p.Id)).Prepend(plan.Id);
+        plan.Sessions.Select(s => s.Id)
+            .Concat(plan.Tracks.Select(t => t.Id))
+            .Concat(plan.Tracks.SelectMany(t => t.Phases).Select(p => p.Id))
+            .Prepend(plan.Id);
 
     private sealed record Placement(Plan? Existing, Plan? Added);
 
@@ -72,20 +75,35 @@ internal sealed class PlanImport : IImportKind
         }
     }
 
-    /// <summary>The Plan under <paramref name="id"/>, with its Session and Phase IDs freshened and its overrides following the Sessions.</summary>
+    /// <summary>The Plan under <paramref name="id"/>, with its Track, Session and Phase IDs freshened and references following.</summary>
     private static Plan Rebuild(Plan plan, string id, IEnumerable<string> taken)
     {
         var used = new HashSet<string>(taken) { id };
+        var trackIds = new Dictionary<string, string>();
+        foreach (var track in plan.Tracks)
+        {
+            trackIds[track.Id] = Fresh(track.Id, used);
+        }
+
         var sessionIds = new Dictionary<string, string>();
-        var sessions = plan.Sessions.Select(s => s with { Id = sessionIds[s.Id] = Fresh(s.Id, used) }).ToList();
-        var phases = plan.Phases
-            .Select(p => p with
+        var sessions = plan.Sessions
+            .Select(s => s with { Id = sessionIds[s.Id] = Fresh(s.Id, used), TrackId = trackIds.GetValueOrDefault(s.TrackId, s.TrackId) })
+            .ToList();
+        var tracks = plan.Tracks
+            .Select(t => t with
             {
-                Id = Fresh(p.Id, used),
-                SessionOverrides = [.. p.SessionOverrides.Select(o => o with { SessionId = sessionIds.GetValueOrDefault(o.SessionId, o.SessionId) })],
+                Id = trackIds[t.Id],
+                Phases =
+                [
+                    .. t.Phases.Select(p => p with
+                    {
+                        Id = Fresh(p.Id, used),
+                        SessionOverrides = [.. p.SessionOverrides.Select(o => o with { SessionId = sessionIds.GetValueOrDefault(o.SessionId, o.SessionId) })],
+                    }),
+                ],
             })
             .ToList();
-        return plan with { Id = id, Sessions = sessions, Phases = phases };
+        return plan with { Id = id, Tracks = tracks, Sessions = sessions };
     }
 
     /// <summary>The ID itself when free, otherwise the first free <c>id-2</c>, <c>id-3</c>...; the result is reserved in <paramref name="used"/>.</summary>

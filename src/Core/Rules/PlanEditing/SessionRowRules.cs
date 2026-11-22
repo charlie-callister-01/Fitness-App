@@ -1,5 +1,6 @@
 using Core.Ids;
 using Core.Model;
+using Core.Rules.Tracks;
 
 namespace Core.Rules.PlanEditing;
 
@@ -58,7 +59,7 @@ public static class SessionRowRules
         ReplaceSession(plan, sessionId, s => s with { Exercises = rows });
 
     /// <summary>The Plan with the Session's name, default day and type changed. A blank name is refused.</summary>
-    public static PlanEditResult<Plan> EditSession(Plan plan, string sessionId, string? name, DayOfWeek day, SessionType type)
+    public static PlanEditResult<Plan> EditSession(Plan plan, string sessionId, string? name, DefaultDay day, SessionType type)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -74,15 +75,15 @@ public static class SessionRowRules
         }));
     }
 
-    /// <summary>The Plan with a new, empty Session added at the end. A blank name is refused.</summary>
-    public static PlanEditResult<Plan> AddSession(Plan plan, string? name, DayOfWeek day, SessionType type, IIdGenerator ids)
+    /// <summary>The Plan with a new, empty Session added at the end on the main Track. A blank name is refused.</summary>
+    public static PlanEditResult<Plan> AddSession(Plan plan, string? name, DefaultDay day, SessionType type, IIdGenerator ids)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return new PlanEditResult<Plan>.Invalid("Give the Session a name.");
         }
 
-        var session = new Session(ids.NewId(), name.Trim(), day, type, null, []);
+        var session = new Session(ids.NewId(), name.Trim(), TrackRules.Main(plan).Id, day, type, null, []);
         return new PlanEditResult<Plan>.Valid(plan with { Sessions = [.. plan.Sessions, session] });
     }
 

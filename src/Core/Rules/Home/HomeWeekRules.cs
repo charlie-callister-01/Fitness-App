@@ -3,6 +3,7 @@ using System.Globalization;
 using Core.Model;
 using Core.Rules.Outcomes;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Storage;
 
@@ -98,7 +99,7 @@ public static class HomeWeekRules
         var done = WeekRules.CountedWorkouts(plan, snapshot.Workouts, monday);
         var layout = WeekScheduleRules.Layout(plan, snapshot.WeekSchedules, snapshot.Breaks, today);
         var scheduled = layout.Sessions.Count;
-        var target = plan.WeeklyTarget;
+        var target = TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly weekly ? weekly.WeeklyTarget : 0;
 
         var missed = WeekScheduleRules.MissedInWeek(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, today, today);
         var missedCodes = missed

@@ -117,7 +117,7 @@ public static class WeekEditRules
                     message => new PlanEditResult<SessionMoveChanges>.Invalid(message));
         }
 
-        if (!MakeDefaultDay(plan, sessionId, date.DayOfWeek).TryGet(out var newPlan, out var reason))
+        if (!MakeDefaultDay(plan, sessionId, date.DayOfWeek.ToDefaultDay()).TryGet(out var newPlan, out var reason))
         {
             return new PlanEditResult<SessionMoveChanges>.Invalid(reason);
         }
@@ -128,7 +128,7 @@ public static class WeekEditRules
     }
 
     /// <summary>The Plan with the Session's default day changed ("Make this the default day").</summary>
-    public static PlanEditResult<Plan> MakeDefaultDay(Plan plan, string sessionId, DayOfWeek day) =>
+    public static PlanEditResult<Plan> MakeDefaultDay(Plan plan, string sessionId, DefaultDay day) =>
         plan.Sessions.Any(s => s.Id == sessionId)
             ? new PlanEditResult<Plan>.Valid(plan with { Sessions = [.. plan.Sessions.Select(s => s.Id == sessionId ? s with { DefaultDay = day } : s)] })
             : new PlanEditResult<Plan>.Invalid("That Session is no longer in the Plan.");

@@ -34,14 +34,16 @@ internal static class PlanReader
         var sessions = ReadSessions(reader);
         var phases = reader.ReadRecords("phases", ReadPhase) ?? [];
 
-        return new Plan(id, name, isActive.Value, startDate ?? default, goal, goalDate, weeklyTarget, streakMin, streakCountsCustom, increment, phases, sessions);
+        return V1ToV2Upgrader.UpgradePlan(new V1Plan(
+            id, name, isActive.Value, startDate ?? default, goal, goalDate,
+            weeklyTarget, streakMin, streakCountsCustom, increment, phases, sessions));
     }
 
-    private static List<Session> ReadSessions(FieldReader plan) =>
-        plan.ReadRecords("sessions", reader => new Session(
+    private static List<V1Session> ReadSessions(FieldReader plan) =>
+        plan.ReadRecords("sessions", reader => new V1Session(
             reader.RequiredId("id"),
             reader.RequiredString("name"),
-            reader.RequiredEnum<DayOfWeek>("defaultDay"),
+            reader.RequiredEnum<DefaultDay>("defaultDay"),
             reader.RequiredEnum<SessionType>("type"),
             reader.OptionalInt("benchmarkIntervalWeeks", min: 1),
             SessionRowReader.ReadRows(reader, "exercises"))) ?? [];

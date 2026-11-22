@@ -17,13 +17,12 @@ public sealed class PlansTests : BunitContext
     private static Phase Ph(string id, string focus, int start, int end) => new(id, focus, start, end, [], []);
 
     private static Plan Other(string id = "other", string name = "Winter block") =>
-        Plan() with
+        WithMainPhases(Plan(), [Ph("o1", "Base", 1, 6)]) with
         {
             Id = id,
             Name = name,
             IsActive = false,
-            Phases = [Ph("o1", "Base", 1, 6)],
-            Sessions = [new("o-lower", "Legs", DayOfWeek.Tuesday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)])],
+            Sessions = [Session("o-lower", "Legs", DayOfWeek.Tuesday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)])],
         };
 
     private IRenderedComponent<Plans> RenderPlans(AppData data)
@@ -61,7 +60,7 @@ public sealed class PlansTests : BunitContext
     [Fact]
     public async Task One_Plan_is_outlined_as_active_with_its_week_of_the_total()
     {
-        var plan = Plan() with { Phases = [Ph("p1", "Base", 1, 8)] };
+        var plan = WithMainPhases(Plan(), [Ph("p1", "Base", 1, 8)]);
         var cut = RenderPlans(await OpenWithAsync(plan));
 
         var card = Assert.Single(cut.FindAll(".fa-plans__plan"));
