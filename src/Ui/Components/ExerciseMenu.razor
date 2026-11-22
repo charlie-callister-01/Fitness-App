@@ -44,7 +44,7 @@
     </Actions>
 </Sheet>
 
-<GuideSheet Open="_guiding" ExerciseName="@name" Opener="_opener" OnClose="CloseGuide">
+<GuideSheet Open="_guiding" ExerciseName="@name" Opener="_opener" OnClose="CloseGuide" FullGuideHref="@($"exercises/{State.ExerciseId}/guide")">
     <GuideContent Guide="State.Guide" ExerciseName="@name" />
 </GuideSheet>
 

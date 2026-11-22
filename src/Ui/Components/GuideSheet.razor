@@ -1,9 +1,12 @@
-@* The Guide as a sheet over the log (design 8.4): a labelled dialog with the Exercise's Guide in it and one button, Back to the Set, which only
-   closes it. The sheet is only the shell; what it shows is its ChildContent, so the Guide page (B4) can supply its own content without
-   changing the sheet. *@
+@* The Guide as a sheet over the log (design 8.4): a labelled dialog with the Exercise's Guide in it, a link to the full Guide page and one
+   button, Back to the Set, which only closes it. The sheet is only the shell; what it shows is its ChildContent. *@
 <Sheet Open="Open" Title="@($"{ExerciseName} Guide")" Opener="Opener" OnClose="OnClose">
     <ChildContent>@ChildContent</ChildContent>
     <Actions>
+        @if (FullGuideHref is { Length: > 0 })
+        {
+            <Button Variant="ButtonVariant.Primary" Href="@FullGuideHref">Open full Guide</Button>
+        }
         <Button Variant="ButtonVariant.Secondary" OnClick="OnClose">Back to the Set</Button>
     </Actions>
 </Sheet>
@@ -17,6 +20,10 @@
 
     [Parameter]
     public ElementReference? Opener { get; set; }
+
+    /// <summary>Where the Exercise's full Guide page is (relative to the app base); when set the sheet offers "Open full Guide".</summary>
+    [Parameter]
+    public string? FullGuideHref { get; set; }
 
     /// <summary>Back to the Set, Escape or a tap outside: the owner closes the sheet. Nothing else changes.</summary>
     [Parameter]

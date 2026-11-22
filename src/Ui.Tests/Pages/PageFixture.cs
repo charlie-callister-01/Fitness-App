@@ -182,6 +182,7 @@ internal static class PageFixture
         context.Services.AddSingleton<IIdGenerator>(new CountingIds());
         context.Services.AddSingleton(notice);
         context.Services.AddSingleton<InAppHistory>();
+        context.Services.AddSingleton<LogEditStates>();
         context.Services.AddSingleton(new ThemeService(data, new FakeThemeInterop(), notice));
         context.Services.AddSingleton<IDevicePreferences>(preferences);
         context.Services.AddSingleton<RestTimerSetting>();

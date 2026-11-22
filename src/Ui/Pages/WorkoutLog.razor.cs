@@ -49,10 +49,14 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     [Inject] private InAppHistory History { get; set; } = default!;
 
+    [Inject] private LogEditStates KeptStates { get; set; } = default!;
+
     [Parameter]
     public string WorkoutId { get; set; } = "";
 
-    private LogEditState State { get; } = new();
+    private LogEditState State { get; set; } = new();
+
+    private bool _restored;
 
     private Workout? OpenWorkout =>
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: null } open ? open : null;
@@ -68,6 +72,12 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     protected override void OnInitialized()
     {
         Page = new PageContext(Data, Clock);
+        if (KeptStates.Take(WorkoutId) is { } kept)
+        {
+            State = kept;
+            _restored = true;
+        }
+
         _builder = new LogViewBuilder(Data, State);
         _finish = new FinishFlow(Data, Notice, Clock, Ids);
         _afterwards = new LoggedAfterwardsFlow(Data, Notice);
@@ -77,7 +87,14 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     protected override Task OnAfterRenderAsync(bool firstRender) => _session.SyncScreenLockAsync(OpenWorkout);
 
-    public void Dispose() => _session.Dispose();
+    public void Dispose()
+    {
+        _session.Dispose();
+        if (_landedFor is { Length: > 0 } landed)
+        {
+            KeptStates.Keep(landed, State);
+        }
+    }
 
     private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
 
@@ -92,6 +109,13 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _actions.WorkoutId = WorkoutId;
         _finish.Reset();
         _afterwards.Reset();
+        if (_restored)
+        {
+            // Back from another page (the full Guide): keep the Exercise showing and whatever was typed.
+            _restored = false;
+            return;
+        }
+
         if (OpenWorkout is { } workout)
         {
             State.Reset(_builder.Standing.FirstIncomplete(workout), IsResumed(workout));
