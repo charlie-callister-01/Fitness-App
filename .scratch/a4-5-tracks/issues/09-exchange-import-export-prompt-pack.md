@@ -13,10 +13,19 @@
 
 **Blocked by:** 02, 03.
 
-**Status:** ready-for-agent
+**Status:** resolved
+**Notes:** `PlanImport` uses deterministic derived IDs (`id-2`, `id-3`...) rather than an injected random `IIdGenerator` so repeated identical imports remain idempotent ("Nothing to change."), and includes `RecordKind.Badge` in `Reads` so qualified Track metrics (`streak:<id>`, `days:<id>`, `bestweek:<id>`) in the same file follow Track ID remapping. `ExportMarkdownTests` updated Session headings from `####` to `#####` under the new `####` Track headings; `PromptPackTests` updated for the two-Track data-spec example and `formatVersion` 2.
 
-- [ ] Plan Import remaps colliding Track IDs and updates `trackId`, Track Phase overrides and qualified Badge metrics; a second identical import says "nothing to change".
-- [ ] A v1 Backup and a v1 Plan file import; a v2 Backup with two Tracks round-trips through Export JSON then Restore.
-- [ ] Export Markdown shows Tracks; the prompt example reads, validates and previews cleanly.
-- [ ] A4 Export, Import and prompt-pack tests pass for one-Track Plans with only mechanical changes.
-- [ ] `dotnet build` 0 warnings; all tests pass.
+- [x] Plan Import remaps colliding Track IDs and updates `trackId`, Track Phase overrides and qualified Badge metrics; a second identical import says "nothing to change".
+- [x] A v1 Backup and a v1 Plan file import; a v2 Backup with two Tracks round-trips through Export JSON then Restore.
+- [x] Export Markdown shows Tracks; the prompt example reads, validates and previews cleanly.
+- [x] A4 Export, Import and prompt-pack tests pass for one-Track Plans with only mechanical changes.
+- [x] `dotnet build` 0 warnings; all tests pass.
+
+## Comments
+
+- Implemented on branch `a4-5/ticket-09`:
+  - `ExerciseReferences`: fixed Track Phase path (`plans[i].tracks[t].phases[p]`) to match `DocumentValidator`.
+  - `PlanImport`: remaps colliding Track IDs, `Session.TrackId`, Track Phase overrides, and qualified Badge metrics (`streak:<id>`, `days:<id>`, `bestweek:<id>`) in the same file; preserves idempotency on second import; mentions Track count in preview when a Plan has >1 Track.
+  - `MarkdownRenderer`: renders each Track as a `####` heading with cadence, Track rules, Phases, and `#####` Sessions underneath.
+  - `PromptPackFormat`: updated `PlanExample` to the data-spec two-Track example, bumped prompt format references/examples to `ExchangeFormat.CurrentVersion` (`2`), generated `TrackCadence`, `DefaultDay` (including `daily`), `SessionType`, and `LogKind` lists from C# enums, and documented that the first Track is main and must be `weekly`.

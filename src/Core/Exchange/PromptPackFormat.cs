@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Core.Model;
+using Core.Serialisation;
 
 namespace Core.Exchange;
 
@@ -8,70 +9,100 @@ namespace Core.Exchange;
 public static partial class PromptPack
 {
     /// <summary>
-    /// The worked example in the Plan prompt. Tests read it with the real reader and preview it as a Plan Import against a library holding
-    /// <c>goblet-squat</c>, <c>farmers-carry</c> and <c>rdl</c>; <c>kb-swing</c> is the new Exercise it adds.
+    /// The worked example in the Plan prompt (the two-Track Plan example from the data spec). Tests read it with the real reader and preview
+    /// it as a Plan Import against a library holding <c>goblet-squat</c>, <c>farmers-carry</c> and <c>rdl</c>; <c>cat-cow</c> and
+    /// <c>hip-flexor-stretch</c> are the new Exercises it adds.
     /// </summary>
     public static string PlanExample { get; } = Lf("""
         {
-          "formatVersion": 1,
+          "formatVersion": 2,
           "exercises": [
             { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load" },
             { "id": "farmers-carry", "name": "Farmers carry", "logKind": "carry" },
             { "id": "rdl", "name": "Romanian deadlift", "logKind": "load" },
-            { "id": "kb-swing", "name": "Kettlebell swing", "logKind": "load" }
+            { "id": "cat-cow", "name": "Cat-cow", "logKind": "tickOnly" },
+            { "id": "hip-flexor-stretch", "name": "Hip flexor stretch", "logKind": "tickOnly" }
           ],
           "plans": [
             {
-              "id": "example-plan",
-              "name": "Example Plan",
+              "id": "hyrox-2027",
+              "name": "HYROX London",
               "isActive": true,
-              "startDate": "2026-12-07",
-              "goal": "Get stronger",
-              "goalDate": "2027-03-01",
-              "weeklyTarget": 3,
-              "streakMinWorkoutsPerWeek": 3,
-              "streakCountsCustomWorkouts": false,
+              "startDate": "2026-10-19",
+              "goal": "HYROX London Doubles",
+              "goalDate": "2027-04-24",
               "weightIncrementKg": 2,
-              "phases": [
+              "tracks": [
                 {
-                  "id": "foundation",
-                  "focus": "Foundation",
-                  "startWeek": 1,
-                  "endWeek": 4,
-                  "goals": [{ "exerciseId": "goblet-squat", "weightKg": 24, "reps": 10 }]
+                  "id": "main",
+                  "name": "Main",
+                  "cadence": "weekly",
+                  "weeklyTarget": 5,
+                  "streakMinWorkoutsPerWeek": 4,
+                  "streakCountsCustomWorkouts": false,
+                  "phases": [
+                    {
+                      "id": "foundation",
+                      "focus": "Foundation",
+                      "startWeek": 1,
+                      "endWeek": 8,
+                      "goals": [{ "exerciseId": "goblet-squat", "weightKg": 24, "reps": 10 }]
+                    },
+                    {
+                      "id": "build",
+                      "focus": "Build",
+                      "startWeek": 9,
+                      "endWeek": 19,
+                      "sessionOverrides": [
+                        {
+                          "sessionId": "a-lower",
+                          "exercises": [{ "exerciseId": "rdl", "sets": 4, "reps": 6, "cue": "Hinge, don't squat" }]
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
-                  "id": "build",
-                  "focus": "Build",
-                  "startWeek": 5,
-                  "endWeek": 12,
-                  "sessionOverrides": [
-                    {
-                      "sessionId": "a-lower",
-                      "exercises": [{ "exerciseId": "rdl", "sets": 4, "reps": 6, "cue": "Hinge, don't squat" }]
-                    }
+                  "id": "mobility",
+                  "name": "Morning mobility",
+                  "cadence": "daily",
+                  "dayDonePercent": 75,
+                  "phases": [
+                    { "id": "mobility-habit", "focus": "Habit", "startWeek": 1, "endWeek": 4 }
                   ]
                 }
               ],
               "sessions": [
                 {
                   "id": "a-lower",
-                  "name": "A: Lower",
+                  "name": "A: Lower + core",
+                  "trackId": "main",
                   "defaultDay": "monday",
                   "type": "strength",
                   "exercises": [
                     { "exerciseId": "goblet-squat", "sets": 3, "reps": 8, "repsMax": 12, "cue": "Chest tall" },
-                    { "exerciseId": "kb-swing", "sets": 3, "reps": 15 },
                     { "exerciseId": "farmers-carry", "sets": 3 }
                   ]
                 },
                 {
-                  "id": "b-benchmark",
-                  "name": "B: Benchmark test",
+                  "id": "benchmark",
+                  "name": "Benchmark test",
+                  "trackId": "main",
                   "defaultDay": "saturday",
                   "type": "test",
                   "benchmarkIntervalWeeks": 4,
                   "exercises": [{ "exerciseId": "goblet-squat", "sets": 1, "reps": 5 }]
+                },
+                {
+                  "id": "m-mobility",
+                  "name": "Morning mobility",
+                  "trackId": "mobility",
+                  "defaultDay": "daily",
+                  "type": "mobility",
+                  "exercises": [
+                    { "exerciseId": "cat-cow", "sets": 1 },
+                    { "exerciseId": "hip-flexor-stretch", "sets": 1, "cue": "30 seconds each side" }
+                  ]
                 }
               ]
             }
@@ -85,7 +116,7 @@ public static partial class PromptPack
     /// </summary>
     public static string GuidesExample { get; } = Lf("""
         {
-          "formatVersion": 1,
+          "formatVersion": 2,
           "guides": [
             {
               "exerciseId": "goblet-squat",
@@ -111,21 +142,24 @@ public static partial class PromptPack
         """);
 
     private static string PlanFormatReference() => Lines(
-        "The file is one JSON object. Always include `\"formatVersion\": 1`. Dates are yyyy-MM-dd. IDs are letters, digits, hyphens or underscores.",
+        $"The file is one JSON object. Always include `\"formatVersion\": {ExchangeFormat.CurrentVersion}`. Dates are yyyy-MM-dd. IDs are letters, digits, hyphens or underscores.",
         "- Root: `formatVersion`, `exercises` (optional), `plans` (one Plan).",
         $"- Exercise: `id`, `name`, `logKind` (one of: {EnumList<LogKind>()}), `isBenchmark` (optional, true or false),",
         "  `tags` (optional: `muscleGroups`, `equipment`, `movementPatterns`, each a list of words).",
-        "- Plan: `id`, `name`, `isActive` (true), `startDate`, `goal` (optional), `goalDate` (optional, on or after `startDate`), `weeklyTarget` (Workouts a week, 1 or more),",
-        "  `streakMinWorkoutsPerWeek` (1 or more), `streakCountsCustomWorkouts` (true or false), `weightIncrementKg` (more than 0), `phases` (optional), `sessions`.",
-        "- Phase: `id`, `focus`, `startWeek`, `endWeek` (weeks count from 1, both ends included; Phases must start at week 1 and leave no gap or overlap),",
-        "  `goals` (optional: `exerciseId`, `weightKg`, `reps`), `sessionOverrides` (optional: `sessionId` of a Session in this Plan, and `exercises` rows that replace that Session's rows in this Phase).",
-        $"- Session: `id`, `name`, `defaultDay` (one of: {DayList()}), `type` (one of: {EnumList<SessionType>()}),",
-        "  `benchmarkIntervalWeeks` (optional, with type test: repeats every N weeks), `exercises` (rows, in order).",
+        "- Plan: `id`, `name`, `isActive` (true), `startDate`, `goal` (optional), `goalDate` (optional, on or after `startDate`),",
+        "  `weightIncrementKg` (more than 0), `tracks` (one or more; the first Track is the main Track and must be `weekly`), `sessions`.",
+        $"- Track: `id`, `name`, `cadence` (one of: {EnumList<TrackCadence>()}), `phases` (optional: this Track's Phases).",
+        "  For `weekly` Tracks: `weeklyTarget` (Workouts a week, 1 or more), `streakMinWorkoutsPerWeek` (1 or more), `streakCountsCustomWorkouts` (true or false).",
+        "  For `daily` Tracks: `dayDonePercent` (1 to 100, default 75).",
+        "- Phase: `id`, `focus`, `startWeek`, `endWeek` (weeks count from 1 Plan-wide, both ends included; each Track's Phases must start at week 1 and leave no gap or overlap),",
+        "  `goals` (optional: `exerciseId`, `weightKg`, `reps`), `sessionOverrides` (optional: `sessionId` of a Session on the same Track, and `exercises` rows that replace that Session's rows in this Phase).",
+        $"- Session: `id`, `name`, `trackId` (must match a Track of this Plan), `defaultDay` (one of: {DayList()}; `daily` is required on a `daily` Track and not allowed on a `weekly` Track),",
+        $"  `type` (one of: {EnumList<SessionType>()}), `benchmarkIntervalWeeks` (optional, with type test on the main Track: repeats every N weeks), `exercises` (rows, in order).",
         "- Exercise row: `exerciseId`, `sets` (1 or more), `reps` (optional, the rep target or the low end of a range), `repsMax` (optional, the high end), `cue` (optional, a short coaching cue).",
-        "Session and Phase IDs must be unique in the file. Leave out any field that does not apply; do not write null.");
+        "Track, Session and Phase IDs must be unique in the file. Leave out any field that does not apply; do not write null.");
 
     private static string GuideFormatReference() => Lines(
-        "The file is one JSON object. Always include `\"formatVersion\": 1`, and a `guides` list.",
+        $"The file is one JSON object. Always include `\"formatVersion\": {ExchangeFormat.CurrentVersion}`, and a `guides` list.",
         "- Guide: `exerciseId` (required), then any of: `works`, `whyInPlan`, `setup`, `howTo`, `easier`, `harder` (each a short text),",
         "  `cues`, `commonMistakes`, `watchOuts` (each a list of short texts), `videoUrl` (a full http:// or https:// address).",
         "Leave out any field that does not apply; do not write null.");
@@ -133,9 +167,9 @@ public static partial class PromptPack
     /// <summary>The camelCase names of an enum, as the exchange format writes them, in declaration order.</summary>
     private static string EnumList<T>() where T : struct, Enum => CamelCaseList(Enum.GetNames<T>());
 
-    /// <summary>The days of the week as the format writes them, Monday first (<see cref="DayOfWeek"/> itself starts on Sunday).</summary>
+    /// <summary>The default-day values as the format writes them, Monday first, then <c>daily</c>.</summary>
     private static string DayList() =>
-        CamelCaseList(Enum.GetValues<DayOfWeek>().OrderBy(d => ((int)d + 6) % 7).Select(d => d.ToString()));
+        CamelCaseList(Enum.GetValues<DefaultDay>().OrderBy(d => d == DefaultDay.Daily ? 7 : ((int)d + 6) % 7).Select(d => d.ToString()));
 
     private static string CamelCaseList(IEnumerable<string> names) =>
         string.Join(", ", names.Select(name => JsonNamingPolicy.CamelCase.ConvertName(name)));

@@ -273,4 +273,41 @@ public class ApplyTests
         Assert.Equal(Now, app.LastBackupAt);
         Assert.Contains(app.Snapshot.WeighIns, w => w.Id == "wi-new");
     }
+
+    [Fact]
+    public async Task A_v2_backup_with_two_tracks_round_trips_through_export_and_restore()
+    {
+        var baseSnapshot = ExchangeTestData.Snapshot();
+        var active = baseSnapshot.Plans.Single(p => p.IsActive);
+        var twoTrack = active with
+        {
+            Tracks =
+            [
+                active.Tracks[0],
+                new Track("mobility", "Morning mobility", new TrackRhythm.Daily(80), [new Phase("mob-habit", "Habit", 1, 4, [], [])]),
+            ],
+            Sessions =
+            [
+                .. active.Sessions,
+                new Session("m-mobility", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [new SessionExercise("goblet-squat", 1, null, null, null)]),
+            ],
+        };
+        var snapshot = baseSnapshot with
+        {
+            Plans = [.. baseSnapshot.Plans.Select(p => p.IsActive ? twoTrack : p)],
+            Badges = [.. baseSnapshot.Badges, new Badge("b-mob", "7 mornings", "streak:mobility", 7)],
+        };
+        var source = await OpenWith(snapshot);
+        var backup = Exporter.Export(source.Snapshot, ExportRequest.Backup, "test", Now);
+        var wiped = await AppData.OpenAsync(new InMemoryDataStore());
+
+        var outcome = await ImportApplier.ApplyAsync(wiped, Preview(wiped, ExchangeTestData.ReadBack(backup.Text), ImportKind.Restore), new RecordingBackupSink(), Now);
+
+        Assert.IsType<ApplyOutcome.Applied>(outcome);
+        Assert.Equal(ExchangeFormat.Write(source.Snapshot.ToDocument()), ExchangeFormat.Write(wiped.Snapshot.ToDocument()));
+        var restoredPlan = wiped.Snapshot.Plans.Single(p => p.IsActive);
+        Assert.Equal(2, restoredPlan.Tracks.Count);
+        Assert.Equal(80, Assert.IsType<TrackRhythm.Daily>(restoredPlan.Tracks[1].Rhythm).DayDonePercent);
+        Assert.Equal("mobility", restoredPlan.Sessions.Single(s => s.Id == "m-mobility").TrackId);
+    }
 }
