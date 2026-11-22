@@ -33,6 +33,7 @@ public class OfflineCacheCoverageTests
     /// </summary>
     [Theory]
     [InlineData("js/wake-lock.js")]
+    [InlineData("js/browser-capabilities.js")]
     [InlineData("_content/Ui/Components/Sheet.razor.js")]
     public void The_script_modules_the_log_imports_are_matched_by_the_include_list_and_exist_in_the_source(string servedPath)
     {

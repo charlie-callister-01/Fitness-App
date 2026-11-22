@@ -1,6 +1,182 @@
 @page "/settings"
+@using Core.Model
+@using Core.Storage
+@using Ui.Theming
 
-<div class="fa-root">
+<div class="fa-root fa-settings">
     <h1 class="fa-title fa-title--l">Settings</h1>
-    <EmptyState Kind="EmptyStateKind.FirstRun" Title="Settings will live here" Message="Units, rest defaults and Appearance move here in a later stage." />
+
+    <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+
+    <section class="fa-panel fa-settings__section" aria-labelledby="settings-look-heading">
+        <h2 id="settings-look-heading" class="fa-title fa-title--m">Look</h2>
+
+        <div class="fa-settings__group" role="group" aria-labelledby="settings-theme-label">
+            <span id="settings-theme-label" class="fa-label">Theme</span>
+            <div class="fa-chips">
+                @foreach (var (value, label) in AppearanceLabels.Themes)
+                {
+                    <Button Variant="ButtonVariant.Secondary" Pressed="Themes.Theme == value" OnClick="() => Themes.SetThemeAsync(value)">@label</Button>
+                }
+            </div>
+        </div>
+
+        <div class="fa-settings__group" role="group" aria-labelledby="settings-mode-label">
+            <span id="settings-mode-label" class="fa-label">Mode</span>
+            <div class="fa-chips">
+                @foreach (var (value, label) in AppearanceLabels.Modes)
+                {
+                    <Button Variant="ButtonVariant.Secondary" Pressed="Themes.Mode == value" OnClick="() => Themes.SetModeAsync(value)">@label</Button>
+                }
+            </div>
+        </div>
+
+        <div class="fa-well fa-settings__preview"
+             data-testid="look-preview"
+             data-preview-theme="@Themes.Theme.ToString().ToLowerInvariant()"
+             data-preview-mode="@Themes.Mode.ToString().ToLowerInvariant()">
+            <span class="fa-label">Button preview</span>
+            <Button Variant="ButtonVariant.Primary">Start Workout</Button>
+        </div>
+    </section>
+
+    <section class="fa-panel fa-settings__section" aria-labelledby="settings-units-heading">
+        <h2 id="settings-units-heading" class="fa-title fa-title--m">Units and training</h2>
+
+        <div class="fa-settings__group" role="group" aria-labelledby="settings-weight-unit-label">
+            <span id="settings-weight-unit-label" class="fa-label">Weight unit</span>
+            <div class="fa-chips">
+                <Button Variant="ButtonVariant.Secondary" Disabled="WriteDisabled" Pressed="Current.DisplayWeightUnit == WeightUnit.Kg" OnClick="() => SetWeightUnitAsync(WeightUnit.Kg)">kg</Button>
+                <Button Variant="ButtonVariant.Secondary" Disabled="WriteDisabled" Pressed="Current.DisplayWeightUnit == WeightUnit.Lb" OnClick="() => SetWeightUnitAsync(WeightUnit.Lb)">lb</Button>
+            </div>
+        </div>
+
+        <div class="fa-settings__group" role="group" aria-labelledby="settings-distance-unit-label">
+            <span id="settings-distance-unit-label" class="fa-label">Distance unit</span>
+            <div class="fa-chips">
+                <Button Variant="ButtonVariant.Secondary" Disabled="WriteDisabled" Pressed="Current.DisplayDistanceUnit == DistanceUnit.Km" OnClick="() => SetDistanceUnitAsync(DistanceUnit.Km)">km</Button>
+                <Button Variant="ButtonVariant.Secondary" Disabled="WriteDisabled" Pressed="Current.DisplayDistanceUnit == DistanceUnit.Mi" OnClick="() => SetDistanceUnitAsync(DistanceUnit.Mi)">miles</Button>
+            </div>
+        </div>
+
+        <div class="fa-settings__field">
+            <label for="settings-weight-increment" class="fa-label">Weight increment (kg)</label>
+            <input id="settings-weight-increment"
+                   class="fa-settings__input"
+                   type="text"
+                   inputmode="decimal"
+                   disabled="@WriteDisabled"
+                   value="@_weightIncrementText"
+                   @onchange="OnWeightIncrementChangedAsync" />
+            @if (_weightIncrementError is { Length: > 0 })
+            {
+                <p class="fa-settings__error" data-testid="weight-increment-error" role="alert">@_weightIncrementError</p>
+            }
+        </div>
+
+        <div class="fa-settings__field">
+            <label for="settings-rest-timer" class="fa-label">Default rest timer (seconds)</label>
+            <input id="settings-rest-timer"
+                   class="fa-settings__input"
+                   type="text"
+                   inputmode="numeric"
+                   disabled="@WriteDisabled"
+                   value="@_restTimerText"
+                   @onchange="OnRestTimerChangedAsync" />
+            @if (_restTimerError is { Length: > 0 })
+            {
+                <p class="fa-settings__error" data-testid="rest-timer-error" role="alert">@_restTimerError</p>
+            }
+        </div>
+
+        <div class="fa-settings__field">
+            <label for="settings-goal-weight" class="fa-label">Goal weight (@WeightUnitLabel, optional)</label>
+            <input id="settings-goal-weight"
+                   class="fa-settings__input"
+                   type="text"
+                   inputmode="decimal"
+                   placeholder="None"
+                   disabled="@WriteDisabled"
+                   value="@_goalWeightText"
+                   @onchange="OnGoalWeightChangedAsync" />
+            @if (_goalWeightError is { Length: > 0 })
+            {
+                <p class="fa-settings__error" data-testid="goal-weight-error" role="alert">@_goalWeightError</p>
+            }
+        </div>
+    </section>
+
+    <section class="fa-panel fa-settings__section" aria-labelledby="settings-streak-heading">
+        <h2 id="settings-streak-heading" class="fa-title fa-title--m">Streak rules</h2>
+
+        <div class="fa-settings__field">
+            <label for="settings-streak-min" class="fa-label">Minimum Workouts per week</label>
+            <input id="settings-streak-min"
+                   class="fa-settings__input"
+                   type="text"
+                   inputmode="numeric"
+                   disabled="@WriteDisabled"
+                   value="@_streakMinText"
+                   @onchange="OnStreakMinChangedAsync" />
+            @if (_streakMinError is { Length: > 0 })
+            {
+                <p class="fa-settings__error" data-testid="streak-min-error" role="alert">@_streakMinError</p>
+            }
+        </div>
+
+        <label class="fa-settings__checkbox">
+            <input id="settings-streak-custom"
+                   type="checkbox"
+                   disabled="@WriteDisabled"
+                   checked="@Current.StreakCountsCustomWorkouts"
+                   @onchange="OnStreakCountsCustomChangedAsync" />
+            <span>Custom workouts count toward the Streak</span>
+        </label>
+    </section>
+
+    <section class="fa-panel fa-settings__section" aria-labelledby="settings-data-heading">
+        <h2 id="settings-data-heading" class="fa-title fa-title--m">Data</h2>
+
+        <div class="fa-settings__row">
+            <div>
+                <span class="fa-label">Last backed up</span>
+                <p class="fa-settings__value" data-testid="last-backup">@LastBackupText</p>
+            </div>
+            <Button Variant="ButtonVariant.Secondary" Glyph="IconName.Backup" Disabled="WriteDisabled" OnClick="BackUpAsync">Back up</Button>
+        </div>
+        @if (_backupError is { Length: > 0 })
+        {
+            <p class="fa-settings__error" role="alert">@_backupError</p>
+        }
+
+        <div class="fa-settings__row">
+            <div>
+                <span class="fa-label">Persistent storage</span>
+                <p class="fa-settings__value" data-testid="persistence-status">@PersistenceStatusText</p>
+            </div>
+            @if (Data.Health.Persistence == PersistenceStatus.NotGranted)
+            {
+                <Button Variant="ButtonVariant.Secondary" Glyph="IconName.Storage" OnClick="RequestPersistenceAsync">Request persistent storage</Button>
+            }
+        </div>
+
+        @if (StorageEstimateText is { Length: > 0 } estimateText)
+        {
+            <div>
+                <span class="fa-label">Storage usage</span>
+                <p class="fa-settings__value" data-testid="storage-estimate">@estimateText</p>
+            </div>
+        }
+
+        <div class="fa-settings__row">
+            <div>
+                <span class="fa-label">App install</span>
+                <p class="fa-settings__value" data-testid="install-status">@InstallStatusText</p>
+            </div>
+            @if (!_isStandalone && _canInstall)
+            {
+                <Button Variant="ButtonVariant.Secondary" Glyph="IconName.Install" OnClick="InstallAppAsync">Install app</Button>
+            }
+        </div>
+    </section>
 </div>

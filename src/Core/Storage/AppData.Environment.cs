@@ -82,6 +82,14 @@ public sealed partial class AppData
     public async Task RefreshEstimateAsync() =>
         _environment = _environment with { Estimate = await _environment.Environment.EstimateAsync() };
 
+    /// <summary>Asks the browser again for persistent storage and updates <see cref="Health"/>.</summary>
+    public async Task<PersistenceStatus> RequestPersistenceAsync()
+    {
+        var status = await _environment.Environment.RequestPersistenceAsync();
+        _environment = _environment with { Persistence = status };
+        return status;
+    }
+
     /// <summary>
     /// The browser cleared the data only if the marker (outside the database) says something was saved, yet the database is empty and
     /// not marked initialised. The initialised flag lives inside the database, so if it is still set the database was not wiped: an
