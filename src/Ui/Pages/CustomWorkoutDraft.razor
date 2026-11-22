@@ -38,6 +38,6 @@
 
         <Button Variant="ButtonVariant.Primary" Disabled="@(_draft.Count == 0 || _save.IsBusy || !Page.CanWrite)" OnClick="StartAsync">Start</Button>
 
-        <ExercisePicker Open="_pickerOpen" Title="Add Exercise" Choices="PickerChoices" OnPick="Add" OnClose="ClosePicker" />
+        <ExercisePicker Open="_pickerOpen" Title="Add Exercise" Request="PickerRequest" OnPick="Add" OnClose="ClosePicker" />
     }
 </div>

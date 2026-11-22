@@ -71,6 +71,24 @@ public sealed class CustomWorkoutDraftTests : BunitContext
     }
 
     [Fact]
+    public async Task A_new_Exercise_made_from_the_picker_goes_into_the_draft_and_is_stored()
+    {
+        var data = await OpenSeededAsync(plan: Plan());
+        var cut = await RenderDraftAsync(data);
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Add Exercise").Click();
+
+        var add = cut.Find("[role='dialog'] .fa-picker__new button");
+        Assert.Equal("Add a new Exercise", add.TextContent.Trim());
+        add.Click();
+        cut.Find("[role='dialog'] input[aria-label='Name']").Input("Cable row");
+        cut.FindAll("[role='dialog'] button").Single(b => b.TextContent.Trim() == "Add Exercise").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(["Cable row"], DraftNames(cut)));
+        Assert.Contains(data.Snapshot.Exercises, e => e.Name == "Cable row");
+        Assert.Empty(cut.FindAll("[role='dialog']"));
+    }
+
+    [Fact]
     public async Task The_picker_offers_the_Exercises_of_this_weeks_Missed_Sessions_first()
     {
         var core = new Session("core", "Core", DayOfWeek.Monday, SessionType.Body, null,

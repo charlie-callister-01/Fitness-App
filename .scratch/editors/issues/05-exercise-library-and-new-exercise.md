@@ -8,9 +8,15 @@
 
 **Blocked by:** 02, 03.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] bUnit tests over the in-memory store: browse and group, search and tag filter, add an Exercise (stored with a permanent id), duplicate name refused with a message, no-match search offer, read-only disables Add with the reason, failure shows the notice and keeps the form, double tap saves once.
-- [ ] Picker tests: "Add a new Exercise" is enabled, opens the form, and the new Exercise is selected on return in the log Swap and Add paths and the Custom workout draft.
-- [ ] Theme and Mode behave; tokens only; works at 360 px.
-- [ ] Assertions after async clicks use `WaitForAssertion`; `dotnet build` has 0 warnings.
+- [x] bUnit tests over the in-memory store: browse and group, search and tag filter, add an Exercise (stored with a permanent id), duplicate name refused with a message, no-match search offer, read-only disables Add with the reason, failure shows the notice and keeps the form, double tap saves once.
+- [x] Picker tests: "Add a new Exercise" is enabled, opens the form, and the new Exercise is selected on return in the log Swap and Add paths and the Custom workout draft.
+- [x] Theme and Mode behave; tokens only; works at 360 px.
+- [x] Assertions after async clicks use `WaitForAssertion`; `dotnet build` has 0 warnings.
+
+## Notes from implementation
+- The picker takes a `PickerRequest` (parameter `Request`); `ExercisePickerChoices` and the duplicated ranking and threshold code in `LogStanding` and `CustomWorkoutDraft` are gone. The log builds one `ForSwap` request and uses it for both Swap and Add (the Core rule ranks them the same).
+- The picker always shows one secondary button: "Add a new Exercise", or "Add '<text>' as a new Exercise" after a no-match search. The New Exercise sheet replaces the picker sheet while open; Cancel returns to the picker. A made Exercise counts as picked, so the Swap confirm step still applies. The picker passes `OfferGuide=false`.
+- `NewExerciseSheet` is self-saving (own `GuardedSave`); the Exercise and its cue Guide go in one commit. "How it is logged" defaults to Weight and reps. Labels live in `LogKindLabels`.
+- `MoreTests` no longer treats the Exercise library as a placeholder; it has its own link and route check.

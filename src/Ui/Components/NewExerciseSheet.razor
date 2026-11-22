@@ -1,0 +1,173 @@
+@using Core.Ids
+@using Core.Model
+@using Core.Rules.Library
+@using Core.Storage
+@using Core.Time
+@using Microsoft.AspNetCore.Components
+@using Ui.Pages
+@using Ui.Saving
+@* The New Exercise form (design S-04). It saves itself: the Exercise (and a Guide holding the cue, when one was typed) goes in one guarded
+   commit, then OnAdded says which Exercise it made. A refused name or a failed save keeps the form open. *@
+<FormSheet Open="Open" Title="New Exercise" Saving="_save.IsBusy" CanWrite="_page.CanWrite" ReadOnlyMessage="@_page.ReadOnlyMessage"
+           Message="@_message" OnClose="OnClose">
+    <ChildContent>
+        <label class="fa-newex__field">
+            <span class="fa-label">Name</span>
+            <input class="fa-newex__control" type="text" aria-label="Name" value="@_name" @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
+        </label>
+        <MenuChoices Label="How it is logged" Choices="_kindChoices" />
+        <label class="fa-newex__field">
+            <span class="fa-label">Muscle groups</span>
+            <input class="fa-newex__control" type="text" aria-label="Muscle groups" placeholder="Separate with commas"
+                   value="@_muscles" @oninput="e => _muscles = e.Value?.ToString() ?? string.Empty" />
+        </label>
+        <label class="fa-newex__field">
+            <span class="fa-label">Equipment</span>
+            <input class="fa-newex__control" type="text" aria-label="Equipment" placeholder="Separate with commas"
+                   value="@_equipment" @oninput="e => _equipment = e.Value?.ToString() ?? string.Empty" />
+        </label>
+        <label class="fa-newex__field">
+            <span class="fa-label">Movement pattern</span>
+            <input class="fa-newex__control" type="text" aria-label="Movement pattern" placeholder="Separate with commas"
+                   value="@_patterns" @oninput="e => _patterns = e.Value?.ToString() ?? string.Empty" />
+        </label>
+        <label class="fa-newex__field">
+            <span class="fa-label">Cue (optional)</span>
+            <textarea class="fa-newex__control fa-newex__cue" aria-label="Cue" rows="2"
+                      @oninput="e => _cue = e.Value?.ToString() ?? string.Empty">@_cue</textarea>
+        </label>
+        @if (OfferGuide)
+        {
+            <label class="fa-newex__check">
+                <input type="checkbox" checked="@_writeGuide" @onchange="e => _writeGuide = (bool)(e.Value ?? false)" />
+                <span>Write a Guide now</span>
+            </label>
+        }
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="AddAsync">Add Exercise</Button>
+    </Actions>
+</FormSheet>
+
+@code {
+    private string _name = "";
+    private string _muscles = "";
+    private string _equipment = "";
+    private string _patterns = "";
+    private string _cue = "";
+    private LogKind _kind = LogKind.Load;
+    private bool _writeGuide;
+    private bool _wasOpen;
+    private string? _message;
+    private PageContext _page = default!;
+    private GuardedSave _save = default!;
+    private IReadOnlyList<MenuChoices.Choice> _kindChoices = [];
+
+    [Inject] private AppData Data { get; set; } = default!;
+
+    [Inject] private IClock Clock { get; set; } = default!;
+
+    [Inject] private IIdGenerator Ids { get; set; } = default!;
+
+    [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter]
+    public ElementReference? Opener { get; set; }
+
+    /// <summary>The name to start with (a search the owner typed that matched nothing). Read each time the form opens.</summary>
+    [Parameter]
+    public string? InitialName { get; set; }
+
+    /// <summary>Whether to offer "Write a Guide now" (which goes to the Guide page after Add).</summary>
+    [Parameter]
+    public bool OfferGuide { get; set; }
+
+    /// <summary>The Exercise was saved to the library. The owner of the sheet closes it.</summary>
+    [Parameter]
+    public EventCallback<Exercise> OnAdded { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _page = new PageContext(Data, Clock);
+        _save = new GuardedSave(Data, Notice);
+        _save.Started += () => StateHasChanged();
+        _kindChoices = BuildKindChoices();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Open && !_wasOpen)
+        {
+            _name = InitialName ?? "";
+            _muscles = _equipment = _patterns = _cue = "";
+            _kind = LogKind.Load;
+            _writeGuide = false;
+            _message = null;
+            _kindChoices = BuildKindChoices();
+        }
+
+        _wasOpen = Open;
+    }
+
+    private IReadOnlyList<MenuChoices.Choice> BuildKindChoices() =>
+    [
+        .. NewExerciseRules.OfferedKinds.Select(kind => new MenuChoices.Choice(LogKindLabels.For(kind), _kind == kind, () => PickKind(kind))),
+    ];
+
+    private Task PickKind(LogKind kind)
+    {
+        _kind = kind;
+        _kindChoices = BuildKindChoices();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private static IReadOnlyList<string> Words(string commaSeparated) => commaSeparated.Split(',');
+
+    private async Task AddAsync()
+    {
+        _message = null;
+        Exercise? added = null;
+        await _save.RunAsync(async () =>
+        {
+            var tags = new ExerciseTags(Words(_muscles), Words(_equipment), Words(_patterns));
+            switch (NewExerciseRules.Create(_name, _kind, tags, _cue, Data.Snapshot.Exercises, Ids))
+            {
+                case NewExerciseResult.Valid valid:
+                    List<Change> changes = [Change.Put(valid.Exercise)];
+                    if (valid.Guide is { } guide)
+                    {
+                        changes.Add(Change.Put(guide));
+                    }
+
+                    var commit = await Data.CommitAsync(changes);
+                    added = commit is CommitResult.Committed ? valid.Exercise : null;
+                    return SaveWork.Committed(commit);
+                case NewExerciseResult.Invalid invalid:
+                    _message = invalid.Message;
+                    return SaveWork.None;
+                default:
+                    return SaveWork.None;
+            }
+        });
+
+        if (added is null)
+        {
+            return;
+        }
+
+        await OnAdded.InvokeAsync(added);
+        if (OfferGuide && _writeGuide)
+        {
+            Navigation.NavigateTo($"exercises/{added.Id}/guide");
+        }
+    }
+}

@@ -1,6 +1,68 @@
 @page "/exercises"
+@using Core.Rules.Library
+@* The Exercise library (design S-04): search, tag chips, Exercises grouped by Session then "Not in a Session", and New Exercise. Each row opens
+   the Exercise's Guide page. What is shown is the Core LibraryViewBuilder; this page only holds the search, the tag and the form. *@
+@{
+    var view = View;
+}
+<div class="fa-root fa-lib">
+    <header class="fa-lib__header">
+        <h1 class="fa-title fa-title--l">Exercise library</h1>
+        <Button Variant="ButtonVariant.Icon" Glyph="IconName.Plus" AccessibleName="New Exercise" OnClick="() => StartAdding(null)" />
+    </header>
 
-<div class="fa-root">
-    <h1 class="fa-title fa-title--l">Exercise library</h1>
-    <EmptyState Kind="EmptyStateKind.NoHistory" Title="Your Exercise library will live here" Message="Search, Guides and videos arrive in a later stage." />
+    @if (view.IsLibraryEmpty)
+    {
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Exercises yet" Message="Add your first Exercise to build your library."
+                    ActionLabel="Add an Exercise" OnAction="() => StartAdding(null)" />
+    }
+    else
+    {
+        @if (view.ShowSearch)
+        {
+            <input type="search" class="fa-lib__search" aria-label="Search Exercises" placeholder="Search Exercises"
+                   value="@_search" @oninput="e => _search = e.Value?.ToString() ?? string.Empty" />
+        }
+
+        @if (view.Tags.Count > 0)
+        {
+            <div class="fa-chips fa-lib__tags" role="group" aria-label="Filter by tag">
+                <Button Variant="ButtonVariant.Secondary" Pressed="_tag is null" OnClick="() => PickTag(null)">All</Button>
+                @foreach (var tag in view.Tags)
+                {
+                    var value = tag;
+                    <Button Variant="ButtonVariant.Secondary" Pressed="IsTag(value)" OnClick="() => PickTag(value)">@value</Button>
+                }
+            </div>
+        }
+
+        @foreach (var group in view.Groups)
+        {
+            <section class="fa-lib__group" aria-label="@group.Heading">
+                <h2 class="fa-label fa-lib__heading">@group.Heading</h2>
+                @foreach (var row in group.Rows)
+                {
+                    <a class="fa-lib__row" href="@GuideHref(row.Exercise.Id)">
+                        <span class="fa-lib__name">@row.Exercise.Name</span>
+                        <span class="fa-lib__meta fa-muted">@MetaOf(row.Exercise)</span>
+                        <span class="fa-lib__guide fa-muted">@(row.HasGuide ? "Guide" : "No Guide yet")</span>
+                    </a>
+                }
+            </section>
+        }
+
+        @if (view.NewExerciseOffer is { } offer)
+        {
+            <div class="fa-lib__none">
+                <p class="fa-muted">No match.</p>
+                <Button Variant="ButtonVariant.Secondary" OnClick="() => StartAdding(offer)">Add '@offer' as a new Exercise</Button>
+            </div>
+        }
+        else if (view.Groups.Count == 0)
+        {
+            <p class="fa-muted">No Exercises have that tag.</p>
+        }
+    }
+
+    <NewExerciseSheet Open="_adding" InitialName="@_offer" OfferGuide="true" OnAdded="StopAdding" OnClose="StopAdding" />
 </div>

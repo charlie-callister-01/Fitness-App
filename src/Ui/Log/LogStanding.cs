@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Editing;
+using Core.Rules.Library;
 using Core.Rules.LogKinds;
 using Core.Rules.Outcomes;
 using Core.Rules.Performance;
@@ -14,9 +15,6 @@ namespace Ui.Log;
 /// </summary>
 public sealed class LogStanding(AppData data)
 {
-    /// <summary>The picker gets a search box once the library is bigger than this.</summary>
-    private const int MaxLibraryWithoutSearch = 20;
-
     public Exercise? ExerciseOf(string id) => data.Snapshot.Exercises.FirstOrDefault(e => e.Id == id);
 
     public string NameOf(SessionExercise planned) => ExerciseOf(planned.ExerciseId)?.Name ?? "Exercise";
@@ -94,11 +92,7 @@ public sealed class LogStanding(AppData data)
     public (SwapInfo? Swap, bool Added) MarksOf(LogSlot slot) =>
         (slot.SwappedFromId is { } original ? new SwapInfo(original, ExerciseOf(original)?.Name ?? "Exercise") : null, slot.Added);
 
-    /// <summary>The Exercises the picker offers for an Exercise in hand: those sharing a tag with it first (the Core ranking), then the rest.</summary>
-    public ExercisePickerChoices PickerFor(Workout workout, Exercise current)
-    {
-        var ranked = SimilarExercises.Rank(current, data.Snapshot.Exercises, workout);
-        var similar = ranked.Where(e => SimilarExercises.SharedTagCount(current, e) > 0).ToList();
-        return new ExercisePickerChoices(similar, [.. ranked.Except(similar)], data.Snapshot.Exercises.Count > MaxLibraryWithoutSearch);
-    }
+    /// <summary>What the picker is asked for an Exercise in hand (Swap, and Add after it); the Core picker rule ranks and filters.</summary>
+    public PickerRequest PickerFor(Workout workout, Exercise current) =>
+        PickerRequest.ForSwap(current, workout, data.Snapshot.Exercises);
 }

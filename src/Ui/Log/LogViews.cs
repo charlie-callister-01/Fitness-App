@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Library;
 using Core.Rules.LogKinds;
 using Ui.Components;
 
@@ -37,7 +38,7 @@ public sealed record ExerciseRows(RowSpec Spec, IReadOnlyList<RowView> Items, Ro
 /// <summary>An Exercise as shown: its rows, or the reason it has none (<see cref="Unavailable"/>).</summary>
 public sealed record ExerciseView(
     ExerciseInfo Info, HeaderText? Header, ExerciseRows? Rows, string? Unavailable, int? Rpe, SkipInfo? Skip = null,
-    SwapInfo? Swap = null, bool Added = false, ExercisePickerChoices? Picker = null);
+    SwapInfo? Swap = null, bool Added = false, PickerRequest? Picker = null);
 
 /// <summary>The Exercise stands in for a planned one: the original planned Exercise (whose row Skip, Swap and Undo act on) and its name.</summary>
 public sealed record SwapInfo(string OriginalId, string OriginalName);

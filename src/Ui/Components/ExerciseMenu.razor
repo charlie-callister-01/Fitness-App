@@ -51,12 +51,12 @@
 <SkipSheet Open="_skipping" ExerciseName="@name" HasSets="facts.HasSets" Opener="_opener" OnClose="CloseSkip"
            OnSkip="Skipped" />
 
-@if (State.Picker is { } choices)
+@if (State.Picker is { } request)
 {
-    <ExercisePicker Open="_picking == PickerMode.Swap" Title="@($"Swap {name}")" Choices="choices" Opener="_opener" OnClose="ClosePicker"
+    <ExercisePicker Open="_picking == PickerMode.Swap" Title="@($"Swap {name}")" Request="request" Opener="_opener" OnClose="ClosePicker"
                     ConfirmMessage="@(facts.HasSets ? $"{name} has confirmed Sets. The Sets will be removed if you swap it." : null)"
                     ConfirmLabel="Remove Sets and swap" OnPick="id => Picked(new ExerciseAction.Swap(State.RowId, id))" />
-    <ExercisePicker Open="_picking == PickerMode.Add" Title="Add an Exercise" Choices="choices" Opener="_opener" OnClose="ClosePicker"
+    <ExercisePicker Open="_picking == PickerMode.Add" Title="Add an Exercise" Request="request" Opener="_opener" OnClose="ClosePicker"
                     OnPick="id => Picked(new ExerciseAction.Add(State.ExerciseId, id))" />
 }
 

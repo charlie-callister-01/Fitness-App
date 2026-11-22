@@ -1,6 +1,6 @@
 using Core.Ids;
 using Core.Model;
-using Core.Rules.CustomWorkout;
+using Core.Rules.Library;
 using Core.Rules.Starting;
 using Core.Storage;
 using Core.Time;
@@ -12,8 +12,6 @@ namespace Ui.Pages;
 
 public sealed partial class CustomWorkoutDraft : IDisposable
 {
-    private const int MaxLibraryWithoutSearch = 20;
-
     private List<string> _draft = [];
     private string? _initialisedFor;
     private bool _initialised;
@@ -46,18 +44,13 @@ public sealed partial class CustomWorkoutDraft : IDisposable
 
 
 
-    private ExercisePickerChoices PickerChoices
+    private PickerRequest PickerRequest
     {
         get
         {
-            var library = Data.Snapshot.Exercises;
-            if (Page.ActivePlan is not { } plan)
-            {
-                return new([], [.. library.Where(e => !_draft.Contains(e.Id))], library.Count > MaxLibraryWithoutSearch);
-            }
-
-            var ordered = CustomWorkoutOffer.Order(plan, Data.Snapshot.WeekSchedules, Data.Snapshot.Breaks, Data.Snapshot.Workouts, library, Page.Today);
-            return new([], [.. ordered.Where(e => !_draft.Contains(e.Id))], library.Count > MaxLibraryWithoutSearch);
+            var snapshot = Data.Snapshot;
+            return PickerRequest.ForCustomWorkout(
+                Page.ActivePlan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, snapshot.Exercises, Page.Today, _draft);
         }
     }
 
