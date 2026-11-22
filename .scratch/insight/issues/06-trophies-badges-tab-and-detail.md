@@ -2,7 +2,7 @@
 
 Spec: `docs/specs/insight-b6-b8.md` (S-13, C-10). Stories 39-43, 54.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Blocked by:** 03 Benchmarks tab (ProgressBar).
 
@@ -10,7 +10,7 @@ Spec: `docs/specs/insight-b6-b8.md` (S-13, C-10). Stories 39-43, 54.
 
 New pure Core trophy view over the existing Badge rules: ordering, unlocked count, closest few and per-Badge detail. Progress is never stored. A metric that cannot be measured shows "not measurable".
 
-- [ ] Core view has Core.Tests: ordering, ties, drop-by targets, not-measurable Badge, none unlocked, all unlocked, contributing events per metric
-- [ ] BadgeTile component and Badges tab bUnit tests via `PageFixture`: populated, empty, detail opens
-- [ ] Both Themes, both Modes, 360 px; tile art uses the existing starter art family
-- [ ] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 06 Trophies Badges tab and detail`
+- [x] Core view has Core.Tests: ordering, ties, drop-by targets, not-measurable Badge, none unlocked, all unlocked, contributing events per metric
+- [x] BadgeTile component and Badges tab bUnit tests via `PageFixture`: populated, empty, detail opens
+- [x] Both Themes, both Modes, 360 px; tile art uses the existing starter art family
+- [x] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 06 Trophies Badges tab and detail`
