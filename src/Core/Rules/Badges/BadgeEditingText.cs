@@ -1,5 +1,6 @@
-using System.Globalization;
 using Core.Model;
+using Core.Rules.Formatting;
+using Core.Rules.Parsing;
 using Core.Rules.Insight;
 using Core.Rules.Performance;
 using Core.Rules.Units;
@@ -20,13 +21,13 @@ public static class BadgeEditingText
         if (draft.Metric != BadgeMetricChoice.ExerciseBest
             || exercises.FirstOrDefault(e => e.Id == draft.ExerciseId) is not { } exercise
             || !BadgeEditingRules.UsesWeightAndReps(exercise)
-            || !BadgeEditingRules.Validate(draft with { Name = "draft" }, "draft", exercises, units).TryGet(out var badge, out _))
+            || !BadgeEditingRules.ValidateIgnoringName(draft, exercises, units).TryGet(out var badge, out _))
         {
             return null;
         }
 
-        var shown = $"{Number(units.DisplayWeight(badge.Target, rounded: false), 1)} {units.WeightLabel}";
-        return $"This target is stored as an estimated 1RM of {shown} ({Number(BadgeEditingRules.ParseNumber(draft.Target), 1)} {units.WeightLabel} for {draft.Reps.Trim()} reps).";
+        var shown = $"{DisplayFormat.Rounded(units.DisplayWeight(badge.Target, rounded: false), 1)} {units.WeightLabel}";
+        return $"This target is stored as an estimated 1RM of {shown} ({DisplayFormat.Rounded(DecimalText.ParseOrZero(draft.Target), 1)} {units.WeightLabel} for {draft.Reps.Trim()} reps).";
     }
 
     /// <summary>
@@ -43,8 +44,7 @@ public static class BadgeEditingText
             return BadgeEditingRules.CannotMeasure(exercise);
         }
 
-        // The name does not affect where a target stands, so a draft without one still gets its line.
-        if (!BadgeEditingRules.Validate(draft with { Name = "draft" }, "draft", history.Exercises, units).TryGet(out var badge, out _))
+        if (!BadgeEditingRules.ValidateIgnoringName(draft, history.Exercises, units).TryGet(out var badge, out _))
         {
             return FillIn;
         }
@@ -55,16 +55,16 @@ public static class BadgeEditingText
         string now;
         if (exercise is not null && BadgeEditingRules.UsesWeightAndReps(exercise))
         {
-            unlocks = $"you lift {Number(BadgeEditingRules.ParseNumber(draft.Target))} × {draft.Reps.Trim()} or better";
+            unlocks = $"you lift {DisplayFormat.Rounded(DecimalText.ParseOrZero(draft.Target))} × {draft.Reps.Trim()} or better";
             now = ExercisePerformance.Best(exercise, history.Workouts) is { Set: { WeightKg: { } w, Reps: { } r } }
-                ? $"{Number(units.DisplayWeight(w))} × {r}"
+                ? $"{DisplayFormat.Rounded(units.DisplayWeight(w))} × {r}"
                 : NothingLogged;
         }
         else
         {
             var needs = view.Badges[0].Needs;
             unlocks = char.ToLowerInvariant(needs[0]) + needs[1..];
-            now = HasData(draft, exercise, history) ? Number(DisplayValue(draft, progress.Value, units)) : NothingLogged;
+            now = HasData(draft, exercise, history) ? DisplayFormat.Rounded(DisplayValue(draft, progress.Value, units)) : NothingLogged;
         }
 
         return $"Now: {now}. Unlocks when: {unlocks}.";
@@ -82,8 +82,4 @@ public static class BadgeEditingText
             && (ExercisePerformance.Best(exercise, history.Workouts) is not null || ExercisePerformance.BodyChange(exercise, history.Workouts) is not null),
         _ => true,
     };
-
-    /// <summary>A number as text for the editor: rounded to <paramref name="decimals"/>, trailing zeros dropped.</summary>
-    public static string Number(double value, int decimals = 2) =>
-        Math.Round(value, decimals).ToString("0." + new string('#', decimals), CultureInfo.InvariantCulture);
 }

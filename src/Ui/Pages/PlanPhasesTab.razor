@@ -1,3 +1,4 @@
+@using Core.Rules.Formatting
 @using Core.Rules.Insight
 @using System.Globalization
 @using Core.Ids
@@ -71,7 +72,7 @@
                                 <div class="fa-phase__pair">
                                     <label class="fa-phase__field">
                                         <span class="fa-label">Weight (kg)</span>
-                                        <input class="fa-phase__control" type="text" inputmode="decimal" disabled="@Disabled" value="@InsightFormat.Trimmed(goal.WeightKg)" @onchange="e => SetGoalWeight(id, index, e)" />
+                                        <input class="fa-phase__control" type="text" inputmode="decimal" disabled="@Disabled" value="@DisplayFormat.Trimmed(goal.WeightKg)" @onchange="e => SetGoalWeight(id, index, e)" />
                                     </label>
                                     <label class="fa-phase__field">
                                         <span class="fa-label">Reps</span>

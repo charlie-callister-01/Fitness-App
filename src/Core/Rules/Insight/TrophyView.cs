@@ -1,3 +1,4 @@
+using Core.Rules.Formatting;
 using System.Globalization;
 using Core.Model;
 using Core.Rules.Badges;
@@ -90,7 +91,7 @@ public static class TrophyViewBuilder
             : progress.Percent > 0 ? BadgeStanding.InProgress
             : BadgeStanding.Locked;
 
-        string Num(double v) => InsightFormat.Trimmed(isBody ? units.DisplayWeight(v) : v);
+        string Num(double v) => DisplayFormat.Trimmed(isBody ? units.DisplayWeight(v) : v);
         var text = progress.IsMeasurable ? $"{Num(progress.Value)} / {Num(Math.Abs(badge.Target))}" : "not measurable";
         var events = progress.IsMeasurable ? BadgeText.Events(metric, h, units) : [];
         return new TrophyBadge(badge.Id, badge.Name, standing, text, progress.Percent,

@@ -1,3 +1,4 @@
+using Core.Rules.Formatting;
 using System.Globalization;
 using Core.Exchange;
 using Core.Model;
@@ -128,7 +129,7 @@ public static class ProgressSeries
 
     private static string Label(double best, double change, int? firstWeek, int decimals)
     {
-        string Fmt(double v) => decimals == 0 ? v.ToString("0", CultureInfo.InvariantCulture) : InsightFormat.OneDecimal(v);
+        string Fmt(double v) => decimals == 0 ? v.ToString("0", CultureInfo.InvariantCulture) : DisplayFormat.OneDecimal(v);
         var sign = Math.Round(change, decimals) < 0 ? "-" : "+";
         var since = firstWeek is { } w ? $"W{w}" : "first entry";
         return

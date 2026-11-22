@@ -1,4 +1,5 @@
 @using System.Globalization
+@using Core.Rules.Formatting
 @using Core.Rules.Insight
 @* C-15 DateRangePicker: a field showing the range in words; tapping opens a sheet with the presets and, for Custom, two native date inputs.
    A start after the end shows an inline message and is not applied. It resolves ranges with RangeResolver and raises OnChanged; it keeps
@@ -69,8 +70,8 @@
     private void OpenSheet()
     {
         _selected = Value.Preset;
-        _start = InsightFormat.Iso(Value.Range.From);
-        _end = InsightFormat.Iso(Value.Range.To);
+        _start = DisplayFormat.Iso(Value.Range.From);
+        _end = DisplayFormat.Iso(Value.Range.To);
         _error = null;
         _open = true;
     }
@@ -101,5 +102,5 @@
     }
 
     private static DateOnly? Parse(string? text) =>
-        DateOnly.TryParseExact(text, InsightFormat.IsoFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
+        DateOnly.TryParseExact(text, DisplayFormat.IsoFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
 }

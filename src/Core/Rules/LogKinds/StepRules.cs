@@ -1,4 +1,4 @@
-using Core.Rules.Insight;
+using Core.Rules.Formatting;
 using Core.Rules.Parsing;
 
 namespace Core.Rules.LogKinds;
@@ -24,6 +24,6 @@ public readonly record struct StepSize(StepField Field, double Amount, string Un
     public string Apply(string typed, int direction)
     {
         var start = DecimalText.TryParse(typed, out var number) ? number : 0;
-        return InsightFormat.Trimmed(Math.Max(0, Math.Round(start + direction * Amount, 2)));
+        return DisplayFormat.Trimmed(Math.Max(0, Math.Round(start + direction * Amount, 2)));
     }
 }

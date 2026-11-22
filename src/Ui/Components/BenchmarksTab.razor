@@ -1,4 +1,5 @@
 @using System.Globalization
+@using Core.Rules.Formatting
 @using Core.Rules.Insight
 @using Core.Storage
 @using Core.Rules.Units
@@ -13,9 +14,9 @@
     }
     else
     {
-        <p class="fa-muted fa-bench__next">@(_view.NextDue is { } due ? $"Next test: {InsightFormat.WeekdayDay(due)}" : "No benchmark test is scheduled.")</p>
+        <p class="fa-muted fa-bench__next">@(_view.NextDue is { } due ? $"Next test: {DisplayFormat.WeekdayDay(due)}" : "No benchmark test is scheduled.")</p>
 
-        <ul class="fa-bench__list">
+        <ul class="fa-twocol fa-bench__list">
             @foreach (var row in _view.Rows)
             {
                 <li class="fa-bench__row fa-well">
@@ -28,7 +29,7 @@
                     {
                         <p class="fa-bench__latest">
                             <span class="fa-bench__result">@row.LatestText</span>
-                            <span class="fa-muted">@InsightFormat.DayMonthYear(row.LatestDate!.Value)</span>
+                            <span class="fa-muted">@DisplayFormat.DayMonthYear(row.LatestDate!.Value)</span>
                             @switch (row.Trend)
                             {
                                 case BenchmarkTrend.Better:

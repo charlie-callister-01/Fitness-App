@@ -2,6 +2,7 @@ using System.Globalization;
 using Core.Ids;
 using Core.Model;
 using Core.Rules.Home;
+using Core.Rules.Formatting;
 using Core.Rules.Insight;
 using Core.Rules.Units;
 using Core.Storage;
@@ -33,7 +34,7 @@ public sealed partial class Weight : IDisposable
 
     private string LastWeightText =>
         _view.Now is { } now && _view.NowDate is { } date
-            ? $"Last: {Num(now)} {_view.UnitLabel} on {InsightFormat.WeekdayDay(date)}"
+            ? $"Last: {Num(now)} {_view.UnitLabel} on {DisplayFormat.WeekdayDay(date)}"
             : "";
 
     private string ChangeText => _view.ChangeSinceStart is not { } change
@@ -61,7 +62,7 @@ public sealed partial class Weight : IDisposable
     private void Rebuild() =>
         _view = WeightViewBuilder.Build(Data.Snapshot.WeighIns, Data.Snapshot.Badges, Page.Today, Converter);
 
-    private static string Num(double value) => InsightFormat.OneDecimal(value);
+    private static string Num(double value) => DisplayFormat.OneDecimal(value);
 
     private string Show(double? value) => value is { } v ? $"{Num(v)} {_view.UnitLabel}" : "-";
 

@@ -1,4 +1,5 @@
 @page "/weight"
+@using Core.Rules.Formatting
 @using Core.Rules.Insight
 @* Weight (design S-08): three stats, the weight LineChart, a weekly averages table and the Log weight sheet. Everything shown comes from the Core
    WeightView; this page holds the sheet. A Weigh-in never counts toward the Streak. *@
@@ -32,7 +33,7 @@
                     @foreach (var row in _view.Weeks)
                     {
                         <tr>
-                            <td>@InsightFormat.WeekdayDay(row.WeekStart)</td>
+                            <td>@DisplayFormat.WeekdayDay(row.WeekStart)</td>
                             <td>@Num(row.Average) @_view.UnitLabel</td>
                             <td>@row.Count</td>
                         </tr>

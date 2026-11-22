@@ -33,15 +33,18 @@ public static class WeightPanelRules
     public static double? WeekAverageKg(IReadOnlyList<WeighIn> weighIns, DateOnly monday)
     {
         var inWeek = weighIns.Where(w => WeekCalendar.InWeek(monday, w.Date)).ToList();
-        return inWeek.Count == 0 ? null : inWeek.Sum(w => w.WeightKg) / inWeek.Count;
+        return inWeek.Count == 0 ? null : MeanKg(inWeek);
     }
+
+    private static double MeanKg(IReadOnlyCollection<WeighIn> weighIns) => weighIns.Sum(w => w.WeightKg) / weighIns.Count;
+
 
     /// <summary>The Weigh-ins grouped by their Monday, newest week first, each with its average (<see cref="WeekAverageKg"/>) and count.</summary>
     public static IReadOnlyList<WeighInWeek> ByWeek(IReadOnlyList<WeighIn> weighIns) =>
         [.. weighIns
             .GroupBy(w => WeekCalendar.MondayOf(w.Date))
             .OrderByDescending(g => g.Key)
-            .Select(g => new WeighInWeek(g.Key, WeekAverageKg(weighIns, g.Key)!.Value, g.Count()))];
+            .Select(g => new WeighInWeek(g.Key, MeanKg(g.ToList()), g.Count()))];
 
     public static WeighIn? LastLabelInfo(IReadOnlyList<WeighIn> weighIns)
     {

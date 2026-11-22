@@ -1,3 +1,4 @@
+using Core.Rules.Formatting;
 using System.Globalization;
 using Core.Model;
 using Core.Rules.Badges;
@@ -13,7 +14,7 @@ public static class BadgeText
     public static string Needs(Badge badge, string metric, BadgeHistory h, UnitConverter units)
     {
         var t = badge.Target;
-        var abs = InsightFormat.Trimmed(Math.Abs(t));
+        var abs = DisplayFormat.Trimmed(Math.Abs(t));
         switch (metric.ToLowerInvariant())
         {
             case "sessions": return $"Complete {abs} Workouts";
@@ -21,7 +22,7 @@ public static class BadgeText
             case "bestweek" or "best week": return $"Complete {abs} Workouts in one week";
             case "prs": return $"Set {abs} PRs";
             case "bodyweight":
-                var shown = InsightFormat.Trimmed(Math.Abs(units.DisplayWeight(t)));
+                var shown = DisplayFormat.Trimmed(Math.Abs(units.DisplayWeight(t)));
                 return t < 0 ? $"Drop {shown} {units.WeightLabel} from your first Weigh-in" : $"Reach {shown} {units.WeightLabel}";
         }
 
@@ -29,7 +30,7 @@ public static class BadgeText
         if (exercise is null) return $"Metric \"{badge.Metric}\" is not measurable";
         if (exercise.LogKind == LogKind.Load && t > 0)
         {
-            var shown = InsightFormat.Trimmed(units.DisplayWeight(t));
+            var shown = DisplayFormat.Trimmed(units.DisplayWeight(t));
             return $"Estimated 1RM of {shown} {units.WeightLabel} on {exercise.Name}";
         }
 
@@ -46,7 +47,7 @@ public static class BadgeText
                 return Counted(h)
                     .GroupBy(w => WeekCalendar.MondayOf(w.Date))
                     .OrderByDescending(g => g.Key)
-                    .Select(g => new BadgeEvent(g.Key, $"Week of {InsightFormat.DayMonth(g.Key)}: {g.Count()} Workouts"))
+                    .Select(g => new BadgeEvent(g.Key, $"Week of {DisplayFormat.DayMonth(g.Key)}: {g.Count()} Workouts"))
                     .ToList();
             case "bestweek" or "best week":
                 var weeks = Counted(h).GroupBy(w => WeekCalendar.MondayOf(w.Date)).ToList();
@@ -59,7 +60,7 @@ public static class BadgeText
                     .OrderByDescending(e => e.Date).ThenBy(e => e.Text, StringComparer.Ordinal).ToList();
             case "bodyweight":
                 return h.WeighIns.OrderByDescending(w => w.Date).ThenBy(w => w.Id, StringComparer.Ordinal)
-                    .Select(w => new BadgeEvent(w.Date, $"Weigh-in: {InsightFormat.Trimmed(units.DisplayWeight(w.WeightKg))} {units.WeightLabel}"))
+                    .Select(w => new BadgeEvent(w.Date, $"Weigh-in: {DisplayFormat.Trimmed(units.DisplayWeight(w.WeightKg))} {units.WeightLabel}"))
                     .ToList();
         }
 

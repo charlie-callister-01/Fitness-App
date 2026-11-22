@@ -1,5 +1,5 @@
 using System.Globalization;
-using Core.Rules.Insight;
+using Core.Rules.Formatting;
 using Core.Model;
 using Core.Rules.LogKinds;
 using Core.Rules.Units;
@@ -148,5 +148,5 @@ internal static class TargetRules
 
     private static string Plural(double n, string word) => $"{Num(n)} {word}{(n == 1 ? "" : "s")}";
 
-    internal static string Num(double n) => InsightFormat.Trimmed(n);
+    internal static string Num(double n) => DisplayFormat.Trimmed(n);
 }

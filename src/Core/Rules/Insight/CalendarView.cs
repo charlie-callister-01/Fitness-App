@@ -1,3 +1,4 @@
+using Core.Rules.Formatting;
 using System.Globalization;
 using Core.Model;
 using Core.Rules.Outcomes;
@@ -142,9 +143,10 @@ public static class CalendarViewBuilder
             CalendarDayState.Missed => "missed",
             CalendarDayState.BreakDay => "Break",
             CalendarDayState.Future => "upcoming",
-            _ => "nothing planned",
+            CalendarDayState.Empty => "nothing planned",
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
         };
-        var text = InsightFormat.WeekdayDay(date) + ": ";
+        var text = DisplayFormat.WeekdayDay(date) + ": ";
         text += name is null ? word : $"{name}, {word}";
         if (prs > 0) text += prs == 1 ? ", 1 PR" : $", {prs} PRs";
         return isToday ? text + ", today" : text;

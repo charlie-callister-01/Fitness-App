@@ -1,3 +1,4 @@
+using Core.Rules.Formatting;
 using System.Globalization;
 using Core.Exchange;
 
@@ -54,7 +55,7 @@ public static class RangeResolver
 
     /// <summary>The field text: "Last 12 weeks · 24 Aug – 16 Nov".</summary>
     public static string Describe(RangePreset preset, DateRange range) =>
-        $"{PresetLabel(preset)} · {InsightFormat.DayMonth(range.From)} – {InsightFormat.DayMonth(range.To)}";
+        $"{PresetLabel(preset)} · {DisplayFormat.DayMonth(range.From)} – {DisplayFormat.DayMonth(range.To)}";
 
     private static RangeResult Ok(DateOnly from, DateOnly to) => new(new DateRange(from > to ? to : from, to), null);
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Core.Rules.Formatting;
 using Core.Rules.Insight;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -56,11 +57,11 @@ public sealed partial class LineChart
 
     private double Y(double value) => PlotBottom - (value - Lo) / (Hi - Lo) * (PlotBottom - Top);
 
-    private static string N(double v) => InsightFormat.Trimmed(v);
+    private static string N(double v) => DisplayFormat.Trimmed(v);
 
     private static string Value(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
 
-    private static string DateText(DateOnly d) => InsightFormat.WeekdayDay(d);
+    private static string DateText(DateOnly d) => DisplayFormat.WeekdayDay(d);
 
     private string ValueText(int i) => $"{Value(Series.Points[i].Value)} {Series.UnitLabel}";
 

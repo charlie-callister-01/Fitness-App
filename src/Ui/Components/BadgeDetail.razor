@@ -1,4 +1,5 @@
 @using System.Globalization
+@using Core.Rules.Formatting
 @using Core.Rules.Insight
 @* Badge detail (design S-13): large art, name, what it needs, progress, and the events that contributed. Progress is worked out by the
    Core TrophyViewBuilder; nothing here is stored. *@
@@ -33,7 +34,7 @@
         <ul class="fa-badgedetail__events">
             @foreach (var e in Badge.Events)
             {
-                <li class="fa-badgedetail__event"><span class="fa-muted">@InsightFormat.DayMonthYear(e.Date)</span> @e.Text</li>
+                <li class="fa-badgedetail__event"><span class="fa-muted">@DisplayFormat.DayMonthYear(e.Date)</span> @e.Text</li>
             }
         </ul>
     }

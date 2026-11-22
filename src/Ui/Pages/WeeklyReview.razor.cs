@@ -1,5 +1,6 @@
 using System.Globalization;
 using Core.Rules.Home;
+using Core.Rules.Formatting;
 using Core.Rules.Insight;
 using Core.Rules.LogKinds;
 using Core.Rules.Units;
@@ -62,9 +63,9 @@ public sealed partial class WeeklyReview : IDisposable
         Rebuild();
     }
 
-    private static string Day(DateOnly date) => InsightFormat.WeekdayDay(date);
+    private static string Day(DateOnly date) => DisplayFormat.WeekdayDay(date);
 
-    private static string Num(double value) => InsightFormat.OneDecimal(value);
+    private static string Num(double value) => DisplayFormat.OneDecimal(value);
 
     private string ResultText(RecentPr pr) =>
         Data.Snapshot.Exercises.FirstOrDefault(e => e.Id == pr.ExerciseId) is { } exercise

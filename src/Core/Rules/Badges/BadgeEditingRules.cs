@@ -1,6 +1,7 @@
 using System.Globalization;
 using Core.Ids;
 using Core.Model;
+using Core.Rules.Formatting;
 using Core.Rules.Insight;
 using Core.Rules.Parsing;
 using Core.Rules.Performance;
@@ -59,6 +60,13 @@ public static class BadgeEditingRules
 
     /// <summary>True for an Exercise whose target is weight x reps (stored as an estimated one-rep max).</summary>
     public static bool UsesWeightAndReps(Exercise exercise) => exercise.LogKind == LogKind.Load;
+
+    /// <summary>
+    /// The Badge a draft describes, or why not, without needing a name: the name does not affect where a target stands, so the editor's
+    /// live lines work before the owner has typed one.
+    /// </summary>
+    public static PlanEditResult<Badge> ValidateIgnoringName(BadgeDraft draft, IReadOnlyList<Exercise> exercises, UnitConverter units) =>
+        Validate(draft with { Name = "Draft" }, "draft", exercises, units);
 
     /// <summary>Checks a draft and builds the Badge it describes under <paramref name="id"/>, or says why not.</summary>
     public static PlanEditResult<Badge> Validate(BadgeDraft draft, string id, IReadOnlyList<Exercise> exercises, UnitConverter units)
@@ -157,21 +165,21 @@ public static class BadgeEditingRules
             case "prs": return Simple(BadgeMetricChoice.PrCount);
             case "bodyweight":
                 return new BadgeDraft(badge.Name, BadgeMetricChoice.BodyWeight, null,
-                    BadgeEditingText.Number(units.DisplayWeight(Math.Abs(badge.Target), rounded: false)), "", badge.Target < 0);
+                    DisplayFormat.Rounded(units.DisplayWeight(Math.Abs(badge.Target), rounded: false)), "", badge.Target < 0);
         }
 
         var exercise = exercises.FirstOrDefault(e => e.Id == metric);
         if (exercise is null)
         {
-            return new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, null, BadgeEditingText.Number(Math.Abs(badge.Target)), "", false);
+            return new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, null, DisplayFormat.Rounded(Math.Abs(badge.Target)), "", false);
         }
 
         return UsesWeightAndReps(exercise)
             ? new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, exercise.Id,
-                BadgeEditingText.Number(units.DisplayWeight(SetRanking.WeightForOneRepMax(badge.Target, 1), rounded: false), 3), "1", false)
-            : new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, exercise.Id, BadgeEditingText.Number(Math.Abs(badge.Target)), "", false);
+                DisplayFormat.Rounded(units.DisplayWeight(SetRanking.WeightForOneRepMax(badge.Target, 1), rounded: false), 3), "1", false)
+            : new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, exercise.Id, DisplayFormat.Rounded(Math.Abs(badge.Target)), "", false);
 
-        BadgeDraft Simple(BadgeMetricChoice choice) => new(badge.Name, choice, null, BadgeEditingText.Number(Math.Abs(badge.Target)), "", false);
+        BadgeDraft Simple(BadgeMetricChoice choice) => new(badge.Name, choice, null, DisplayFormat.Rounded(Math.Abs(badge.Target)), "", false);
     }
 
     /// <summary>False for an Exercise with nothing to measure (text or tick only), which cannot have a Badge.</summary>
@@ -185,9 +193,8 @@ public static class BadgeEditingRules
 
     private static bool TryNumber(string? text, out double value)
     {
-        value = ParseNumber(text);
+        value = DecimalText.ParseOrZero(text);
         return value > 0 && double.IsFinite(value);
     }
-
-    internal static double ParseNumber(string? text) => DecimalText.TryParse(text, out var v) ? v : 0;
 }
+
