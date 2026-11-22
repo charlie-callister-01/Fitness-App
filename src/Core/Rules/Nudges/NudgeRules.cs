@@ -66,7 +66,7 @@ public static class NudgeRules
             .Where(g => g.Select(x => x.Id).Distinct().Count() >= 2)
             .OrderBy(g => g.Key)
             .Select(g => new Nudge(NudgeKind.RepeatedPain,
-                $"{g.Key} pain reported twice this week. Consider easing off.", Area: g.Key));
+                $"{g.Key} pain reported twice this week. Consider an easier variation.", Area: g.Key));
     }
 
     /// <summary>The distinct body areas a Workout's Pain check reported, each tagged with the Workout. None when no pain was reported.</summary>
@@ -82,5 +82,5 @@ public static class NudgeRules
         WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
             .OrderBy(m => m.Date)
             .Select(m => new Nudge(
-                NudgeKind.MissedSession, $"You missed {m.SessionName} on {m.Date:dddd}. Make it up this week?", m.SessionId));
+                NudgeKind.MissedSession, $"You missed {m.SessionName} on {m.Date.ToString("dddd", System.Globalization.CultureInfo.InvariantCulture)}. Make it up this week?", m.SessionId));
 }

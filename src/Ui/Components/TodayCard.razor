@@ -60,6 +60,12 @@ else
                     <h2 class="fa-title fa-title--m">Your Plan starts on @startDate.ToString("ddd d MMM", CultureInfo.InvariantCulture)</h2>
                     break;
             }
+            @if (ReviewReady)
+            {
+                <div class="fa-todaycard__review">
+                    <Button Variant="ButtonVariant.Secondary" OnClick="() => OnOpenReview.InvokeAsync()">See your Weekly review</Button>
+                </div>
+            }
         </div>
     </section>
 }
@@ -91,6 +97,13 @@ else
     /// <summary>View summary was tapped on the Done card. The page knows which Workout finished today.</summary>
     [Parameter]
     public EventCallback OnOpenSummary { get; set; }
+
+    /// <summary>It is Sunday and the Weigh-in is done: show the way on to the Weekly review.</summary>
+    [Parameter]
+    public bool ReviewReady { get; set; }
+
+    [Parameter]
+    public EventCallback OnOpenReview { get; set; }
 
     private static int Minutes(TimeSpan span) => (int)Math.Round(span.TotalMinutes, MidpointRounding.AwayFromZero);
 

@@ -94,6 +94,13 @@ public sealed partial class Home : IDisposable
 
     private void OnOpenProgress() => Navigation.NavigateTo("progress");
 
+    private void OnOpenCalendar() => Navigation.NavigateTo("progress?tab=calendar");
+
+    private void OnOpenReview() => Navigation.NavigateTo("weekly-review");
+
+    /// <summary>Sunday, and today's Weigh-in is logged: the Today card leads on to the Weekly review (F-07).</summary>
+    private bool ReviewReady => Page.Today.DayOfWeek == DayOfWeek.Sunday && _view.Weight.Latest?.Date == Page.Today;
+
     /// <summary>Starts a Workout under the guarded save and opens the log when there is a Workout to open (null when the save was refused).</summary>
     private async Task<StartOutcome?> StartAndOpenAsync(Func<Task<StartOutcome>> start)
     {
