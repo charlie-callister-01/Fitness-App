@@ -149,4 +149,14 @@ public sealed class WeeklyReviewTests : BunitContext
         Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Contains("Export"));
         Assert.Contains("Export for the LLM arrives", cut.Find(".fa-review__exportnote").TextContent);
     }
+
+    [Fact]
+    public async Task A_Break_week_that_also_reached_the_target_says_Target_hit()
+    {
+        var plan = EarlierPlan() with { StreakCountsCustomWorkouts = true };
+        var cut = await RenderAsync(plan, [CustomDone("a", Today), CustomDone("b", Today), CustomDone("c", Today)],
+            [Change.Put(new Break("b", Today, Today.AddDays(5), "Trip"))]);
+
+        Assert.Equal("Target hit", Verdict(cut));
+    }
 }

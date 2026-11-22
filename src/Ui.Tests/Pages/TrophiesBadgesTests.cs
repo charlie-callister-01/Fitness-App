@@ -105,4 +105,14 @@ public sealed class TrophiesBadgesTests : BunitContext
 
         Assert.Contains("10 Workouts", cut.Find(".fa-badgedetail__name").TextContent);
     }
+
+    [Fact]
+    public async Task A_Load_Exercise_Badge_detail_says_the_target_is_an_estimated_1RM()
+    {
+        var cut = await RenderAsync([new Badge("sq", "Squat 100", Squat, 100)], Finished("w1", Today, Set("a", 60, 5)));
+
+        cut.Find(".fa-tile").Click();
+
+        Assert.Equal("Estimated 1RM of 100 kg on Goblet squat", cut.Find(".fa-badgedetail__needs").TextContent);
+    }
 }

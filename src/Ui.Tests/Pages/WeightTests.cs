@@ -132,4 +132,27 @@ public sealed class WeightTests : BunitContext
         Assert.True(save.HasAttribute("disabled"));
         Assert.Empty(locked.Snapshot.WeighIns);
     }
+
+    [Fact]
+    public async Task A_drop_by_weight_Badge_draws_the_goal_line_from_the_first_Weigh_in()
+    {
+        var data = await SeededAsync(null, new WeighIn("a", Today.AddDays(-3), 91), new WeighIn("b", Today, 90));
+        await data.CommitAsync(Change.Put(new Badge("g", "Drop", "bodyweight", -5)));
+
+        var cut = RenderWeight(data);
+
+        Assert.Single(cut.FindAll("svg.fa-chart .fa-chart__goal"));
+    }
+
+    [Fact]
+    public async Task A_drop_by_weight_Badge_draws_no_goal_line_before_the_first_Weigh_in()
+    {
+        var data = await SeededAsync();
+        await data.CommitAsync(Change.Put(new Badge("g", "Drop", "bodyweight", -5)));
+
+        var cut = RenderWeight(data);
+
+        Assert.Empty(cut.FindAll("svg.fa-chart"));
+        Assert.Empty(cut.FindAll(".fa-chart__goal"));
+    }
 }

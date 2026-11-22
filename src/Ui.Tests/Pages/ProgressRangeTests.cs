@@ -76,4 +76,16 @@ public sealed class ProgressRangeTests : BunitContext
 
         Assert.Single(cut.FindAll("svg.fa-chart"));
     }
+
+    [Fact]
+    public async Task A_range_never_makes_its_first_visible_point_a_PR_and_the_label_names_that_point()
+    {
+        var cut = await RenderAsync(Finished("w0", Sep14, Set("z", 40, 5)), Finished("w1", Nov2, Set("a", 20, 5)), Finished("w2", Nov9, Set("b", 20, 8)));
+
+        Pick(cut, "Last 4 weeks");
+
+        Assert.Equal(2, cut.FindAll("svg.fa-chart .fa-chart__point").Count);
+        Assert.Empty(cut.FindAll("svg.fa-chart .fa-chart__point--pr"));
+        Assert.Contains("since W44", System.Text.RegularExpressions.Regex.Replace(cut.Find("svg.fa-chart").TextContent, @"\s+", " "), StringComparison.Ordinal);
+    }
 }

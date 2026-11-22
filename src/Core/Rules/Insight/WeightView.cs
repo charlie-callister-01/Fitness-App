@@ -54,8 +54,9 @@ public static class WeightViewBuilder
 
         double? change = ordered.Count >= 2 ? units.DisplayWeight(ordered[^1].WeightKg) - units.DisplayWeight(ordered[0].WeightKg) : null;
         var goalBadge = badges.FirstOrDefault(b => b.Metric.Trim().Equals("bodyweight", StringComparison.OrdinalIgnoreCase));
-        // A positive target is the goal weight; a drop is the first Weigh-in minus the drop, and nothing is drawn before a first Weigh-in.
+        // A positive target is the goal weight, zero draws nothing; a drop is the first Weigh-in minus the drop, and nothing is drawn before a first Weigh-in.
         double? goalKg = goalBadge is null ? null
+            : goalBadge.Target == 0 ? null
             : goalBadge.Target > 0 ? goalBadge.Target
             : ordered.Count > 0 ? ordered[0].WeightKg + goalBadge.Target
             : null;

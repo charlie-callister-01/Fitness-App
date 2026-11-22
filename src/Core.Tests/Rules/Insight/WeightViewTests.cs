@@ -155,4 +155,10 @@ public class WeightViewTests
         Assert.Equal(Kg.DisplayWeight(panel.WeekAverageKg!.Value), view.WeekAverage);
         Assert.Equal(88.75, view.WeekAverage);
     }
+
+    [Fact]
+    public void A_weight_Badge_with_a_zero_target_draws_no_goal_line()
+    {
+        Assert.Null(Build([W("a", Mon, 90)], [new Badge("1", "Zero", "bodyweight", 0)]).Goal);
+    }
 }
