@@ -16,7 +16,8 @@ public sealed partial class Home : IDisposable
 {
     private HomeView _view = default!;
     private IReadOnlySet<string> _dismissed = new HashSet<string>();
-    private bool _saving;
+    private PageContext Page = default!;
+    private GuardedSave _save = default!;
     private bool _differentOpen;
     private bool _pastOpen;
     private bool _weightOpen;
@@ -37,15 +38,7 @@ public sealed partial class Home : IDisposable
 
     private NudgeDismissals Dismissals => new(Preferences);
 
-    private DateTimeOffset LocalNow => Clock.UtcNow.ToLocalTime();
-
-    private DateOnly Today => DateOnly.FromDateTime(LocalNow.DateTime);
-
-    private bool CanWrite => Data.Health.CanWrite;
-
     private UnitConverter Converter => new(Data.Snapshot.Settings);
-
-    private Plan? ActivePlan => Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
 
     private string DateText => _view.Header.PhaseLabel.Length == 0
         ? _view.Header.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)
@@ -53,9 +46,7 @@ public sealed partial class Home : IDisposable
 
     private IReadOnlyList<Session> UndoneSessions => [.. _view.UndoneSessions.Select(s => s.Session)];
 
-    private IReadOnlyList<Session> PlanSessions => ActivePlan?.Sessions ?? [];
-
-    private string? ReadOnlyMessage => ReadOnlyWording.For(Data, "Home");
+    private IReadOnlyList<Session> PlanSessions => Page.ActivePlan?.Sessions ?? [];
 
     private string LatestWeightText =>
         _view.Weight.Latest is { } latest ? Converter.DisplayWeight(latest.WeightKg).ToString("0.0", CultureInfo.InvariantCulture) : "";
@@ -67,6 +58,8 @@ public sealed partial class Home : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        Page = new PageContext(Data, Clock);
+        _save = new GuardedSave(Data, Notice);
         Data.Changed += OnDataChanged;
         Rebuild();
         await RefreshAsync();
@@ -77,7 +70,7 @@ public sealed partial class Home : IDisposable
     private void OnDataChanged() => _ = InvokeAsync(RefreshAsync);
 
     private void Rebuild() =>
-        _view = HomeViewBuilder.Build(Data.Snapshot, Clock.UtcNow, Today, LocalNow.Hour, _dismissed, Data.LastBackupAt);
+        _view = HomeViewBuilder.Build(Data.Snapshot, Clock.UtcNow, Page.Today, Page.LocalNow.Hour, _dismissed, Data.LastBackupAt);
 
     private async Task RefreshAsync()
     {
@@ -101,54 +94,38 @@ public sealed partial class Home : IDisposable
 
     private void OnOpenProgress() => Navigation.NavigateTo("progress");
 
-    /// <summary>Runs a save with the page marked busy. A second tap while one is running does nothing (returns null).</summary>
-    private async Task<T?> WhileSavingAsync<T>(Func<Task<T>> work)
-        where T : class
+    /// <summary>Starts a Workout under the guarded save and opens the log when there is a Workout to open (null when the save was refused).</summary>
+    private async Task<StartOutcome?> StartAndOpenAsync(Func<Task<StartOutcome>> start)
     {
-        if (_saving)
+        StartOutcome? outcome = null;
+        var result = await _save.RunAsync(async () =>
+        {
+            outcome = await start();
+            return outcome.Commit is { } commit ? SaveWork.Committed(commit) : SaveWork.None;
+        });
+        if (result.Status is SaveStatus.Busy or SaveStatus.ReadOnly)
         {
             return null;
         }
 
-        _saving = true;
-        try
+        if (outcome?.Workout is { } workout)
         {
-            return await work();
+            Navigation.NavigateTo($"log/{workout.Id}");
         }
-        finally
-        {
-            _saving = false;
-        }
+
+        return outcome;
     }
-
-    /// <summary>Starts a Workout, reports a failed save, and opens the log when there is a Workout to open (null when busy).</summary>
-    private Task<StartOutcome?> StartAndOpenAsync(Func<Task<StartOutcome>> start) =>
-        WhileSavingAsync(async () =>
-        {
-            var outcome = await start();
-            if (outcome.Commit is { } commit)
-            {
-                Notice.Report(commit);
-            }
-
-            if (outcome.Workout is { } workout)
-            {
-                Navigation.NavigateTo($"log/{workout.Id}");
-            }
-
-            return outcome;
-        });
 
     private async Task StartAsync(Session session) => await StartSessionAsync(session);
 
     private async Task<bool> StartSessionAsync(Session session)
     {
-        if (ActivePlan is not { } plan)
+        if (Page.ActivePlan is not { } plan)
         {
             return false;
         }
 
-        var outcome = await StartAndOpenAsync(() => new WorkoutStarter(Data, Ids, Clock).StartAsync(plan, session, Today));
+        var outcome = await StartAndOpenAsync(() => new WorkoutStarter(Data, Ids, Clock).StartAsync(plan, session, Page.Today));
         return outcome?.Workout is not null;
     }
 
@@ -189,7 +166,7 @@ public sealed partial class Home : IDisposable
     private async Task StartPastAsync((DateOnly Date, Session? Session) choice)
     {
         var outcome = await StartAndOpenAsync(() =>
-            new WorkoutStarter(Data, Ids, Clock).StartLoggedAfterwardsAsync(ActivePlan, choice.Session, choice.Date, Today));
+            new WorkoutStarter(Data, Ids, Clock).StartLoggedAfterwardsAsync(Page.ActivePlan, choice.Session, choice.Date, Page.Today));
         if (outcome is { Workout: null, Commit: null })
         {
             _pastMessage = "That day hasn't happened yet.";
@@ -234,21 +211,16 @@ public sealed partial class Home : IDisposable
 
     private async Task<bool> SaveWeightAsync(string text)
     {
-        switch (WeighInRules.Create(text, Converter, Today, Ids))
+        switch (WeighInRules.Create(text, Converter, Page.Today, Ids))
         {
             case WeighInResult.Invalid invalid:
                 _weightMessage = invalid.Message;
                 return false;
             case WeighInResult.Valid valid:
                 _weightMessage = null;
-                var result = await WhileSavingAsync(async () =>
-                {
-                    var committed = await Data.CommitAsync(Change.Put(valid.WeighIn));
-                    Notice.Report(committed);
-                    return committed;
-                });
-                _weightOpen = _weightOpen && result is not CommitResult.Committed;
-                return result is CommitResult.Committed;
+                var result = await _save.CommitAsync(Change.Put(valid.WeighIn));
+                _weightOpen = _weightOpen && !result.IsSaved;
+                return result.IsSaved;
             default:
                 return false;
         }

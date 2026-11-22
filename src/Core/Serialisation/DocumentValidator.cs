@@ -1,5 +1,6 @@
 using System.Globalization;
 using Core.Model;
+using Core.Rules.Phases;
 
 namespace Core.Serialisation;
 
@@ -218,19 +219,14 @@ internal static class DocumentValidator
         private void CheckPhases(Plan plan, int planIndex)
         {
             var planSessionIds = plan.Sessions.Select(s => s.Id).ToHashSet();
-            var judgeable = new List<(Phase Phase, int Index)>();
-            var excluded = new List<Phase>();
+            var findings = PhaseRanges.Check(plan.Phases, _findings.AreWeeksUnreadable);
             foreach (var (phase, i) in Indexed(plan.Phases))
             {
                 var path = $"plans[{planIndex}].phases[{i}]";
                 CheckUnique(RecordKind.Phase, $"{path}.id", "id", phase.Id);
-                if (HasJudgeableWeeks(phase, path))
+                foreach (var finding in findings.Where(f => f.Index == i && f.Problem is PhaseRangeProblem.BadStart or PhaseRangeProblem.EndBeforeStart))
                 {
-                    judgeable.Add((phase, i));
-                }
-                else
-                {
-                    excluded.Add(phase);
+                    ReportRange(finding, path);
                 }
 
                 foreach (var (goal, g) in Indexed(phase.Goals))
@@ -241,33 +237,32 @@ internal static class DocumentValidator
                 CheckOverrides(phase, path, planSessionIds);
             }
 
-            CheckWeekCoverage(judgeable, excluded, planIndex);
+            foreach (var finding in findings.Where(f => f.Problem is PhaseRangeProblem.Overlap or PhaseRangeProblem.Gap or PhaseRangeProblem.LeadingGap))
+            {
+                ReportRange(finding, $"plans[{planIndex}].phases[{finding.Index}]");
+            }
         }
 
-        /// <summary>
-        /// The one home of the Phase week-range rule: it starts at week 1 or later and ends no earlier than it starts. A range that breaks it is
-        /// reported here, once, and the Phase is left out of the coverage check. A Phase whose weeks the parse phase couldn't read was already reported.
-        /// </summary>
-        private bool HasJudgeableWeeks(Phase phase, string path)
+        /// <summary>Turns a finding of the shared Phase week-range rule (<see cref="PhaseRanges"/>) into this document's issue.</summary>
+        private void ReportRange(PhaseRangeFinding finding, string path)
         {
-            if (_findings.AreWeeksUnreadable(phase))
+            var phase = finding.Phase;
+            switch (finding.Problem)
             {
-                return false;
+                case PhaseRangeProblem.BadStart:
+                    Error($"{path}.startWeek", "out_of_range", $"{path}.startWeek must be 1 or more (it was {phase.StartWeek}).");
+                    break;
+                case PhaseRangeProblem.EndBeforeStart:
+                    Error($"{path}.endWeek", "out_of_range", $"{path}.endWeek must be {phase.StartWeek} or more (it was {phase.EndWeek}).");
+                    break;
+                case PhaseRangeProblem.Overlap:
+                    Error($"{path}.startWeek", "phase_overlap", $"{path}.startWeek is {phase.StartWeek}, but week {phase.StartWeek} already belongs to an earlier Phase. Phase week ranges must not overlap.");
+                    break;
+                default:
+                    var missing = finding.FirstWeek == finding.LastWeek ? $"week {finding.FirstWeek}" : $"weeks {finding.FirstWeek} to {finding.LastWeek}";
+                    Error($"{path}.startWeek", "phase_gap", $"{path}.startWeek is {phase.StartWeek}, which leaves {missing} in no Phase. Phases must cover every week from week 1 with no gaps.");
+                    break;
             }
-
-            if (phase.StartWeek < 1)
-            {
-                Error($"{path}.startWeek", "out_of_range", $"{path}.startWeek must be 1 or more (it was {phase.StartWeek}).");
-                return false;
-            }
-
-            if (phase.EndWeek < phase.StartWeek)
-            {
-                Error($"{path}.endWeek", "out_of_range", $"{path}.endWeek must be {phase.StartWeek} or more (it was {phase.EndWeek}).");
-                return false;
-            }
-
-            return true;
         }
 
         private void CheckOverrides(Phase phase, string phasePath, HashSet<string> planSessionIds)
@@ -290,34 +285,6 @@ internal static class DocumentValidator
                 CheckRows(item.Exercises, $"{path}.exercises");
             }
         }
-
-        /// <summary>
-        /// Phases may be listed in any order but, by week, must start at week 1 and follow each other with no gap and no overlap.
-        /// Only Phases with a valid range are compared. A gap before a Phase is excused when an excluded Phase starts inside it (or has no usable
-        /// start), because that Phase's real weeks can't be known; an overlap between two valid Phases is always real.
-        /// </summary>
-        private void CheckWeekCoverage(List<(Phase Phase, int Index)> phases, List<Phase> excluded, int planIndex)
-        {
-            var expectedStart = 1;
-            foreach (var (phase, original) in phases.OrderBy(p => p.Phase.StartWeek))
-            {
-                var path = $"plans[{planIndex}].phases[{original}].startWeek";
-                if (phase.StartWeek > expectedStart && !GapIsExcused(excluded, expectedStart, phase.StartWeek - 1))
-                {
-                    var missing = phase.StartWeek - 1 == expectedStart ? $"week {expectedStart}" : $"weeks {expectedStart} to {phase.StartWeek - 1}";
-                    Error(path, "phase_gap", $"{path} is {phase.StartWeek}, which leaves {missing} in no Phase. Phases must cover every week from week 1 with no gaps.");
-                }
-                else if (phase.StartWeek < expectedStart)
-                {
-                    Error(path, "phase_overlap", $"{path} is {phase.StartWeek}, but week {phase.StartWeek} already belongs to an earlier Phase. Phase week ranges must not overlap.");
-                }
-
-                expectedStart = Math.Max(expectedStart, phase.EndWeek + 1);
-            }
-        }
-
-        private static bool GapIsExcused(List<Phase> excluded, int firstMissing, int lastMissing) =>
-            excluded.Any(p => p.StartWeek < 1 || (p.StartWeek >= firstMissing && p.StartWeek <= lastMissing));
 
         public void CheckWorkouts()
         {

@@ -3,45 +3,32 @@
 @using Core.Rules.Home
 @* The Log a past Workout sheet: a day (never after today, yesterday to begin with) and then which Session it was, or a Custom workout.
    It raises events only; Home starts the Logged afterwards Workout. *@
-<Sheet Open="Open" Title="Log a past Workout" OnClose="OnClose">
+<FormSheet Open="Open" Title="Log a past Workout" Saving="Saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Message="@(Message ?? _local)" MessageClass="fa-pastmessage" OnClose="OnClose">
     <ChildContent>
         <label class="fa-datefield">
             <span class="fa-label">Date</span>
             <input class="fa-datefield__control" type="date" max="@Format(Today)" value="@_value" @onchange="e => _value = (string?)e.Value" />
         </label>
 
-        @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
-        {
-            <p class="fa-well" role="alert">@ReadOnlyMessage</p>
-        }
-
-        @if ((Message ?? _local) is { } message)
-        {
-            <p class="fa-well fa-pastmessage" role="alert">@message</p>
-        }
-
         <ul class="fa-pastrows">
             @foreach (var session in Sessions)
             {
                 var picked = session;
                 <li>
-                    <button type="button" class="fa-pastrow" disabled="@(Saving || !CanWrite)" @onclick="() => StartAsync(picked)">
+                    <button type="button" class="fa-pastrow" disabled="@context.WriteDisabled" @onclick="() => StartAsync(picked)">
                         <span class="fa-pastrow__code">@HomeWeekRules.SessionCode(session)</span>
                         <span class="fa-pastrow__name">@session.Name</span>
                     </button>
                 </li>
             }
             <li>
-                <button type="button" class="fa-pastrow" disabled="@(Saving || !CanWrite)" @onclick="() => StartAsync(null)">
+                <button type="button" class="fa-pastrow" disabled="@context.WriteDisabled" @onclick="() => StartAsync(null)">
                     <span class="fa-pastrow__name">Custom workout</span>
                 </button>
             </li>
         </ul>
     </ChildContent>
-    <Actions>
-        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnClose">Cancel</Button>
-    </Actions>
-</Sheet>
+</FormSheet>
 
 @code {
     private const string DateFormat = "yyyy-MM-dd";

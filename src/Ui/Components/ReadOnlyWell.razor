@@ -1,0 +1,18 @@
+@* The read-only well: the one place a screen says, in plain words, why it cannot save. Shows nothing when this window can write. *@
+@if (!CanWrite && Message is { Length: > 0 })
+{
+    <p class="fa-well @Class" role="status">@Message</p>
+}
+
+@code {
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
+
+    /// <summary>Why this window cannot save (from the page context).</summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    /// <summary>An extra class for the page's own spacing.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+}

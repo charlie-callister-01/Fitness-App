@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Editing;
+using Core.Rules.Library;
 using Ui.Log;
 
 namespace Ui.Components;
@@ -9,7 +10,7 @@ namespace Ui.Components;
 /// <see cref="Facts"/> feed the Core availability rule.
 /// </summary>
 public sealed record ExerciseMenuState(
-    string ExerciseId, string RowId, string ExerciseName, ExerciseMenuFacts Facts, Guide? Guide, ExercisePickerChoices? Picker)
+    string ExerciseId, string RowId, string ExerciseName, ExerciseMenuFacts Facts, Guide? Guide, PickerRequest? Picker)
 {
     public ExerciseMenuAvailability Items => ExerciseMenuAvailability.Of(Facts);
 

@@ -1,23 +1,18 @@
 @* The Logged afterwards date sheet (design 8.6): one native date input, no earlier limit, nothing after today. Save date hands the date to the
    owner of the sheet, which refuses a day after today in plain words; Cancel, Escape and a tap outside close it without changing anything.
    The date starts on yesterday, the usual case. *@
-<Sheet Open="Open" Title="Logged afterwards" OnClose="OnCancel">
+<FormSheet Open="Open" Title="Logged afterwards" Saving="Saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Message="@(Message ?? _local)" MessageClass="fa-datemessage" OnClose="OnCancel">
     <ChildContent>
         <p>Pick the day this Workout happened. It has no timers and no duration.</p>
         <label class="fa-datefield">
             <span class="fa-label">Date</span>
             <input class="fa-datefield__control" type="date" max="@Format(Today)" value="@_value" @onchange="e => _value = (string?)e.Value" />
         </label>
-        @if ((Message ?? _local) is { } message)
-        {
-            <p class="fa-well fa-datemessage" role="alert">@message</p>
-        }
     </ChildContent>
     <Actions>
-        <Button Variant="ButtonVariant.Primary" Disabled="Saving || !CanWrite" OnClick="SaveAsync">Save date</Button>
-        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnCancel">Cancel</Button>
+        <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="SaveAsync">Save date</Button>
     </Actions>
-</Sheet>
+</FormSheet>
 
 @code {
     private const string DateFormat = "yyyy-MM-dd";
@@ -39,6 +34,10 @@
     /// <summary>This window can save; when it cannot, Save date waits (Cancel writes nothing).</summary>
     [Parameter]
     public bool CanWrite { get; set; } = true;
+
+    /// <summary>Why this window cannot save, for the read-only well.</summary>
+    [Parameter]
+    public string? ReadOnlyMessage { get; set; }
 
     /// <summary>Why the date was refused, in plain words.</summary>
     [Parameter]

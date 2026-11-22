@@ -1,3 +1,4 @@
+using Core.Rules.PlanEditing;
 using Core.Model;
 using Core.Rules.Phases;
 using Core.Rules.Weeks;
@@ -24,7 +25,7 @@ public sealed record HomeOrbs(StreakOrb Streak, PhaseOrb? Phase, RaceOrb? Race)
 {
     public static HomeOrbs? Compute(DataSnapshot snapshot, DateOnly today)
     {
-        var plan = snapshot.Plans.FirstOrDefault(p => p.IsActive);
+        var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null) return null;
 
         var monday = WeekCalendar.MondayOf(today);

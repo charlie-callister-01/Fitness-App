@@ -1,0 +1,29 @@
+.fa-planeditor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-planeditor h1 {
+    margin: 0;
+}
+
+.fa-planeditor__banner {
+    margin: 0;
+}
+
+.fa-planeditor__tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+}
+
+.fa-planeditor__save {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-planeditor__save p {
+    margin: 0;
+}

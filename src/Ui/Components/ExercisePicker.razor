@@ -1,7 +1,12 @@
-@* C-14 ExercisePicker: a sheet to pick one Exercise from the library, shared by Swap, Add an Exercise and (later) the Plan editor. A Similar group
-   first, then All Exercises; a search box only when the library is big; an optional confirm step (used when swapping would remove Sets).
-   It knows nothing about Workouts: the owner passes the choices and hears which Exercise was picked. *@
-<Sheet Open="Open" Title="@Title" Opener="Opener" OnClose="OnClose">
+@using Core.Rules.Library
+@* C-14 ExercisePicker: a sheet to pick one Exercise from the library, shared by Swap, Add an Exercise, the Custom workout draft and (later) the
+   Plan editor. What it offers, in what order, and when it has a search box is the Core rule (ExercisePickerRules.Choose) applied to the
+   PickerRequest its owner passes. An optional confirm step (used when swapping would remove Sets). "Add a new Exercise" opens the New
+   Exercise form; the Exercise it makes counts as picked. It knows nothing about Workouts: the owner hears which Exercise was picked. *@
+@{
+    var result = Result;
+}
+<Sheet Open="Open && !_adding" Title="@Title" Opener="Opener" OnClose="OnClose">
     <ChildContent>
         @if (_chosen is not null && ConfirmMessage is not null)
         {
@@ -9,24 +14,25 @@
         }
         else
         {
-            @if (Choices.ShowSearch)
+            @if (result.ShowSearch)
             {
                 <input type="search" class="fa-picker__search" aria-label="Search Exercises" placeholder="Search Exercises"
                        value="@_search" @oninput="OnSearch" />
             }
-            @if (Similar.Count == 0 && Others.Count == 0)
+            @if (result.IsEmpty)
             {
-                <div class="fa-picker__empty fa-muted">
-                    @(_search.Length > 0 ? "No match." : "No other Exercises in your library.")
-                    <button type="button" class="fa-btn fa-btn--secondary" disabled="disabled">Add a new Exercise</button>
-                    <span>Adding a new Exercise comes with the Exercise library.</span>
-                </div>
+                <p class="fa-picker__empty fa-muted">@(result.NewExerciseOffer is not null ? "No match." : "No other Exercises in your library.")</p>
             }
             else
             {
-                <ExercisePickerGroup Heading="Similar" Items="Similar" OnPick="Pick" />
-                <ExercisePickerGroup Heading="All Exercises" Items="Others" OnPick="Pick" />
+                @foreach (var group in result.Groups)
+                {
+                    <ExercisePickerGroup Heading="@group.Heading" Items="group.Items" OnPick="Pick" />
+                }
             }
+            <div class="fa-picker__new">
+                <Button Variant="ButtonVariant.Secondary" OnClick="() => StartAdding(result.NewExerciseOffer)">@AddLabel(result.NewExerciseOffer)</Button>
+            </div>
         }
     </ChildContent>
     <Actions>
@@ -38,9 +44,13 @@
     </Actions>
 </Sheet>
 
+<NewExerciseSheet Open="Open && _adding" InitialName="@_offer" OfferGuide="false" OnAdded="Added" OnClose="StopAdding" />
+
 @code {
     private string _search = "";
     private string? _chosen;
+    private bool _adding;
+    private string? _offer;
 
     [Parameter]
     public bool Open { get; set; }
@@ -48,8 +58,9 @@
     [Parameter, EditorRequired]
     public string Title { get; set; } = "";
 
+    /// <summary>What the picker is for (Swap, Add, Custom workout, Plan editor) and what it must leave out.</summary>
     [Parameter, EditorRequired]
-    public ExercisePickerChoices Choices { get; set; } = new([], [], false);
+    public PickerRequest Request { get; set; } = default!;
 
     [Parameter]
     public ElementReference? Opener { get; set; }
@@ -69,9 +80,7 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
-    private IReadOnlyList<Core.Model.Exercise> Similar => Filter(Choices.Similar);
-
-    private IReadOnlyList<Core.Model.Exercise> Others => Filter(Choices.Others);
+    private PickerResult Result => ExercisePickerRules.Choose(Request, _search);
 
     protected override void OnParametersSet()
     {
@@ -79,13 +88,28 @@
         {
             _search = "";
             _chosen = null;
+            _adding = false;
+            _offer = null;
         }
     }
 
-    private IReadOnlyList<Core.Model.Exercise> Filter(IReadOnlyList<Core.Model.Exercise> items) =>
-        _search.Length == 0 ? items : [.. items.Where(e => e.Name.Contains(_search, StringComparison.OrdinalIgnoreCase))];
+    private static string AddLabel(string? offer) => offer is null ? "Add a new Exercise" : $"Add '{offer}' as a new Exercise";
 
-    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString()?.Trim() ?? "";
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? "";
+
+    private void StartAdding(string? offer)
+    {
+        _offer = offer;
+        _adding = true;
+    }
+
+    private void StopAdding() => _adding = false;
+
+    private Task Added(Core.Model.Exercise exercise)
+    {
+        _adding = false;
+        return Pick(exercise.Id);
+    }
 
     private Task Pick(string id)
     {

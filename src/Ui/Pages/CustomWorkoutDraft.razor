@@ -34,13 +34,10 @@
 
         <Button Variant="ButtonVariant.Secondary" OnClick="OpenPicker">Add Exercise</Button>
 
-        @if (ReadOnlyMessage is { } message)
-        {
-            <p class="fa-well" role="status">@message</p>
-        }
+        <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
 
-        <Button Variant="ButtonVariant.Primary" Disabled="@(_draft.Count == 0 || _saving || !CanWrite)" OnClick="StartAsync">Start</Button>
+        <Button Variant="ButtonVariant.Primary" Disabled="@(_draft.Count == 0 || _save.IsBusy || !Page.CanWrite)" OnClick="StartAsync">Start</Button>
 
-        <ExercisePicker Open="_pickerOpen" Title="Add Exercise" Choices="PickerChoices" OnPick="Add" OnClose="ClosePicker" />
+        <ExercisePicker Open="_pickerOpen" Title="Add Exercise" Request="PickerRequest" OnPick="Add" OnClose="ClosePicker" />
     }
 </div>

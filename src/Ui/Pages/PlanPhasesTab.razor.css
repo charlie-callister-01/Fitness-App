@@ -1,0 +1,82 @@
+.fa-phases {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-phases__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fa-phase__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.fa-phase__name,
+.fa-phase__weeks {
+    margin: 0;
+}
+
+.fa-phase__edit {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-phase__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.fa-phase__pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+}
+
+.fa-phase__goal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-control);
+}
+
+.fa-phase__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.fa-phase__control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--radius-control);
+}
+
+.fa-phase__control:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}
+
+.fa-phases__problem {
+    margin: 0;
+    color: var(--pr-text);
+}

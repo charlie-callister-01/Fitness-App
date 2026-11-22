@@ -3,7 +3,7 @@ using Core.Model;
 using Core.Storage;
 using Ui.Pages;
 using Ui.Saving;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
 

@@ -5,7 +5,7 @@ using Core.Storage;
 using Core.Tests.Storage;
 using Ui.Pages;
 using Ui.Saving;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
 
@@ -147,7 +147,7 @@ public sealed class WorkoutLogSwapAddTests : BunitContext
     }
 
     [Fact]
-    public async Task A_search_with_no_match_says_so_and_offers_a_disabled_Add_a_new_Exercise_for_the_library_stage()
+    public async Task A_search_with_no_match_says_so_and_offers_to_add_the_text_as_a_new_Exercise()
     {
         var cut = await OpenAsync(await SeedAsync(extraLibrary: 20));
         OpenPicker(cut, "Goblet squat", "Swap Exercise");
@@ -155,10 +155,84 @@ public sealed class WorkoutLogSwapAddTests : BunitContext
         cut.Find("[role='dialog'] input[type='search']").Input("zzzz");
 
         Assert.Contains("No match.", cut.Find("[role='dialog'] .fa-picker__empty").TextContent);
-        var add = cut.Find("[role='dialog'] .fa-picker__empty button");
-        Assert.Contains("Add a new Exercise", add.TextContent);
-        Assert.True(add.HasAttribute("disabled"));
-        Assert.Contains("Exercise library", cut.Find("[role='dialog'] .fa-picker__empty").TextContent);
+        var add = cut.Find("[role='dialog'] .fa-picker__new button");
+        Assert.Contains("Add 'zzzz' as a new Exercise", add.TextContent);
+        Assert.False(add.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Add_a_new_Exercise_is_always_offered_and_enabled()
+    {
+        var cut = await OpenAsync();
+        OpenPicker(cut, "Goblet squat", "Swap Exercise");
+
+        var add = cut.Find("[role='dialog'] .fa-picker__new button");
+
+        Assert.Equal("Add a new Exercise", add.TextContent.Trim());
+        Assert.False(add.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task The_typed_text_prefills_the_New_Exercise_form_and_Cancel_returns_to_the_picker()
+    {
+        var cut = await OpenAsync(await SeedAsync(extraLibrary: 20));
+        OpenPicker(cut, "Goblet squat", "Swap Exercise");
+        cut.Find("[role='dialog'] input[type='search']").Input("Cable row");
+
+        cut.Find("[role='dialog'] .fa-picker__new button").Click();
+
+        Assert.Equal("New Exercise", cut.Find("[role='dialog'] .fa-sheet__title").TextContent);
+        Assert.Equal("Cable row", cut.Find("[role='dialog'] input[aria-label='Name']").GetAttribute("value"));
+        Assert.Empty(cut.FindAll("[role='dialog'] input[type='checkbox']"));
+        SheetButton(cut, "Cancel").Click();
+        Assert.Equal("Swap Goblet squat", cut.Find("[role='dialog'] .fa-sheet__title").TextContent);
+    }
+
+    [Fact]
+    public async Task A_new_Exercise_made_from_the_Swap_picker_is_chosen_and_swapped_in()
+    {
+        var data = await SeedAsync();
+        var cut = await OpenAsync(data);
+        OpenPicker(cut, "Goblet squat", "Swap Exercise");
+
+        cut.Find("[role='dialog'] .fa-picker__new button").Click();
+        cut.Find("[role='dialog'] input[aria-label='Name']").Input("Cable row");
+        SheetButton(cut, "Add Exercise").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("Cable row", ShownExercise(cut)));
+        Assert.Contains(data.Snapshot.Exercises, e => e.Name == "Cable row");
+        Assert.Contains(Stored(data).Entries, e => e.Status == EntryStatus.Swapped);
+    }
+
+    [Fact]
+    public async Task A_new_Exercise_made_from_the_Swap_picker_still_asks_to_confirm_when_Sets_would_be_removed()
+    {
+        var data = await SeedAsync();
+        var cut = await OpenAsync(data, new WorkoutEntry(Squat, EntryStatus.Done, null, null, null, [Set("s1", 20, 8)]));
+        OpenPicker(cut, "Goblet squat", "Swap Exercise");
+
+        cut.Find("[role='dialog'] .fa-picker__new button").Click();
+        cut.Find("[role='dialog'] input[aria-label='Name']").Input("Cable row");
+        SheetButton(cut, "Add Exercise").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("will be removed if you swap it", cut.Find("[role='dialog']").TextContent));
+        Assert.Equal("Goblet squat", ShownExercise(cut));
+        SheetButton(cut, "Remove Sets and swap").Click();
+        cut.WaitForAssertion(() => Assert.Equal("Cable row", ShownExercise(cut)));
+    }
+
+    [Fact]
+    public async Task A_new_Exercise_made_from_the_Add_picker_is_added_to_the_Workout()
+    {
+        var data = await SeedAsync();
+        var cut = await OpenAsync(data);
+        OpenPicker(cut, "Goblet squat", "Add an Exercise");
+
+        cut.Find("[role='dialog'] .fa-picker__new button").Click();
+        cut.Find("[role='dialog'] input[aria-label='Name']").Input("Cable row");
+        SheetButton(cut, "Add Exercise").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(Stored(data).Entries, e => e.ExerciseId == data.Snapshot.Exercises.Single(x => x.Name == "Cable row").Id));
     }
 
     // ---- Swapping

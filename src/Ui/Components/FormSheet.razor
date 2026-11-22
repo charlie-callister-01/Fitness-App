@@ -1,0 +1,64 @@
+@* The form sheet: every editor sheet's shared frame. It owns the read-only well, the error message, the Cancel button and the rule for when
+   write buttons wait (FormSheetState.WriteDisabled), so each sheet only supplies its fields and its write buttons. *@
+<Sheet Open="Open" Title="@Title" Opener="Opener" OnClose="OnClose">
+    <ChildContent>
+        <ReadOnlyWell CanWrite="CanWrite" Message="@ReadOnlyMessage" />
+        @ChildContent?.Invoke(State)
+        @if (Message is { Length: > 0 })
+        {
+            <p class="fa-well @MessageClass" role="alert">@Message</p>
+        }
+    </ChildContent>
+    <Actions>
+        @Actions?.Invoke(State)
+        @if (CancelLabel is { Length: > 0 })
+        {
+            <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnClose">@CancelLabel</Button>
+        }
+    </Actions>
+</Sheet>
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public ElementReference? Opener { get; set; }
+
+    /// <summary>A save is running: Cancel and the write buttons wait.</summary>
+    [Parameter]
+    public bool Saving { get; set; }
+
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
+
+    [Parameter]
+    public string? ReadOnlyMessage { get; set; }
+
+    /// <summary>The owner's plain refusal or error, shown as an alert under the content.</summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    /// <summary>An extra class on the message, for a sheet's own spacing.</summary>
+    [Parameter]
+    public string? MessageClass { get; set; }
+
+    /// <summary>The text of the Cancel button; empty for a sheet that has none (the Pain check's answers close it).</summary>
+    [Parameter]
+    public string? CancelLabel { get; set; } = "Cancel";
+
+    /// <summary>Asks the owner of the sheet to close it, with nothing changed. Escape, a tap outside and Cancel all come here.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public RenderFragment<FormSheetState>? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment<FormSheetState>? Actions { get; set; }
+
+    private FormSheetState State => new(Saving, CanWrite);
+}

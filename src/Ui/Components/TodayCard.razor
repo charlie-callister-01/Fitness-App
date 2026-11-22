@@ -22,10 +22,7 @@ else
                 case TodayKind.Start when Card.Session is { } session:
                     <h2 class="fa-title fa-title--m">@session.Name</h2>
                     <p class="fa-muted">@session.Type · @session.Exercises.Count @(session.Exercises.Count == 1 ? "Exercise" : "Exercises")</p>
-                    @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
-                    {
-                        <p class="fa-well" role="status">@ReadOnlyMessage</p>
-                    }
+                    <ReadOnlyWell CanWrite="CanWrite" Message="@ReadOnlyMessage" />
                     <Button Variant="ButtonVariant.Primary" Disabled="Starting || !CanWrite" OnClick="() => OnStart.InvokeAsync(session)">Start</Button>
                     break;
 

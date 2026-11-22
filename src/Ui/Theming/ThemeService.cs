@@ -18,6 +18,7 @@ public sealed class ThemeService : IDisposable
     private readonly AppData _appData;
     private readonly IThemeInterop _interop;
     private readonly SaveFailureNotice _notice;
+    private readonly GuardedSave _save;
 
     // One choice at a time reaches the page and storage, so an older commit can never land after a newer one.
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -33,6 +34,7 @@ public sealed class ThemeService : IDisposable
         _appData = appData;
         _interop = interop;
         _notice = notice;
+        _save = new GuardedSave(appData, notice);
         _stored = StoredChoice();
         (Theme, Mode) = _stored;
         _appData.Changed += OnAppDataChanged;
@@ -80,10 +82,9 @@ public sealed class ThemeService : IDisposable
         try
         {
             var settings = _appData.Snapshot.Settings with { Theme = Theme, Mode = Mode };
-            var error = await RunAsync(async () =>
-            {
-                _notice.Report(await _appData.CommitAsync(Change.Put(settings)));
-            });
+
+            // The Theme choice has no disabled state, so a read-only window still tries and the commit's own failure is reported.
+            var error = await RunAsync(() => _save.CommitAsync(Change.Put(settings), requireWrite: false));
             if (error is not null)
             {
                 _notice.Report(new CommitResult.StoreFailed(new StoreFailure(StoreFailureKind.Unexpected, error.Message)));

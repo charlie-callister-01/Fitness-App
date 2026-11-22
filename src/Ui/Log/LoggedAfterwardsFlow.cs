@@ -24,7 +24,6 @@ public sealed class LoggedAfterwardsFlow(AppData data, SaveFailureNotice notice)
     {
         Open = false;
         Message = null;
-        Saving = false;
     }
 
     public void Begin()
@@ -42,9 +41,9 @@ public sealed class LoggedAfterwardsFlow(AppData data, SaveFailureNotice notice)
     }
 
     /// <summary>Re-dates to <paramref name="date"/>. A future date is refused with the message; the sheet then stays open.</summary>
-    public async Task SaveAsync(string workoutId, DateOnly date, DateOnly today, bool canWrite)
+    public async Task SaveAsync(string workoutId, DateOnly date, DateOnly today)
     {
-        if (!CanAct(canWrite) || FindOpen(workoutId) is null)
+        if (!CanAct() || FindOpen(workoutId) is null)
         {
             return;
         }
@@ -61,9 +60,9 @@ public sealed class LoggedAfterwardsFlow(AppData data, SaveFailureNotice notice)
     }
 
     /// <summary>Takes the flag off and puts today's date back (the start time is not restored).</summary>
-    public async Task UndoAsync(string workoutId, DateOnly today, bool canWrite)
+    public async Task UndoAsync(string workoutId, DateOnly today)
     {
-        if (!CanAct(canWrite) || FindOpen(workoutId) is null)
+        if (!CanAct() || FindOpen(workoutId) is null)
         {
             return;
         }

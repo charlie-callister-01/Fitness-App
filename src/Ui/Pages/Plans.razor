@@ -1,6 +1,70 @@
 @page "/plans"
+@using Core.Rules.PlanEditing
+@* Plans (design S-05): the active Plan outlined, the others with Make active, and New Plan (from scratch or a copy). *@
+<div class="fa-root fa-plans">
+    <header class="fa-plans__header">
+        <h1 class="fa-title fa-title--l">Plans</h1>
+        @if (PlanList.Count > 0)
+        {
+            <Button Variant="ButtonVariant.Primary" Disabled="!Page.CanWrite" OnClick="OpenNew">New Plan</Button>
+        }
+    </header>
 
-<div class="fa-root">
-    <h1 class="fa-title fa-title--l">Plans</h1>
-    <EmptyState Kind="EmptyStateKind.NoPlan" Title="Your Plans will live here" Message="The Plan list and editor arrive in a later stage." />
+    <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+
+    @if (PlanList.Count == 0)
+    {
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No Plan yet" Message="Make a Plan to see your week."
+                    ActionLabel="New Plan" OnAction="OpenNew" />
+    }
+    else
+    {
+        <ul class="fa-plans__list">
+            @foreach (var plan in PlanList)
+            {
+                var id = plan.Id;
+                <li class="fa-panel fa-plans__plan @(plan.IsActive ? "fa-plans__plan--active" : null)">
+                    <h2 class="fa-title fa-title--m fa-plans__name">@plan.Name</h2>
+                    @if (plan.IsActive)
+                    {
+                        <p class="fa-label fa-plans__active">@PlanProgress.ActiveLabel(plan, Page.Today)</p>
+                    }
+                    <p class="fa-muted fa-plans__summary">@Summary(plan)</p>
+                    <div class="fa-plans__actions">
+                        <Button Variant="ButtonVariant.Secondary" Href="@($"plans/{id}")" AccessibleName="@($"Edit {plan.Name}")">Edit</Button>
+                        @if (!plan.IsActive)
+                        {
+                            <Button Variant="ButtonVariant.Secondary" Disabled="@(!Page.CanWrite || _save.IsBusy)" AccessibleName="@($"Make {plan.Name} active")" OnClick="() => MakeActiveAsync(id)">Make active</Button>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+
+    <FormSheet Open="_newOpen" Title="New Plan" Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage"
+               Message="@_newMessage" OnClose="CloseNew">
+        <ChildContent>
+            <label class="fa-plans__field">
+                <span class="fa-label">Name</span>
+                <input class="fa-plans__control" type="text" @bind="_newName" @bind:event="oninput" />
+            </label>
+            @if (PlanList.Count > 0)
+            {
+                <label class="fa-plans__field">
+                    <span class="fa-label">Copy from</span>
+                    <select class="fa-plans__control" @bind="_copyFromId">
+                        @foreach (var plan in PlanList)
+                        {
+                            <option value="@plan.Id">@plan.Name</option>
+                        }
+                    </select>
+                </label>
+            }
+        </ChildContent>
+        <Actions>
+            <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="FromScratchAsync">From scratch</Button>
+            <Button Variant="ButtonVariant.Secondary" Disabled="@(context.WriteDisabled || PlanList.Count == 0)" OnClick="CopyAsync">Copy this Plan</Button>
+        </Actions>
+    </FormSheet>
 </div>

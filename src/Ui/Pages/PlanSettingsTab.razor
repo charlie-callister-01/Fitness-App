@@ -1,0 +1,61 @@
+@* The Plan editor's Settings tab (design S-05): the Plan-level values, held as typed in State.Form. *@
+<div class="fa-planform">
+    <label class="fa-planform__field">
+        <span class="fa-label">Start date</span>
+        <input class="fa-planform__control" type="date" disabled="@Disabled" value="@State.Form.StartDate" @onchange="e => Set(v => State.Form.StartDate = v, e)" />
+    </label>
+
+    <label class="fa-planform__field">
+        <span class="fa-label">Goal</span>
+        <input class="fa-planform__control" type="text" disabled="@Disabled" @bind="State.Form.Goal" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+    </label>
+
+    <label class="fa-planform__field">
+        <span class="fa-label">Goal date</span>
+        <input class="fa-planform__control" type="date" disabled="@Disabled" value="@State.Form.GoalDate" @onchange="e => Set(v => State.Form.GoalDate = v, e)" />
+    </label>
+
+    <label class="fa-planform__field">
+        <span class="fa-label">Weekly target (Workouts)</span>
+        <input class="fa-planform__control" type="text" inputmode="numeric" disabled="@Disabled" @bind="State.Form.WeeklyTarget" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+    </label>
+
+    <label class="fa-planform__field">
+        <span class="fa-label">Streak minimum (Workouts a week)</span>
+        <input class="fa-planform__control" type="text" inputmode="numeric" disabled="@Disabled" @bind="State.Form.StreakMinimum" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+    </label>
+
+    <label class="fa-planform__switch">
+        <input type="checkbox" role="switch" disabled="@Disabled" @bind="State.Form.CustomWorkoutsCount" @bind:after="() => OnEdited.InvokeAsync()" />
+        <span>Custom workouts count toward the Streak</span>
+    </label>
+
+    <label class="fa-planform__field">
+        <span class="fa-label">Weight increment (kg)</span>
+        <input class="fa-planform__control" type="text" inputmode="decimal" disabled="@Disabled" @bind="State.Form.WeightIncrement" @bind:event="oninput" @bind:after="() => OnEdited.InvokeAsync()" />
+    </label>
+
+    @if (State.Snapshot.SettingsProblem is { } problem)
+    {
+        <p class="fa-well fa-planform__problem" role="alert">@problem</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PlanEditState State { get; set; } = default!;
+
+    /// <summary>The whole editor cannot be changed (read-only window or a save running).</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Something in the tab changed, so the page can re-check Save.</summary>
+    [Parameter]
+    public EventCallback OnEdited { get; set; }
+
+    private Task Set(Action<string> assign, ChangeEventArgs e)
+    {
+        assign(e.Value?.ToString() ?? "");
+        return OnEdited.InvokeAsync();
+    }
+}

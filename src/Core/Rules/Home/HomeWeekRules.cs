@@ -1,3 +1,4 @@
+using Core.Rules.PlanEditing;
 using System.Globalization;
 using Core.Model;
 using Core.Rules.Outcomes;
@@ -11,7 +12,7 @@ public static class HomeWeekRules
 {
     public static IReadOnlyList<WeekTile> Strip(DataSnapshot snapshot, DateOnly today)
     {
-        var plan = snapshot.Plans.FirstOrDefault(p => p.IsActive);
+        var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null) return [];
 
         var monday = WeekCalendar.MondayOf(today);
@@ -90,7 +91,7 @@ public static class HomeWeekRules
 
     public static WeekLine? Line(DataSnapshot snapshot, DateOnly today)
     {
-        var plan = snapshot.Plans.FirstOrDefault(p => p.IsActive);
+        var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null) return null;
 
         var monday = WeekCalendar.MondayOf(today);

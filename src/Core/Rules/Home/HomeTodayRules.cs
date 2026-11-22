@@ -1,3 +1,4 @@
+using Core.Rules.PlanEditing;
 using Core.Model;
 using Core.Rules.Badges;
 using Core.Rules.Outcomes;
@@ -15,7 +16,7 @@ public static class HomeTodayRules
 {
     public static TodayCard Compute(DataSnapshot snapshot, DateTimeOffset now, DateOnly today)
     {
-        var plan = snapshot.Plans.FirstOrDefault(p => p.IsActive);
+        var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null)
             return TodayCard.NoPlan();
 
@@ -80,7 +81,7 @@ public static class HomeTodayRules
 
     public static IReadOnlyList<ScheduledSession> UndoneSessions(DataSnapshot snapshot, DateOnly today)
     {
-        var plan = snapshot.Plans.FirstOrDefault(p => p.IsActive);
+        var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null)
             return [];
 

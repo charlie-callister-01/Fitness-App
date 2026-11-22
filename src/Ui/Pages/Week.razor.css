@@ -1,0 +1,124 @@
+.fa-week {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-week__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.fa-week__header h1,
+.fa-week__range {
+    margin: 0;
+}
+
+.fa-week__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fa-week__row,
+.fa-week__draftrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3);
+    background: var(--surface);
+    border: var(--border-thin) solid var(--border);
+    border-radius: var(--r-card);
+}
+
+.fa-week__draftrow--changed {
+    border: var(--border-thick) solid var(--focus);
+}
+
+.fa-week__main {
+    display: flex;
+    flex: 1 1 10rem;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.fa-week__day {
+    color: var(--text-muted);
+}
+
+.fa-week__name {
+    color: var(--text-label);
+    overflow-wrap: anywhere;
+}
+
+.fa-week__draft {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--surface-sunken);
+    border-radius: var(--r-card);
+}
+
+.fa-week__draft h2,
+.fa-week__summary {
+    margin: 0;
+}
+
+.fa-week__draftactions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+}
+
+.fa-week__days {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+    gap: var(--space-2);
+}
+
+.fa-week__scope {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.fa-week__choice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+}
+
+.fa-week__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+}
+
+.fa-week__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--radius-control);
+}
+
+.fa-week__input:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}

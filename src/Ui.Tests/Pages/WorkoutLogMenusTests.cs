@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Ui.Pages;
 using Ui.Saving;
 using Ui.Theming;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
 

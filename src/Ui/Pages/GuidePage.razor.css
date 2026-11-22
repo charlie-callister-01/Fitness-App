@@ -1,0 +1,63 @@
+.fa-guidepage,
+.fa-guidepage__form,
+.fa-guidepage__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-guidepage__header h1,
+.fa-guidepage__header p,
+.fa-guidepage__section h2,
+.fa-guidepage__notes {
+    margin: 0;
+}
+
+.fa-guidepage__notes {
+    white-space: pre-wrap;
+}
+
+.fa-guidepage__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fa-guidepage__control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--r-control);
+}
+
+.fa-guidepage__control:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}
+
+.fa-guidepage__actions {
+    display: flex;
+    gap: var(--space-2);
+    justify-content: flex-end;
+}
+
+.fa-guidepage__results {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-guidepage__result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}

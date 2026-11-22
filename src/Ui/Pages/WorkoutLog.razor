@@ -10,9 +10,9 @@
     <div class="log">
         @if (FinishedWorkout is { } finished)
         {
-            <FinishSummary Workout="finished" Data="Data.Snapshot" Today="Today" />
+            <FinishSummary Workout="finished" Data="Data.Snapshot" Today="Page.Today" />
         }
-        else if (ReadOnlyMessage is { } unreadable && !Data.Health.CanWrite)
+        else if (Page.ReadOnlyMessage is { } unreadable && !Page.CanWrite)
         {
             <p class="fa-well log__notice" role="status">@unreadable</p>
         }
@@ -26,7 +26,7 @@
             <Button Variant="ButtonVariant.Primary" Href="./">Back to Home</Button>
         }
     </div>
-    <PainCheckSheet Open="_finish.Phase == FinishPhase.PainCheck" Saving="_finish.Saving" CanWrite="CanWrite" Message="@_finish.PainMessage"
+    <PainCheckSheet Open="_finish.Phase == FinishPhase.PainCheck" Saving="_finish.Saving" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Message="@_finish.PainMessage"
                     Exercises="_builder.PainExercises(FinishedWorkout)" OnAnswer="AnswerPainAsync" />
 }
 else
@@ -41,7 +41,7 @@ else
                 <p class="fa-muted log__progress" aria-live="polite">@progress.DoneCount of @progress.ExerciseCount done · @progress.PrCount @(progress.PrCount == 1 ? "PR" : "PRs")</p>
             </div>
             <WorkoutMenu FinishHint="@($"{progress.DoneCount} of {progress.ExerciseCount} Exercises done")"
-                         CanWrite="CanWrite" OnFinish="FinishAsync"
+                         CanWrite="Page.CanWrite" OnFinish="FinishAsync"
                          IsLoggedAfterwards="workout.LoggedAfterwards" OnLoggedAfterwards="LoggedAfterwardsAsync" />
         </header>
 
@@ -58,10 +58,7 @@ else
             {
                 <p class="fa-well log__notice" role="status">Resumed where you left off</p>
             }
-            @if (ReadOnlyMessage is { } readOnly)
-            {
-                <p class="fa-well log__notice" role="status">@readOnly</p>
-            }
+            <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" Class="log__notice" />
             @if (_finish.Message is { } refusal)
             {
                 <p class="fa-well log__notice" role="status">@refusal</p>
@@ -78,7 +75,7 @@ else
                                 Last="@shown.Header?.Last" Best="@shown.Header?.Best"
                                 Target="@shown.Header?.Target" Reason="@shown.Header?.Reason" Benchmark="shown.Info.IsBenchmark">
                     <Actions>
-                        <ExerciseMenu State="ExerciseMenuState.For(shown, Data.Snapshot.Guides.FirstOrDefault(g => g.ExerciseId == id), CanWrite)"
+                        <ExerciseMenu State="ExerciseMenuState.For(shown, Data.Snapshot.Guides.FirstOrDefault(g => g.ExerciseId == id), Page.CanWrite)"
                                       OnAction="_actions.ApplyAsync" />
                     </Actions>
                 </ExerciseHeader>
@@ -147,17 +144,17 @@ else
                             <button type="button" class="log__link" @onclick="() => _actions.ToggleMaxAsync(shown)">@(rows.Items[target].Marks.IsMax ? "Unmark" : "Mark") Set @(target + 1) as Max set</button>
                         }
                     </div>
-                    <RpeSelector Value="shown.Rpe" Disabled="@(!CanWrite)" ValueChanged="rpe => _actions.SetRpeAsync(id, rpe)" />
+                    <RpeSelector Value="shown.Rpe" Disabled="@(!Page.CanWrite)" ValueChanged="rpe => _actions.SetRpeAsync(id, rpe)" />
                 }
             }
         </div>
 
-        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@(workout.LoggedAfterwards ? null : _session.Rest.Label)" Disabled="@(!CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
+        <ConfirmBar PrimaryLabel="@view.Primary.Label" UpNext="@view.UpNext" LastDone="@progress.AllDone" Rest="@(workout.LoggedAfterwards ? null : _session.Rest.Label)" Disabled="@(!Page.CanWrite && view.Primary.NeedsWrite)" OnPrimary="PrimaryAsync"
                     StepAmount="@view.Exercise?.Rows?.Tools.StepAmount" StepUnit="@(view.Exercise?.Rows?.Tools.Step?.Unit ?? "")" OnStep="Step" />
     </div>
-    <LoggedAfterwardsSheet Open="_afterwards.Open" Today="Today" Saving="_afterwards.Saving" CanWrite="CanWrite" Message="@_afterwards.Message"
+    <LoggedAfterwardsSheet Open="_afterwards.Open" Today="Page.Today" Saving="_afterwards.Saving" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Message="@_afterwards.Message"
                            OnSave="SaveDateAsync" OnCancel="_afterwards.Cancel" />
     <PartialPrompt Open="_finish.Phase == FinishPhase.PartialPrompt" Done="_finish.PartialCounts.Done" Planned="_finish.PartialCounts.Planned"
-                   Saving="_finish.Saving" CanWrite="CanWrite" OnFinish="ConfirmPartialAsync" OnKeepGoing="_finish.KeepGoing" />
+                   Saving="_finish.Saving" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" OnFinish="ConfirmPartialAsync" OnKeepGoing="_finish.KeepGoing" />
 }
 }

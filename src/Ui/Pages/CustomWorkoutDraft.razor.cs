@@ -1,6 +1,6 @@
 using Core.Ids;
 using Core.Model;
-using Core.Rules.CustomWorkout;
+using Core.Rules.Library;
 using Core.Rules.Starting;
 using Core.Storage;
 using Core.Time;
@@ -12,13 +12,12 @@ namespace Ui.Pages;
 
 public sealed partial class CustomWorkoutDraft : IDisposable
 {
-    private const int MaxLibraryWithoutSearch = 20;
-
     private List<string> _draft = [];
     private string? _initialisedFor;
     private bool _initialised;
     private bool _pickerOpen;
-    private bool _saving;
+    private PageContext Page = default!;
+    private GuardedSave _save = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
 
@@ -34,37 +33,29 @@ public sealed partial class CustomWorkoutDraft : IDisposable
     [Parameter]
     public string? SessionId { get; set; }
 
-    private Plan? ActivePlan => Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
-
     private Session? MakeUpSession =>
-        SessionId is null ? null : ActivePlan?.Sessions.FirstOrDefault(s => s.Id == SessionId);
+        SessionId is null ? null : Page.ActivePlan?.Sessions.FirstOrDefault(s => s.Id == SessionId);
 
     private bool UnknownSession => SessionId is not null && MakeUpSession is null;
 
     private string Title => MakeUpSession is { } session ? $"Make up {session.Name}" : "Custom workout";
 
-    private DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.ToLocalTime().DateTime);
-
-    private bool CanWrite => Data.Health.CanWrite;
-
-    private string? ReadOnlyMessage => ReadOnlyWording.For(Data, "page");
-
-    private ExercisePickerChoices PickerChoices
+    private PickerRequest PickerRequest
     {
         get
         {
-            var library = Data.Snapshot.Exercises;
-            if (ActivePlan is not { } plan)
-            {
-                return new([], [.. library.Where(e => !_draft.Contains(e.Id))], library.Count > MaxLibraryWithoutSearch);
-            }
-
-            var ordered = CustomWorkoutOffer.Order(plan, Data.Snapshot.WeekSchedules, Data.Snapshot.Breaks, Data.Snapshot.Workouts, library, Today);
-            return new([], [.. ordered.Where(e => !_draft.Contains(e.Id))], library.Count > MaxLibraryWithoutSearch);
+            var snapshot = Data.Snapshot;
+            return PickerRequest.ForCustomWorkout(
+                Page.ActivePlan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, snapshot.Exercises, Page.Today, _draft);
         }
     }
 
-    protected override void OnInitialized() => Data.Changed += OnDataChanged;
+    protected override void OnInitialized()
+    {
+        Page = new PageContext(Data, Clock);
+        _save = new GuardedSave(Data, Notice);
+        Data.Changed += OnDataChanged;
+    }
 
     protected override void OnParametersSet()
     {
@@ -75,8 +66,8 @@ public sealed partial class CustomWorkoutDraft : IDisposable
 
         _initialised = true;
         _initialisedFor = SessionId;
-        _draft = MakeUpSession is { } session && ActivePlan is { } plan
-            ? [.. CustomWorkoutStart.RowsForMakeUp(plan, session, Today).Select(r => r.ExerciseId).Distinct()]
+        _draft = MakeUpSession is { } session && Page.ActivePlan is { } plan
+            ? [.. CustomWorkoutStart.RowsForMakeUp(plan, session, Page.Today).Select(r => r.ExerciseId).Distinct()]
             : [];
     }
 
@@ -107,43 +98,35 @@ public sealed partial class CustomWorkoutDraft : IDisposable
     {
         if (MakeUpSession is not { } session)
         {
-            return CustomWorkoutStart.RowsForExercises(plan, _draft, Today);
+            return CustomWorkoutStart.RowsForExercises(plan, _draft, Page.Today);
         }
 
-        var sessionRows = CustomWorkoutStart.RowsForMakeUp(plan, session, Today);
+        var sessionRows = CustomWorkoutStart.RowsForMakeUp(plan, session, Page.Today);
         return
         [
             .. _draft.Select(id =>
                 sessionRows.FirstOrDefault(r => r.ExerciseId == id)
-                ?? CustomWorkoutStart.RowsForExercises(plan, [id], Today)[0]),
+                ?? CustomWorkoutStart.RowsForExercises(plan, [id], Page.Today)[0]),
         ];
     }
 
     private async Task StartAsync()
     {
-        // A second tap while the first is saving must not start another Workout.
-        if (_saving || !CanWrite || _draft.Count == 0 || ActivePlan is not { } plan)
+        if (_draft.Count == 0 || Page.ActivePlan is not { } plan)
         {
             return;
         }
 
-        _saving = true;
-        try
+        // A second tap while the first is saving is refused by the guard, so it cannot start another Workout.
+        StartOutcome? outcome = null;
+        await _save.RunAsync(async () =>
         {
-            var outcome = await new WorkoutStarter(Data, Ids, Clock).StartCustomAsync(plan, RowsToStart(plan), Today);
-            if (outcome.Commit is { } commit)
-            {
-                Notice.Report(commit);
-            }
-
-            if (outcome.Workout is { } workout)
-            {
-                Navigation.NavigateTo($"log/{workout.Id}");
-            }
-        }
-        finally
+            outcome = await new WorkoutStarter(Data, Ids, Clock).StartCustomAsync(plan, RowsToStart(plan), Page.Today);
+            return outcome.Commit is { } commit ? SaveWork.Committed(commit) : SaveWork.None;
+        });
+        if (outcome?.Workout is { } workout)
         {
-            _saving = false;
+            Navigation.NavigateTo($"log/{workout.Id}");
         }
     }
 }

@@ -27,6 +27,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private LogActions _actions = default!;
     private FinishFlow _finish = default!;
     private LoggedAfterwardsFlow _afterwards = default!;
+    private PageContext Page = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
 
@@ -48,10 +49,14 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     [Inject] private InAppHistory History { get; set; } = default!;
 
+    [Inject] private LogEditStates KeptStates { get; set; } = default!;
+
     [Parameter]
     public string WorkoutId { get; set; } = "";
 
-    private LogEditState State { get; } = new();
+    private LogEditState State { get; set; } = new();
+
+    private bool _restored;
 
     private Workout? OpenWorkout =>
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: null } open ? open : null;
@@ -60,15 +65,15 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     private Workout? FinishedWorkout =>
         Data.Snapshot.Workouts.FirstOrDefault(w => w.Id == WorkoutId) is { EndedAt: not null } finished ? finished : null;
 
-    private DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.ToLocalTime().DateTime);
-
-    private bool CanWrite => Data.Health.CanWrite;
-
-    /// <summary>Plain wording for why this window cannot save, or null when it can.</summary>
-    private string? ReadOnlyMessage => ReadOnlyWording.For(Data, "log");
-
     protected override void OnInitialized()
     {
+        Page = new PageContext(Data, Clock);
+        if (KeptStates.Take(WorkoutId) is { } kept)
+        {
+            State = kept;
+            _restored = true;
+        }
+
         _builder = new LogViewBuilder(Data, State);
         _finish = new FinishFlow(Data, Notice, Clock, Ids);
         _afterwards = new LoggedAfterwardsFlow(Data, Notice);
@@ -78,7 +83,14 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
 
     protected override Task OnAfterRenderAsync(bool firstRender) => _session.SyncScreenLockAsync(OpenWorkout);
 
-    public void Dispose() => _session.Dispose();
+    public void Dispose()
+    {
+        _session.Dispose();
+        if (_landedFor is { Length: > 0 } landed)
+        {
+            KeptStates.KeepIfOnGuide(landed, State);
+        }
+    }
 
     private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
 
@@ -93,6 +105,13 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _actions.WorkoutId = WorkoutId;
         _finish.Reset();
         _afterwards.Reset();
+        if (_restored)
+        {
+            // Back from another page (the full Guide): keep the Exercise showing and whatever was typed.
+            _restored = false;
+            return;
+        }
+
         if (OpenWorkout is { } workout)
         {
             State.Reset(_builder.Standing.FirstIncomplete(workout), IsResumed(workout));
@@ -144,11 +163,11 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         }
     }
 
-    private Task FinishAsync() => _finish.RequestAsync(WorkoutId, CanWrite);
+    private Task FinishAsync() => _finish.RequestAsync(WorkoutId);
 
-    private Task AnswerPainAsync(PainAnswer answer) => _finish.AnswerAsync(WorkoutId, answer, CanWrite);
+    private Task AnswerPainAsync(PainAnswer answer) => _finish.AnswerAsync(WorkoutId, answer);
 
-    private Task ConfirmPartialAsync() => _finish.ConfirmPartialAsync(WorkoutId, CanWrite);
+    private Task ConfirmPartialAsync() => _finish.ConfirmPartialAsync(WorkoutId);
 
     /// <summary>The Workout menu's Logged afterwards item: the date sheet, or the undo when the Workout already is one.</summary>
     private Task LoggedAfterwardsAsync()
@@ -164,10 +183,10 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
             return Task.CompletedTask;
         }
 
-        return _afterwards.UndoAsync(WorkoutId, Today, CanWrite);
+        return _afterwards.UndoAsync(WorkoutId, Page.Today);
     }
 
-    private Task SaveDateAsync(DateOnly date) => _afterwards.SaveAsync(WorkoutId, date, Today, CanWrite);
+    private Task SaveDateAsync(DateOnly date) => _afterwards.SaveAsync(WorkoutId, date, Page.Today);
 
     // After a deep link there is nothing in the app to go back to, so go Home rather than out of the app.
     private async Task GoBack()
