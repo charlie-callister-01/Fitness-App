@@ -1,0 +1,160 @@
+@page "/exercises/{ExerciseId}/guide"
+@layout Ui.Layouts.PushedPageLayout
+@using Core.Model
+@using Core.Rules.Guides
+@* S-03, the Guide of one Exercise: the shared read view, My notes with its own Edit notes, the last three results and where the Exercise sits
+   in the Plan; or the editor, one labelled text area per section. Saving goes through the guarded save; leaving the editor with unsaved text asks first. *@
+<div class="fa-root fa-guidepage">
+    @if (Exercise is null)
+    {
+        <h1 class="fa-title fa-title--l">Guide</h1>
+        <p class="fa-muted">That Exercise isn't in your Exercise library.</p>
+        <Button Variant="ButtonVariant.Primary" Href="exercises">Open the Exercise library</Button>
+    }
+    else
+    {
+        <header class="fa-guidepage__header">
+            <h1 class="fa-title fa-title--l">@Exercise.Name</h1>
+            @if (HeaderLine is { Length: > 0 })
+            {
+                <p class="fa-muted">@HeaderLine</p>
+            }
+        </header>
+
+        <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+
+        @if (_editing)
+        {
+            <form class="fa-guidepage__form" @onsubmit:preventDefault>
+                @Area("guide-works", "What it works", _draft.Works, v => _draft = _draft with { Works = v })
+                @Area("guide-why", "Why it's in your plan", _draft.WhyInPlan, v => _draft = _draft with { WhyInPlan = v })
+                @Area("guide-setup", "Setup", _draft.Setup, v => _draft = _draft with { Setup = v })
+                @Area("guide-how", "How to do it", _draft.HowTo, v => _draft = _draft with { HowTo = v })
+                @Area("guide-cues", "Cues", _draft.Cues, v => _draft = _draft with { Cues = v }, "One cue per line.")
+                @Area("guide-mistakes", "Common mistakes", _draft.CommonMistakes, v => _draft = _draft with { CommonMistakes = v }, "One per line.")
+                @Area("guide-easier", "Easier", _draft.Easier, v => _draft = _draft with { Easier = v })
+                @Area("guide-harder", "Harder", _draft.Harder, v => _draft = _draft with { Harder = v })
+                @Area("guide-watchouts", "Watch-outs", _draft.WatchOuts, v => _draft = _draft with { WatchOuts = v }, "One per line.")
+                <label class="fa-guidepage__field" for="guide-video">
+                    <span class="fa-label">Video link</span>
+                    <input id="guide-video" class="fa-guidepage__control" type="url" inputmode="url" value="@_draft.VideoUrl"
+                           @oninput="e => _draft = _draft with { VideoUrl = e.Value?.ToString() ?? string.Empty }" />
+                </label>
+                @if (_message is { Length: > 0 })
+                {
+                    <p class="fa-well" role="alert">@_message</p>
+                }
+                <div class="fa-guidepage__actions">
+                    <Button Variant="ButtonVariant.Secondary" Disabled="_save.IsBusy" OnClick="CancelEdit">Cancel</Button>
+                    <Button Variant="ButtonVariant.Primary" Disabled="@(_save.IsBusy || !Page.CanWrite)" OnClick="SaveSectionsAsync">Save</Button>
+                </div>
+            </form>
+        }
+        else
+        {
+            @if (!GuideContent.HasContent(StoredGuide))
+            {
+                <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Guide yet" Message="@($"Write a Guide for {Exercise.Name}: how to set up, how to do it and what to watch for.")" />
+                <Button Variant="ButtonVariant.Primary" Disabled="!Page.CanWrite" OnClick="StartEdit">Write a Guide</Button>
+            }
+            else
+            {
+                <div><Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite" OnClick="StartEdit">Edit</Button></div>
+                <GuideContent Guide="StoredGuide" ExerciseName="@Exercise.Name" IncludeNotes="false" OnWatchDemo="WatchDemoAsync">
+                    @if (_videoOffline)
+                    {
+                        <EmptyState Kind="EmptyStateKind.Offline" Title="Can't open the video" Message="You look to be offline, or the link did not open. The rest of the app still works." />
+                    }
+                </GuideContent>
+                <section class="fa-guidepage__section" aria-label="My notes">
+                    <h2 class="fa-label">My notes</h2>
+                    @if (StoredGuide?.PersonalNotes is { Length: > 0 } notes)
+                    {
+                        <p class="fa-guidepage__notes">@notes</p>
+                    }
+                    else
+                    {
+                        <p class="fa-muted">No notes yet.</p>
+                    }
+                    <div><Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite" OnClick="StartNotes">Edit notes</Button></div>
+                </section>
+            }
+
+            <section class="fa-guidepage__section" aria-label="Your history">
+                <h2 class="fa-label">Your history</h2>
+                @if (History.Recent.Count == 0)
+                {
+                    <p class="fa-muted">No results yet.</p>
+                }
+                else
+                {
+                    <ul class="fa-guidepage__results">
+                        @foreach (var result in History.Recent)
+                        {
+                            <li class="fa-guidepage__result">
+                                <span>@result.Result.Date.ToString("ddd d MMM", System.Globalization.CultureInfo.InvariantCulture)</span>
+                                <span>@ResultText(result.Result)</span>
+                                @if (result.IsPr)
+                                {
+                                    <StateChip Kind="StateChipKind.Pr" />
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            @if (History.Place is { } place)
+            {
+                <section class="fa-guidepage__section" aria-label="In your Plan">
+                    <h2 class="fa-label">In your Plan</h2>
+                    @if (place.Phase is { } phase)
+                    {
+                        <p class="fa-muted">Phase: @phase.Focus</p>
+                    }
+                    <ul class="fa-guidepage__results">
+                        @foreach (var placement in place.Placements)
+                        {
+                            <li>@PlacementText(placement)</li>
+                        }
+                    </ul>
+                </section>
+            }
+        }
+
+        <FormSheet Open="_notesOpen" Title="My notes" Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" OnClose="CloseNotes">
+            <ChildContent>
+                <label class="fa-guidepage__field" for="guide-notes">
+                    <span class="fa-label">My notes</span>
+                    <textarea id="guide-notes" class="fa-guidepage__control" rows="4" value="@_notes"
+                              @oninput="e => _notes = e.Value?.ToString() ?? string.Empty"></textarea>
+                </label>
+            </ChildContent>
+            <Actions>
+                <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="SaveNotesAsync">Save notes</Button>
+            </Actions>
+        </FormSheet>
+
+        <FormSheet Open="_confirmDiscard" Title="Discard changes?" CancelLabel="" OnClose="KeepEditing">
+            <ChildContent>
+                <p>Your changes to this Guide have not been saved.</p>
+            </ChildContent>
+            <Actions>
+                <Button Variant="ButtonVariant.Primary" OnClick="KeepEditing">Keep editing</Button>
+                <Button Variant="ButtonVariant.Secondary" OnClick="Discard">Discard</Button>
+            </Actions>
+        </FormSheet>
+    }
+</div>
+
+@code {
+    private RenderFragment Area(string id, string label, string value, Action<string> set, string? hint = null) =>
+        @<label class="fa-guidepage__field" for="@id">
+            <span class="fa-label">@label</span>
+            @if (hint is not null)
+            {
+                <span class="fa-muted">@hint</span>
+            }
+            <textarea id="@id" class="fa-guidepage__control" rows="3" value="@value" @oninput="e => set(e.Value?.ToString() ?? string.Empty)"></textarea>
+        </label>;
+}

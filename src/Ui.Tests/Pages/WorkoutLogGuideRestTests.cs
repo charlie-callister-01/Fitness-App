@@ -100,7 +100,7 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
 
         OpenGuide(cut);
 
-        var link = cut.Find("[role='dialog'] a");
+        var link = cut.Find("[role='dialog'] a.fa-guide__video");
         Assert.Equal("https://example.com/squat", link.GetAttribute("href"));
         Assert.Equal("_blank", link.GetAttribute("target"));
         Assert.Contains("noopener", link.GetAttribute("rel"));
@@ -114,7 +114,7 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
 
         OpenGuide(cut);
 
-        Assert.Empty(cut.FindAll("[role='dialog'] a"));
+        Assert.Empty(cut.FindAll("[role='dialog'] a.fa-guide__video"));
     }
 
     [Fact]

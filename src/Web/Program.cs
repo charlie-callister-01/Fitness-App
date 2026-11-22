@@ -27,6 +27,7 @@ builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<IDevicePreferences, LocalStorageDevicePreferences>();
 builder.Services.AddSingleton<RestTimerSetting>();
 builder.Services.AddSingleton<InAppHistory>();
+builder.Services.AddSingleton<LogEditStates>();
 builder.Services.AddSingleton<ISecondTicker, SystemSecondTicker>();
 builder.Services.AddSingleton<IWakeLock, BrowserWakeLock>();
 
