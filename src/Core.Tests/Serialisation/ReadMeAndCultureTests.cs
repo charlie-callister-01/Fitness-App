@@ -21,6 +21,7 @@ public class ReadMeAndCultureTests
         Assert.Contains("formatVersion", readMe.Select(p => p.Key));
         Assert.Contains("units", readMe.Select(p => p.Key));
         Assert.Contains("ids", readMe.Select(p => p.Key));
+        Assert.Contains("tracks", readMe.Select(p => p.Key));
     }
 
     [Fact]

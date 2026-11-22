@@ -16,6 +16,7 @@ internal static class ExchangeReadMe
         ["formatVersion"] = "The integer at the top of this document names the version of the format. Newer apps still read older versions.",
         ["units"] = "Weights in kg (fields ending Kg), cardio distance in km (distanceKm), carry distance in metres (distanceM), body measurements in cm (measurementCm), durations in seconds. Dates are yyyy-MM-dd. Timestamps are ISO 8601 with a time zone offset.",
         ["ids"] = "Every record has an ID that is unique among records of its kind and never changes: letters, digits, hyphens and underscores only. Names are labels and may change.",
+        ["tracks"] = "Each Plan has one or more Tracks (cadence weekly or daily), with the main Track first and each Track holding its own rules and Phases; every Session names its trackId.",
         ["absentFields"] = "A missing optional field and an explicit null mean the same thing. A missing collection means that kind of data is not part of this document.",
     };
 }

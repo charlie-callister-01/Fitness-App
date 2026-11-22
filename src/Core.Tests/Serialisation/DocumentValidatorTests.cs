@@ -90,7 +90,7 @@ public class DocumentValidatorTests
     {
         var document = WithMainPhases(Valid(), ph => [ph[0], ph[1] with { StartWeek = 10 }, ph[2]]);
 
-        Assert.Equal(("plans[0].phases[1].startWeek", "phase_gap"), Only(document));
+        Assert.Equal(("plans[0].tracks[0].phases[1].startWeek", "phase_gap"), Only(document));
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class DocumentValidatorTests
     {
         var document = WithMainPhases(Valid(), ph => [ph[0], ph[1] with { StartWeek = 8 }, ph[2]]);
 
-        Assert.Equal(("plans[0].phases[1].startWeek", "phase_overlap"), Only(document));
+        Assert.Equal(("plans[0].tracks[0].phases[1].startWeek", "phase_overlap"), Only(document));
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class DocumentValidatorTests
     {
         var document = WithMainPhases(Valid(), ph => [ph[0], ph[1] with { EndWeek = 3 }, ph[2]]);
 
-        Assert.Equal(("plans[0].phases[1].endWeek", "out_of_range"), Only(document));
+        Assert.Equal(("plans[0].tracks[0].phases[1].endWeek", "out_of_range"), Only(document));
     }
 
     private static readonly Phase BadRangePhase = new("extra", "Extra", 30, 25, [], []);
@@ -120,7 +120,7 @@ public class DocumentValidatorTests
         var document = WithMainPhases(Valid(), ph => [ph[0], ph[1], ph[2] with { StartWeek = 21 }, BadRangePhase]);
 
         Assert.Equal(
-            [("plans[0].phases[2].startWeek", "phase_gap"), ("plans[0].phases[3].endWeek", "out_of_range")],
+            [("plans[0].tracks[0].phases[2].startWeek", "phase_gap"), ("plans[0].tracks[0].phases[3].endWeek", "out_of_range")],
             Issues(document));
     }
 
@@ -130,7 +130,7 @@ public class DocumentValidatorTests
         var document = WithMainPhases(Valid(), ph => [ph[0], ph[1], ph[2] with { StartWeek = 18 }, BadRangePhase]);
 
         Assert.Equal(
-            [("plans[0].phases[2].startWeek", "phase_overlap"), ("plans[0].phases[3].endWeek", "out_of_range")],
+            [("plans[0].tracks[0].phases[2].startWeek", "phase_overlap"), ("plans[0].tracks[0].phases[3].endWeek", "out_of_range")],
             Issues(document));
     }
 
@@ -139,7 +139,7 @@ public class DocumentValidatorTests
     {
         var document = WithMainPhases(Valid(), ph => [ph[0], ph[1] with { SessionOverrides = [new SessionOverride("ghost", [])] }, ph[2]]);
 
-        Assert.Equal(("plans[0].phases[1].sessionOverrides[0].sessionId", "unknown_session"), Only(document));
+        Assert.Equal(("plans[0].tracks[0].phases[1].sessionOverrides[0].sessionId", "unknown_session"), Only(document));
     }
 
     [Fact]
@@ -176,5 +176,36 @@ public class DocumentValidatorTests
         var document = Valid() with { Exercises = [PlanTestData.Exercise(""), PlanTestData.Exercise("")] };
 
         Assert.DoesNotContain(ExchangeFormat.Validate(document), i => i.Code == "duplicate_id");
+    }
+
+    [Fact]
+    public void Empty_tracks_in_memory_are_reported_as_missing_field()
+    {
+        var document = WithPlan(Valid(), p => p with { Tracks = [], Sessions = [] }) with { Workouts = null };
+
+        Assert.Equal(("plans[0].tracks", "missing_field"), Only(document));
+    }
+
+    [Fact]
+    public void Daily_main_track_in_memory_is_reported_at_cadence()
+    {
+        var document = WithPlan(Valid(), p => p with
+        {
+            Tracks = [new Track("mob", "Mobility", new TrackRhythm.Daily(75), [])],
+            Sessions = [new Session("m-1", "Mobility", "mob", DefaultDay.Daily, SessionType.Mobility, null, [])],
+        }) with { Workouts = null };
+
+        Assert.Equal(("plans[0].tracks[0].cadence", "invalid_value"), Only(document));
+    }
+
+    [Fact]
+    public void Unknown_track_in_memory_is_reported_at_session_track_id()
+    {
+        var document = WithPlan(Valid(), p => p with
+        {
+            Sessions = [p.Sessions[0], p.Sessions[1] with { TrackId = "missing" }, .. p.Sessions.Skip(2)],
+        });
+
+        Assert.Equal(("plans[0].sessions[1].trackId", "unknown_track"), Only(document));
     }
 }

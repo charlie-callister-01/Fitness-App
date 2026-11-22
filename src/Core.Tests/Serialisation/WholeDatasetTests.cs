@@ -129,7 +129,8 @@ public class WholeDatasetTests
             root["settings"]!["extra"] = 1;
             root["exercises"]![0]!["tags"]!["extra"] = 1;
             root["plans"]![0]!["extra"] = 1;
-            root["plans"]![0]!["phases"]![0]!["goals"]![0]!["extra"] = 1;
+            root["plans"]![0]!["tracks"]![0]!["extra"] = 1;
+            root["plans"]![0]!["tracks"]![0]!["phases"]![0]!["goals"]![0]!["extra"] = 1;
             root["plans"]![0]!["sessions"]![0]!["exercises"]![0]!["extra"] = 1;
             root["workouts"]![0]!["extra"] = 1;
             root["workouts"]![0]!["entries"]![0]!["sets"]![0]!["extra"] = 1;
@@ -146,7 +147,8 @@ public class WholeDatasetTests
         Assert.Equal(
             new[]
             {
-                "extra", "settings.extra", "exercises[0].tags.extra", "plans[0].extra", "plans[0].phases[0].goals[0].extra",
+                "extra", "settings.extra", "exercises[0].tags.extra", "plans[0].extra", "plans[0].tracks[0].extra",
+                "plans[0].tracks[0].phases[0].goals[0].extra",
                 "plans[0].sessions[0].exercises[0].extra", "workouts[0].extra", "workouts[0].entries[0].sets[0].extra",
                 "workouts[0].painCheck.extra", "weighIns[0].extra", "breaks[0].extra", "badges[0].extra", "guides[0].extra",
             }.Order(),

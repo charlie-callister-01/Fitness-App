@@ -11,7 +11,7 @@ namespace Core.Serialisation;
 public static class ExchangeFormat
 {
     /// <summary>The format version this build writes and fully understands.</summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     private const string VersionField = "formatVersion";
 
@@ -19,6 +19,7 @@ public static class ExchangeFormat
     private static readonly Dictionary<int, Func<JsonElement, ReadResult>> Readers = new()
     {
         [1] = V1Reader.Read,
+        [2] = V2Reader.Read,
     };
 
     /// <summary>
@@ -27,8 +28,7 @@ public static class ExchangeFormat
     /// </summary>
     public static string Write(ExchangeDocument document, bool indented = false)
     {
-        var body = JsonSerializer.SerializeToElement(
-            V1ToV2Upgrader.ToV1Document(document), ExchangeJsonContext.Default.V1ExchangeDocument);
+        var body = JsonSerializer.SerializeToElement(document, ExchangeJsonContext.Default.ExchangeDocument);
 
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
@@ -93,12 +93,12 @@ public static class ExchangeFormat
     {
         if (!root.TryGetProperty(VersionField, out var versionElement) || versionElement.ValueKind == JsonValueKind.Null)
         {
-            return Fail(VersionField, "missing_field", "formatVersion is required. Add \"formatVersion\": 1 at the top of the document.");
+            return Fail(VersionField, "missing_field", $"formatVersion is required. Add \"formatVersion\": {CurrentVersion} at the top of the document.");
         }
 
         if (versionElement.ValueKind != JsonValueKind.Number || !versionElement.TryGetInt32(out var version))
         {
-            return Fail(VersionField, "wrong_type", "formatVersion must be a whole number such as 1.");
+            return Fail(VersionField, "wrong_type", $"formatVersion must be a whole number such as {CurrentVersion}.");
         }
 
         if (version < 1)

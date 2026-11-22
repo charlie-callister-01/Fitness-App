@@ -39,6 +39,7 @@ internal static class DocumentValidator
         Badge,
         Guide,
         Plan,
+        Track,
         Session,
         Phase,
         Workout,
@@ -83,6 +84,7 @@ internal static class DocumentValidator
         private readonly ParseFindings _findings;
         private readonly ReferenceScope _exercises;
         private readonly ReferenceScope _sessions;
+        private readonly HashSet<string> _dailySessionIds;
         private readonly Dictionary<RecordKind, HashSet<string>> _seenIds = [];
 
         public Checker(ExchangeDocument document, ParseFindings findings)
@@ -91,6 +93,7 @@ internal static class DocumentValidator
             _findings = findings;
             _exercises = ReferenceScope.Of(document.Exercises?.Select(e => e.Id));
             _sessions = ReferenceScope.Of(document.Plans?.SelectMany(p => p.Sessions).Select(s => s.Id));
+            _dailySessionIds = CollectDailySessionIds(document.Plans);
         }
 
         public List<FormatIssue> Issues { get; } = [];
@@ -171,8 +174,8 @@ internal static class DocumentValidator
             foreach (var (plan, i) in Indexed(plans))
             {
                 CheckUnique(RecordKind.Plan, $"plans[{i}].id", "id", plan.Id);
+                CheckTracks(plan, i);
                 CheckSessions(plan, i);
-                CheckPhases(plan, i);
             }
 
             CheckExactlyOneActive(plans);
@@ -198,13 +201,78 @@ internal static class DocumentValidator
             }
         }
 
+        private void CheckTracks(Plan plan, int planIndex)
+        {
+            if (plan.Tracks.Count == 0)
+            {
+                if (!_findings.AreTracksMissing(plan))
+                {
+                    Error($"plans[{planIndex}].tracks", "missing_field",
+                        $"plans[{planIndex}].tracks is required and must contain at least one Track.");
+                }
+
+                return;
+            }
+
+            if (plan.Tracks[0].Rhythm is TrackRhythm.Daily && !_findings.IsCadenceUnreadable(plan.Tracks[0]))
+            {
+                Error($"plans[{planIndex}].tracks[0].cadence", "invalid_value",
+                    $"plans[{planIndex}].tracks[0].cadence must be weekly: the first Track is the main Track.");
+            }
+
+            foreach (var (track, t) in Indexed(plan.Tracks))
+            {
+                var trackPath = $"plans[{planIndex}].tracks[{t}]";
+                CheckUnique(RecordKind.Track, $"{trackPath}.id", "id", track.Id);
+                CheckPhases(plan, track, trackPath);
+            }
+        }
+
         private void CheckSessions(Plan plan, int planIndex)
         {
+            var tracksById = TracksById(plan);
+            var canCheckUnknownTrack = plan.Tracks.Count > 0 && plan.Tracks.All(t => IsSet(t.Id));
+            var mainTrack = plan.Tracks.FirstOrDefault();
+
             foreach (var (session, i) in Indexed(plan.Sessions))
             {
                 var path = $"plans[{planIndex}].sessions[{i}]";
                 CheckUnique(RecordKind.Session, $"{path}.id", "id", session.Id);
                 CheckRows(session.Exercises, $"{path}.exercises");
+
+                if (!IsSet(session.TrackId))
+                {
+                    continue;
+                }
+
+                if (!tracksById.TryGetValue(session.TrackId, out var track))
+                {
+                    if (canCheckUnknownTrack)
+                    {
+                        Error($"{path}.trackId", "unknown_track", $"{path}.trackId \"{session.TrackId}\" is not a Track in this Plan.");
+                    }
+
+                    continue;
+                }
+
+                if (!_findings.IsDefaultDayUnreadable(session) && !_findings.IsCadenceUnreadable(track))
+                {
+                    if (track.Rhythm is TrackRhythm.Daily && session.DefaultDay != DefaultDay.Daily)
+                    {
+                        Error($"{path}.defaultDay", "invalid_value", $"{path}.defaultDay must be daily on a daily Track.");
+                    }
+                    else if (track.Rhythm is TrackRhythm.Weekly && session.DefaultDay == DefaultDay.Daily)
+                    {
+                        Error($"{path}.defaultDay", "invalid_value",
+                            $"{path}.defaultDay cannot be daily on a weekly Track. Choose a day from monday to sunday.");
+                    }
+                }
+
+                if (session.BenchmarkIntervalWeeks is not null && !ReferenceEquals(track, mainTrack))
+                {
+                    Error($"{path}.trackId", "invalid_value",
+                        $"{path}.trackId \"{session.TrackId}\" cannot hold a benchmark Session. Benchmark Sessions must be on the main Track (\"{mainTrack!.Id}\").");
+                }
             }
         }
 
@@ -216,14 +284,15 @@ internal static class DocumentValidator
             }
         }
 
-        private void CheckPhases(Plan plan, int planIndex)
+        private void CheckPhases(Plan plan, Track track, string trackPath)
         {
-            var planSessionIds = plan.Sessions.Select(s => s.Id).ToHashSet();
-            var phases = plan.Tracks.FirstOrDefault()?.Phases ?? [];
-            var findings = PhaseRanges.Check(phases, _findings.AreWeeksUnreadable);
-            foreach (var (phase, i) in Indexed(phases))
+            var trackSessionIds = IsSet(track.Id)
+                ? plan.Sessions.Where(s => s.TrackId == track.Id).Select(s => s.Id).ToHashSet()
+                : null;
+            var findings = PhaseRanges.Check(track.Phases, _findings.AreWeeksUnreadable);
+            foreach (var (phase, i) in Indexed(track.Phases))
             {
-                var path = $"plans[{planIndex}].phases[{i}]";
+                var path = $"{trackPath}.phases[{i}]";
                 CheckUnique(RecordKind.Phase, $"{path}.id", "id", phase.Id);
                 foreach (var finding in findings.Where(f => f.Index == i && f.Problem is PhaseRangeProblem.BadStart or PhaseRangeProblem.EndBeforeStart))
                 {
@@ -235,12 +304,12 @@ internal static class DocumentValidator
                     CheckExercise($"{path}.goals[{g}].exerciseId", goal.ExerciseId);
                 }
 
-                CheckOverrides(phase, path, planSessionIds);
+                CheckOverrides(phase, path, track.Id, trackSessionIds);
             }
 
             foreach (var finding in findings.Where(f => f.Problem is PhaseRangeProblem.Overlap or PhaseRangeProblem.Gap or PhaseRangeProblem.LeadingGap))
             {
-                ReportRange(finding, $"plans[{planIndex}].phases[{finding.Index}]");
+                ReportRange(finding, $"{trackPath}.phases[{finding.Index}]");
             }
         }
 
@@ -266,16 +335,16 @@ internal static class DocumentValidator
             }
         }
 
-        private void CheckOverrides(Phase phase, string phasePath, HashSet<string> planSessionIds)
+        private void CheckOverrides(Phase phase, string phasePath, string trackId, HashSet<string>? trackSessionIds)
         {
             var overridden = new HashSet<string>();
             foreach (var (item, i) in Indexed(phase.SessionOverrides))
             {
                 var path = $"{phasePath}.sessionOverrides[{i}]";
                 var sessionPath = $"{path}.sessionId";
-                if (IsSet(item.SessionId) && !planSessionIds.Contains(item.SessionId))
+                if (IsSet(item.SessionId) && trackSessionIds is not null && !trackSessionIds.Contains(item.SessionId))
                 {
-                    Error(sessionPath, "unknown_session", $"{sessionPath} \"{item.SessionId}\" is not a Session in this Plan.");
+                    Error(sessionPath, "unknown_session", $"{sessionPath} \"{item.SessionId}\" is not a Session on Track \"{trackId}\".");
                 }
 
                 if (IsSet(item.SessionId) && !overridden.Add(item.SessionId))
@@ -393,6 +462,10 @@ internal static class DocumentValidator
                 {
                     Error($"{path}.sessionId", "unknown_session", $"{path}.sessionId \"{move.SessionId}\" is not a Session in any Plan in this document.");
                 }
+                else if (IsSet(move.SessionId) && _dailySessionIds.Contains(move.SessionId))
+                {
+                    Error($"{path}.sessionId", "invalid_value", $"{path}.sessionId \"{move.SessionId}\" is a daily Session and cannot be moved.");
+                }
 
                 if (IsSet(move.SessionId) && !moved.Add(move.SessionId))
                 {
@@ -405,6 +478,46 @@ internal static class DocumentValidator
                         $"{path}.date ({move.Date:yyyy-MM-dd}) is outside the week of {week.WeekStart:yyyy-MM-dd}. A move must land between that Monday and the Sunday after it.");
                 }
             }
+        }
+
+        private static Dictionary<string, Track> TracksById(Plan plan)
+        {
+            var byId = new Dictionary<string, Track>(StringComparer.Ordinal);
+            foreach (var track in plan.Tracks)
+            {
+                if (IsSet(track.Id))
+                {
+                    byId.TryAdd(track.Id, track);
+                }
+            }
+
+            return byId;
+        }
+
+        private static HashSet<string> CollectDailySessionIds(IReadOnlyList<Plan>? plans)
+        {
+            var daily = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var plan in plans ?? [])
+            {
+                var tracksById = TracksById(plan);
+                foreach (var session in plan.Sessions)
+                {
+                    if (!IsSet(session.Id))
+                    {
+                        continue;
+                    }
+
+                    var onDailyTrack = IsSet(session.TrackId)
+                        && tracksById.TryGetValue(session.TrackId, out var track)
+                        && track.Rhythm is TrackRhythm.Daily;
+                    if (onDailyTrack || session.DefaultDay == DefaultDay.Daily)
+                    {
+                        daily.Add(session.Id);
+                    }
+                }
+            }
+
+            return daily;
         }
 
         private static IEnumerable<(T Item, int Index)> Indexed<T>(IEnumerable<T>? items) =>

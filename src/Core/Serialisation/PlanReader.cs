@@ -3,16 +3,31 @@ using Core.Model;
 namespace Core.Serialisation;
 
 /// <summary>
-/// Reads the <c>plans</c> collection of a version 1 document: Plans, their Phases and Sessions. Structure only: unique IDs, Exercise and
-/// Session references, the single active Plan and Phase week ranges and coverage are cross-record rules owned by <see cref="DocumentValidator"/>.
+/// Reads the <c>plans</c> collection of version 1 and version 2 documents: Plans, Tracks, Phases and Sessions.
+/// Structure only: unique IDs, Exercise/Track/Session references, the single active Plan, main Track cadence, and Phase week ranges
+/// are cross-record rules owned by <see cref="DocumentValidator"/>.
 /// A record with a bad field is still returned (the bad field holds a placeholder) so the validator sees its IDs; what could not be read is
 /// noted in <see cref="ParseFindings"/>.
 /// </summary>
 internal static class PlanReader
 {
-    public static List<Plan>? Read(FieldReader root) => root.ReadRecords("plans", ReadPlan);
+    private static readonly string[] WeeklyOnlyFields =
+        ["weeklyTarget", "streakMinWorkoutsPerWeek", "streakCountsCustomWorkouts"];
 
-    private static Plan ReadPlan(FieldReader reader)
+    public static List<Plan>? ReadV1(FieldReader root) => root.ReadRecords("plans", ReadV1Plan);
+
+    public static List<Plan>? ReadV2(FieldReader root) => root.ReadRecords("plans", ReadV2Plan);
+
+    private sealed record PlanHeader(
+        string Id,
+        string Name,
+        bool IsActive,
+        DateOnly StartDate,
+        string? Goal,
+        DateOnly? GoalDate,
+        double WeightIncrementKg);
+
+    private static PlanHeader ReadHeader(FieldReader reader)
     {
         var id = reader.RequiredId("id");
         var name = reader.RequiredString("name");
@@ -25,21 +40,97 @@ internal static class PlanReader
         var startDate = reader.RequiredDateOrNull("startDate");
         var goal = reader.OptionalString("goal");
         var goalDate = reader.OptionalDate("goalDate");
-        var weeklyTarget = reader.RequiredInt("weeklyTarget", min: 1);
-        var streakMin = reader.RequiredInt("streakMinWorkoutsPerWeek", min: 1);
-        var streakCountsCustom = reader.RequiredBool("streakCountsCustomWorkouts");
         var increment = reader.RequiredPositiveDouble("weightIncrementKg");
         reader.CheckDateOrder("startDate", "goalDate", startDate, goalDate, code: "out_of_range");
 
-        var sessions = ReadSessions(reader);
+        return new PlanHeader(id, name, isActive.Value, startDate ?? default, goal, goalDate, increment);
+    }
+
+    private static Plan ReadV1Plan(FieldReader reader)
+    {
+        var header = ReadHeader(reader);
+        var weeklyTarget = reader.RequiredInt("weeklyTarget", min: 1);
+        var streakMin = reader.RequiredInt("streakMinWorkoutsPerWeek", min: 1);
+        var streakCountsCustom = reader.RequiredBool("streakCountsCustomWorkouts");
+
+        var sessions = ReadV1Sessions(reader);
         var phases = reader.ReadRecords("phases", ReadPhase) ?? [];
 
         return V1ToV2Upgrader.UpgradePlan(new V1Plan(
-            id, name, isActive.Value, startDate ?? default, goal, goalDate,
-            weeklyTarget, streakMin, streakCountsCustom, increment, phases, sessions));
+            header.Id, header.Name, header.IsActive, header.StartDate, header.Goal, header.GoalDate,
+            weeklyTarget, streakMin, streakCountsCustom, header.WeightIncrementKg, phases, sessions));
     }
 
-    private static List<V1Session> ReadSessions(FieldReader plan) =>
+    private static Plan ReadV2Plan(FieldReader reader)
+    {
+        var header = ReadHeader(reader);
+        var tracksAttempt = reader.Attempt(() => reader.ReadRecords("tracks", ReadTrack));
+        var tracks = tracksAttempt.Value ?? [];
+        if (tracksAttempt.IsValid && tracks.Count == 0)
+        {
+            reader.Report("tracks", "missing_field", $"{reader.ChildPath("tracks")} is required and must contain at least one Track.");
+        }
+
+        var sessions = reader.ReadRecords("sessions", ReadV2Session) ?? [];
+        var plan = new Plan(
+            header.Id, header.Name, header.IsActive, header.StartDate, header.Goal, header.GoalDate,
+            header.WeightIncrementKg, tracks, sessions);
+
+        if (tracks.Count == 0)
+        {
+            reader.Context.Findings.MarkTracksMissing(plan);
+        }
+
+        return plan;
+    }
+
+    private static Track ReadTrack(FieldReader reader)
+    {
+        var id = reader.RequiredId("id");
+        var name = reader.RequiredString("name");
+        var cadence = reader.Attempt(() => reader.RequiredEnum<TrackCadence>("cadence"));
+
+        if (!cadence.IsValid)
+        {
+            reader.Ignore([.. WeeklyOnlyFields, "dayDonePercent"]);
+            var badPhases = reader.ReadRecords("phases", ReadPhase) ?? [];
+            var badTrack = new Track(id, name, new TrackRhythm.Weekly(0, 0, false), badPhases);
+            reader.Context.Findings.MarkCadenceUnreadable(badTrack);
+            return badTrack;
+        }
+
+        TrackRhythm rhythm;
+        if (cadence.Value == TrackCadence.Weekly)
+        {
+            var weeklyTarget = reader.RequiredInt("weeklyTarget", min: 1);
+            var streakMin = reader.RequiredInt("streakMinWorkoutsPerWeek", min: 1);
+            var streakCountsCustom = reader.RequiredBool("streakCountsCustomWorkouts");
+            if (reader.Has("dayDonePercent"))
+            {
+                reader.Report("dayDonePercent", "invalid_value", $"{reader.ChildPath("dayDonePercent")} only applies to a daily Track.");
+            }
+
+            rhythm = new TrackRhythm.Weekly(weeklyTarget, streakMin, streakCountsCustom);
+        }
+        else
+        {
+            var dayDonePercent = reader.RequiredIntInRange("dayDonePercent", 1, 100);
+            foreach (var field in WeeklyOnlyFields)
+            {
+                if (reader.Has(field))
+                {
+                    reader.Report(field, "invalid_value", $"{reader.ChildPath(field)} only applies to a weekly Track.");
+                }
+            }
+
+            rhythm = new TrackRhythm.Daily(dayDonePercent);
+        }
+
+        var phases = reader.ReadRecords("phases", ReadPhase) ?? [];
+        return new Track(id, name, rhythm, phases);
+    }
+
+    private static List<V1Session> ReadV1Sessions(FieldReader plan) =>
         plan.ReadRecords("sessions", reader => new V1Session(
             reader.RequiredId("id"),
             reader.RequiredString("name"),
@@ -47,6 +138,25 @@ internal static class PlanReader
             reader.RequiredEnum<SessionType>("type"),
             reader.OptionalInt("benchmarkIntervalWeeks", min: 1),
             SessionRowReader.ReadRows(reader, "exercises"))) ?? [];
+
+    private static Session ReadV2Session(FieldReader reader)
+    {
+        var id = reader.RequiredId("id");
+        var name = reader.RequiredString("name");
+        var trackId = reader.RequiredId("trackId");
+        var defaultDay = reader.Attempt(() => reader.RequiredEnum<DefaultDay>("defaultDay"));
+        var type = reader.RequiredEnum<SessionType>("type");
+        var benchmarkIntervalWeeks = reader.OptionalInt("benchmarkIntervalWeeks", min: 1);
+        var exercises = SessionRowReader.ReadRows(reader, "exercises");
+
+        var session = new Session(id, name, trackId, defaultDay.Value, type, benchmarkIntervalWeeks, exercises);
+        if (!defaultDay.IsValid)
+        {
+            reader.Context.Findings.MarkDefaultDayUnreadable(session);
+        }
+
+        return session;
+    }
 
     /// <summary>
     /// Each week number is checked on its own (a whole number of 1 or more). Whether the range runs forwards is the validator's rule,
