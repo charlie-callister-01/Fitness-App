@@ -32,7 +32,7 @@
                     @foreach (var row in _view.Weeks)
                     {
                         <tr>
-                            <td>@row.WeekStart.ToString("ddd d MMM", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@InsightFormat.WeekdayDay(row.WeekStart)</td>
                             <td>@Num(row.Average) @_view.UnitLabel</td>
                             <td>@row.Count</td>
                         </tr>

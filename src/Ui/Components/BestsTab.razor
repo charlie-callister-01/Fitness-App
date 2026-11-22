@@ -73,5 +73,5 @@
         _view = BestsViewBuilder.Build(snapshot.Exercises, snapshot.Workouts, context.Today);
     }
 
-    private static string Date(DateOnly date) => date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
+    private static string Date(DateOnly date) => InsightFormat.DayMonthYear(date);
 }

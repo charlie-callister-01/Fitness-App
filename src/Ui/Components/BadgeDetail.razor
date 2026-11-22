@@ -33,7 +33,7 @@
         <ul class="fa-badgedetail__events">
             @foreach (var e in Badge.Events)
             {
-                <li class="fa-badgedetail__event"><span class="fa-muted">@e.Date.ToString("d MMM yyyy", CultureInfo.InvariantCulture)</span> @e.Text</li>
+                <li class="fa-badgedetail__event"><span class="fa-muted">@InsightFormat.DayMonthYear(e.Date)</span> @e.Text</li>
             }
         </ul>
     }

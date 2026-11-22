@@ -62,9 +62,9 @@ public sealed partial class WeeklyReview : IDisposable
         Rebuild();
     }
 
-    private static string Day(DateOnly date) => date.ToString("ddd d MMM", CultureInfo.InvariantCulture);
+    private static string Day(DateOnly date) => InsightFormat.WeekdayDay(date);
 
-    private static string Num(double value) => value.ToString("0.0", CultureInfo.InvariantCulture);
+    private static string Num(double value) => InsightFormat.OneDecimal(value);
 
     private string ResultText(RecentPr pr) =>
         Data.Snapshot.Exercises.FirstOrDefault(e => e.Id == pr.ExerciseId) is { } exercise

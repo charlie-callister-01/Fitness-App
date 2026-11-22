@@ -2,6 +2,7 @@ using System.Globalization;
 using Core.Ids;
 using Core.Model;
 using Core.Rules.Insight;
+using Core.Rules.Parsing;
 using Core.Rules.Performance;
 using Core.Rules.PlanEditing;
 using Core.Rules.Units;
@@ -152,7 +153,7 @@ public static class BadgeEditingRules
             return null;
         }
 
-        var shown = $"{Text(units.ChartWeight(badge.Target), 1)} {units.WeightLabel}";
+        var shown = $"{Text(units.DisplayWeight(badge.Target, rounded: false), 1)} {units.WeightLabel}";
         return $"This target is stored as an estimated 1RM of {shown} ({Text(ParseNumber(draft.Target), 1)} {units.WeightLabel} for {draft.Reps.Trim()} reps).";
     }
 
@@ -175,7 +176,7 @@ public static class BadgeEditingRules
             case "prs": return Simple(BadgeMetricChoice.PrCount);
             case "bodyweight":
                 return new BadgeDraft(badge.Name, BadgeMetricChoice.BodyWeight, null,
-                    Text(units.ChartWeight(Math.Abs(badge.Target))), "", badge.Target < 0);
+                    Text(units.DisplayWeight(Math.Abs(badge.Target), rounded: false)), "", badge.Target < 0);
         }
 
         var exercise = exercises.FirstOrDefault(e => e.Id == metric);
@@ -186,7 +187,7 @@ public static class BadgeEditingRules
 
         return UsesWeightAndReps(exercise)
             ? new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, exercise.Id,
-                Text(units.ChartWeight(SetRanking.WeightForOneRepMax(badge.Target, 1)), 3), "1", false)
+                Text(units.DisplayWeight(SetRanking.WeightForOneRepMax(badge.Target, 1), rounded: false), 3), "1", false)
             : new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, exercise.Id, Text(Math.Abs(badge.Target)), "", false);
 
         BadgeDraft Simple(BadgeMetricChoice choice) => new(badge.Name, choice, null, Text(Math.Abs(badge.Target)), "", false);
@@ -261,8 +262,7 @@ public static class BadgeEditingRules
         return value > 0 && double.IsFinite(value);
     }
 
-    private static double ParseNumber(string? text) =>
-        double.TryParse((text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0;
+    private static double ParseNumber(string? text) => DecimalText.TryParse(text, out var v) ? v : 0;
 
     private static string Text(double value, int decimals = 2) =>
         Math.Round(value, decimals).ToString("0." + new string('#', decimals), CultureInfo.InvariantCulture);

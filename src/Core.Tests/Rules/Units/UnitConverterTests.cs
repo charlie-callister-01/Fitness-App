@@ -10,6 +10,15 @@ public class UnitConverterTests
     private static UnitConverter Imperial => new(WeightUnit.Lb, DistanceUnit.Mi, 2.5);
 
     [Fact]
+    public void The_unrounded_option_keeps_the_exact_converted_value()
+    {
+        Assert.Equal(100.12, Metric.DisplayWeight(100.12, rounded: false));
+        Assert.Equal(100 / 0.45359237, Imperial.DisplayWeight(100, rounded: false), 9);
+        Assert.Equal(10.123456, Metric.DisplayDistance(10.123456, rounded: false));
+        Assert.Equal(10.123456 / 1.609344, Imperial.DisplayDistance(10.123456, rounded: false), 9);
+    }
+
+    [Fact]
     public void Weight_in_kg_displays_unchanged_and_in_lb_converted_and_rounded()
     {
         Assert.Equal(100, Metric.DisplayWeight(100));

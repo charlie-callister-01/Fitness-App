@@ -93,9 +93,9 @@ public static class ProgressSeries
 
     private static double Display(LogKind kind, ProgressPoint point, UnitConverter units) => kind switch
     {
-        LogKind.Load or LogKind.BodyMeasurementKg => units.ChartWeight(point.Value),
-        LogKind.BodyweightLoad or LogKind.Carry when point.Set.WeightKg is > 0 => units.ChartWeight(point.Value),
-        LogKind.DistanceKm => units.ChartDistance(point.Value),
+        LogKind.Load or LogKind.BodyMeasurementKg => units.DisplayWeight(point.Value, rounded: false),
+        LogKind.BodyweightLoad or LogKind.Carry when point.Set.WeightKg is > 0 => units.DisplayWeight(point.Value, rounded: false),
+        LogKind.DistanceKm => units.DisplayDistance(point.Value, rounded: false),
         LogKind.Minutes => point.Value / 60,
         _ => point.Value,
     };

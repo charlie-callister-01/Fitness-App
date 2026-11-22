@@ -13,7 +13,7 @@
     }
     else
     {
-        <p class="fa-muted fa-bench__next">@(_view.NextDue is { } due ? $"Next test: {due.ToString("ddd d MMM", CultureInfo.InvariantCulture)}" : "No benchmark test is scheduled.")</p>
+        <p class="fa-muted fa-bench__next">@(_view.NextDue is { } due ? $"Next test: {InsightFormat.WeekdayDay(due)}" : "No benchmark test is scheduled.")</p>
 
         <ul class="fa-bench__list">
             @foreach (var row in _view.Rows)
@@ -28,7 +28,7 @@
                     {
                         <p class="fa-bench__latest">
                             <span class="fa-bench__result">@row.LatestText</span>
-                            <span class="fa-muted">@row.LatestDate!.Value.ToString("d MMM yyyy", CultureInfo.InvariantCulture)</span>
+                            <span class="fa-muted">@InsightFormat.DayMonthYear(row.LatestDate!.Value)</span>
                             @switch (row.Trend)
                             {
                                 case BenchmarkTrend.Better:

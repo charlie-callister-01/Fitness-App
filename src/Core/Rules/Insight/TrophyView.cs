@@ -90,7 +90,7 @@ public static class TrophyViewBuilder
             : progress.Percent > 0 ? BadgeStanding.InProgress
             : BadgeStanding.Locked;
 
-        string Num(double v) => (isBody ? units.DisplayWeight(v) : v).ToString("0.##", CultureInfo.InvariantCulture);
+        string Num(double v) => InsightFormat.Trimmed(isBody ? units.DisplayWeight(v) : v);
         var text = progress.IsMeasurable ? $"{Num(progress.Value)} / {Num(Math.Abs(badge.Target))}" : "not measurable";
         var events = progress.IsMeasurable ? Events(metric, h, units) : [];
         return new TrophyBadge(badge.Id, badge.Name, standing, text, progress.Percent,
@@ -100,7 +100,7 @@ public static class TrophyViewBuilder
     private static string Needs(Badge badge, string metric, BadgeHistory h, UnitConverter units)
     {
         var t = badge.Target;
-        var abs = Math.Abs(t).ToString("0.##", CultureInfo.InvariantCulture);
+        var abs = InsightFormat.Trimmed(Math.Abs(t));
         switch (metric.ToLowerInvariant())
         {
             case "sessions": return $"Complete {abs} Workouts";
@@ -108,7 +108,7 @@ public static class TrophyViewBuilder
             case "bestweek" or "best week": return $"Complete {abs} Workouts in one week";
             case "prs": return $"Set {abs} PRs";
             case "bodyweight":
-                var shown = Math.Abs(units.DisplayWeight(t)).ToString("0.##", CultureInfo.InvariantCulture);
+                var shown = InsightFormat.Trimmed(Math.Abs(units.DisplayWeight(t)));
                 return t < 0 ? $"Drop {shown} {units.WeightLabel} from your first Weigh-in" : $"Reach {shown} {units.WeightLabel}";
         }
 
@@ -116,7 +116,7 @@ public static class TrophyViewBuilder
         if (exercise is null) return $"Metric \"{badge.Metric}\" is not measurable";
         if (exercise.LogKind == LogKind.Load && t > 0)
         {
-            var shown = units.DisplayWeight(t).ToString("0.##", CultureInfo.InvariantCulture);
+            var shown = InsightFormat.Trimmed(units.DisplayWeight(t));
             return $"Estimated 1RM of {shown} {units.WeightLabel} on {exercise.Name}";
         }
 
@@ -133,7 +133,7 @@ public static class TrophyViewBuilder
                 return Counted(h)
                     .GroupBy(w => WeekCalendar.MondayOf(w.Date))
                     .OrderByDescending(g => g.Key)
-                    .Select(g => new BadgeEvent(g.Key, $"Week of {g.Key.ToString("d MMM", CultureInfo.InvariantCulture)}: {g.Count()} Workouts"))
+                    .Select(g => new BadgeEvent(g.Key, $"Week of {InsightFormat.DayMonth(g.Key)}: {g.Count()} Workouts"))
                     .ToList();
             case "bestweek" or "best week":
                 var weeks = Counted(h).GroupBy(w => WeekCalendar.MondayOf(w.Date)).ToList();
@@ -146,7 +146,7 @@ public static class TrophyViewBuilder
                     .OrderByDescending(e => e.Date).ThenBy(e => e.Text, StringComparer.Ordinal).ToList();
             case "bodyweight":
                 return h.WeighIns.OrderByDescending(w => w.Date).ThenBy(w => w.Id, StringComparer.Ordinal)
-                    .Select(w => new BadgeEvent(w.Date, $"Weigh-in: {units.DisplayWeight(w.WeightKg).ToString("0.##", CultureInfo.InvariantCulture)} {units.WeightLabel}"))
+                    .Select(w => new BadgeEvent(w.Date, $"Weigh-in: {InsightFormat.Trimmed(units.DisplayWeight(w.WeightKg))} {units.WeightLabel}"))
                     .ToList();
         }
 

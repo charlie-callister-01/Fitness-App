@@ -70,8 +70,8 @@
     private void OpenSheet()
     {
         _selected = Value.Preset;
-        _start = Value.Range.From.ToString(DateFormat, CultureInfo.InvariantCulture);
-        _end = Value.Range.To.ToString(DateFormat, CultureInfo.InvariantCulture);
+        _start = InsightFormat.Iso(Value.Range.From);
+        _end = InsightFormat.Iso(Value.Range.To);
         _error = null;
         _open = true;
     }

@@ -135,7 +135,7 @@ public static class CalendarViewBuilder
     /// <summary>"Wed 18 Nov: Session C, done, 1 PR".</summary>
     private static string Label(DateOnly date, string? name, string state, int prs, bool isToday)
     {
-        var text = date.ToString("ddd d MMM", CultureInfo.InvariantCulture) + ": ";
+        var text = InsightFormat.WeekdayDay(date) + ": ";
         text += name is null ? state : $"{name}, {state}";
         if (prs > 0) text += prs == 1 ? ", 1 PR" : $", {prs} PRs";
         return isToday ? text + ", today" : text;

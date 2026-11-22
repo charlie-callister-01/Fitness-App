@@ -33,7 +33,7 @@ public sealed partial class Weight : IDisposable
 
     private string LastWeightText =>
         _view.Now is { } now && _view.NowDate is { } date
-            ? $"Last: {Num(now)} {_view.UnitLabel} on {date.ToString("ddd d MMM", CultureInfo.InvariantCulture)}"
+            ? $"Last: {Num(now)} {_view.UnitLabel} on {InsightFormat.WeekdayDay(date)}"
             : "";
 
     private string ChangeText => _view.ChangeSinceStart is not { } change
@@ -61,7 +61,7 @@ public sealed partial class Weight : IDisposable
     private void Rebuild() =>
         _view = WeightViewBuilder.Build(Data.Snapshot.WeighIns, Data.Snapshot.Badges, Page.Today, Converter);
 
-    private static string Num(double value) => value.ToString("0.0", CultureInfo.InvariantCulture);
+    private static string Num(double value) => InsightFormat.OneDecimal(value);
 
     private string Show(double? value) => value is { } v ? $"{Num(v)} {_view.UnitLabel}" : "-";
 
