@@ -24,7 +24,8 @@ public static class HomeTodayRules
         if (BreakCalendar.IsBreakDay(snapshot.Breaks, today))
             return TodayCard.Break();
 
-        var inProgress = WorkoutStart.InProgress(snapshot.Workouts);
+        var mainWorkouts = snapshot.Workouts.Where(w => !HomeTrackRules.IsExtraTrackWorkout(plan, w)).ToList();
+        var inProgress = WorkoutStart.InProgress(mainWorkouts);
         if (inProgress is not null)
         {
             var outcome = WorkoutOutcomes.Of(inProgress);
@@ -34,7 +35,7 @@ public static class HomeTodayRules
             return TodayCard.InProgress(inProgress, doneCount, plannedCount, elapsed);
         }
 
-        var finishedToday = snapshot.Workouts
+        var finishedToday = mainWorkouts
             .Where(w => w.Date == today && w.EndedAt is not null)
             .OrderByDescending(w => w.EndedAt)
             .FirstOrDefault();
