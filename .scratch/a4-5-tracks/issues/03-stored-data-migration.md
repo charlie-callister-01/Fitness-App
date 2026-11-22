@@ -14,10 +14,15 @@
 
 **Blocked by:** 02.
 
-**Status:** ready-for-agent
+**Status:** resolved
+Notes: Verified the existing `StartupReader` and `AppData.Migration` (`UpgradeIfOlderAsync`) path handles real format 1 -> format 2 stored-data migration without production code changes: all nine stored record kinds read cleanly at v1, Plans rewrite into Track shape (`<planId>-main`, `"Main"`, `Sessions[*].TrackId`) with `RecordFormatVersion = 2`, non-Plan records remain byte-identical, layout version and `LastBackupAt` are preserved, migration is deterministic and idempotent on reopen, write failure and quarantined/malformed v1 Plans fail safe as `CannotRead` leaving storage untouched, post-migration commits write v2 records, and restoring a v1 Backup into a v2 store writes Track-shaped Plans. Replaced the synthetic version tests in `src/Core.Tests/Storage/AppDataMigrationTests.cs` with real v1 -> v2 tests. No doc update needed: `docs/data-spec.md` already matches this behaviour.
 
-- [ ] A stored v1 dataset (two Plans, one active, Workouts with `sessionId`, Week schedules, Settings) opens as v2: Plans have one Main Track each (distinct IDs), results of the weekly rules for the same Workouts equal the pre-migration results.
-- [ ] Migrating twice from the same input gives byte-identical output; reopening a migrated store writes nothing.
-- [ ] A failed write during migration leaves the stored records and version untouched and the app starts as `CannotRead`; a quarantined v1 Plan makes the migration fail rather than drop it.
-- [ ] A v1 Backup restored into a v2 store ends up in the Track shape (Restore reads through the v1 reader).
-- [ ] `dotnet build` 0 warnings; earlier tests pass.
+- [x] A stored v1 dataset (two Plans, one active, Workouts with `sessionId`, Week schedules, Settings) opens as v2: Plans have one Main Track each (distinct IDs), results of the weekly rules for the same Workouts equal the pre-migration results.
+- [x] Migrating twice from the same input gives byte-identical output; reopening a migrated store writes nothing.
+- [x] A failed write during migration leaves the stored records and version untouched and the app starts as `CannotRead`; a quarantined v1 Plan makes the migration fail rather than drop it.
+- [x] A v1 Backup restored into a v2 store ends up in the Track shape (Restore reads through the v1 reader).
+- [x] `dotnet build` 0 warnings; earlier tests pass.
+
+## Comments
+
+- 2026-11-22: Resolved on branch `a4-5/ticket-03` (merged `feature/a4-5-pr1` at `7a1b59f`). `dotnet build` 0 warnings; Core.Tests 1423, Ui.Tests 611, Web.Tests 39 (all passing).
