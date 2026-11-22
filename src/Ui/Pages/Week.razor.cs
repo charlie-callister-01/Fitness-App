@@ -3,6 +3,7 @@ using Core.Ids;
 using Core.Model;
 using Core.Rules.PlanEditing;
 using Core.Rules.Schedule;
+using Core.Rules.Starting;
 using Core.Rules.Weeks;
 using Core.Storage;
 using Core.Time;
@@ -19,6 +20,7 @@ public sealed partial class Week : IDisposable
     private PageContext Page = default!;
     private GuardedSave _save = default!;
     private Plan? _plan;
+    private IReadOnlyList<DailyWeekRow> _dailyRows = [];
     private IReadOnlyList<WeekRow> _rows = [];
     private IReadOnlyList<DateOnly> _days = [];
 
@@ -47,6 +49,8 @@ public sealed partial class Week : IDisposable
     [Inject] private IIdGenerator Ids { get; set; } = default!;
 
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private string RangeText => _days.Count == 0
         ? ""
@@ -84,11 +88,13 @@ public sealed partial class Week : IDisposable
         _days = [.. WeekCalendar.DaysOf(WeekCalendar.MondayOf(Page.Today))];
         if (_plan is null)
         {
+            _dailyRows = [];
             _rows = [];
             _draft = null;
             return;
         }
 
+        _dailyRows = WeekRows.BuildDaily(_plan, snapshot.Workouts, Page.Today);
         _rows = WeekRows.Build(_plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, Page.Today);
         var basis = Fingerprint(snapshot);
         if (basis == _draftBasis)
@@ -121,6 +127,39 @@ public sealed partial class Week : IDisposable
         WeekRowChip.Today => StateChipKind.Today,
         _ => null,
     };
+
+    private static string DailyStateText(DailyRowState state) => state switch
+    {
+        DailyRowState.Done => "Done",
+        DailyRowState.InProgress => "In progress",
+        _ => "Not started",
+    };
+
+    private void OnOpenWorkout(Workout workout) => Navigation.NavigateTo($"log/{workout.Id}");
+
+    private async Task OnStartDailyAsync(Session session)
+    {
+        if (_plan is not { } plan)
+        {
+            return;
+        }
+
+        StartOutcome? outcome = null;
+        var result = await _save.RunAsync(async () =>
+        {
+            outcome = await new WorkoutStarter(Data, Ids, Clock).StartAsync(plan, session, Page.Today);
+            return outcome.Commit is { } commit ? SaveWork.Committed(commit) : SaveWork.None;
+        });
+        if (result.Status is SaveStatus.Busy or SaveStatus.ReadOnly)
+        {
+            return;
+        }
+
+        if (outcome?.Workout is { } workout)
+        {
+            Navigation.NavigateTo($"log/{workout.Id}");
+        }
+    }
 
     private string UnplacedNames(WeekDraft draft) =>
         string.Join(", ", draft.Unplaced.Select(id => _plan?.Sessions.FirstOrDefault(s => s.Id == id)?.Name ?? id));
