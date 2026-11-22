@@ -8,10 +8,10 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The guarded save module exists and is tested once at its own interface over the in-memory store and the fault-injecting store: busy guard, read-only refusal, "no longer there", failure notice, success.
-- [ ] Home, the Custom workout draft, the log, Theme saving and the writers use it; no page or flow keeps its own saving flag plus try/finally plus notice report.
-- [ ] The `WhileSavingAsync`-style helpers in Home and the draft are gone.
-- [ ] All existing Ui tests pass with only their copied-internals assertions changed; Core and Web tests unchanged.
-- [ ] `dotnet build` has 0 warnings.
+- [x] The guarded save module exists and is tested once at its own interface over the in-memory store and the fault-injecting store: busy guard, read-only refusal, "no longer there", failure notice, success.
+- [x] Home, the Custom workout draft, the log, Theme saving and the writers use it; no page or flow keeps its own saving flag plus try/finally plus notice report.
+- [x] The `WhileSavingAsync`-style helpers in Home and the draft are gone.
+- [x] All existing Ui tests pass with only their copied-internals assertions changed; Core and Web tests unchanged.
+- [x] `dotnet build` has 0 warnings.

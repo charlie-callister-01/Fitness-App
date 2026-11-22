@@ -54,7 +54,6 @@ public sealed class FinishFlow(AppData data, SaveFailureNotice notice, IClock cl
         Phase = FinishPhase.None;
         Message = null;
         PainMessage = null;
-        Saving = false;
     }
 
     /// <summary>Finish was tapped: the Partial prompt when planned Exercises are not done, else the finish write (which refuses with no confirmed Set).</summary>

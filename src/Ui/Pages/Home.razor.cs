@@ -16,7 +16,7 @@ public sealed partial class Home : IDisposable
 {
     private HomeView _view = default!;
     private IReadOnlySet<string> _dismissed = new HashSet<string>();
-    private bool _saving;
+    private GuardedSave _save = default!;
     private bool _differentOpen;
     private bool _pastOpen;
     private bool _weightOpen;
@@ -67,6 +67,7 @@ public sealed partial class Home : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        _save = new GuardedSave(Data, Notice);
         Data.Changed += OnDataChanged;
         Rebuild();
         await RefreshAsync();
@@ -101,43 +102,27 @@ public sealed partial class Home : IDisposable
 
     private void OnOpenProgress() => Navigation.NavigateTo("progress");
 
-    /// <summary>Runs a save with the page marked busy. A second tap while one is running does nothing (returns null).</summary>
-    private async Task<T?> WhileSavingAsync<T>(Func<Task<T>> work)
-        where T : class
+    /// <summary>Starts a Workout under the guarded save and opens the log when there is a Workout to open (null when the save was refused).</summary>
+    private async Task<StartOutcome?> StartAndOpenAsync(Func<Task<StartOutcome>> start)
     {
-        if (_saving)
+        StartOutcome? outcome = null;
+        var result = await _save.RunAsync(async () =>
+        {
+            outcome = await start();
+            return outcome.Commit is { } commit ? SaveWork.Committed(commit) : SaveWork.None;
+        });
+        if (result.Status is SaveStatus.Busy or SaveStatus.ReadOnly)
         {
             return null;
         }
 
-        _saving = true;
-        try
+        if (outcome?.Workout is { } workout)
         {
-            return await work();
+            Navigation.NavigateTo($"log/{workout.Id}");
         }
-        finally
-        {
-            _saving = false;
-        }
+
+        return outcome;
     }
-
-    /// <summary>Starts a Workout, reports a failed save, and opens the log when there is a Workout to open (null when busy).</summary>
-    private Task<StartOutcome?> StartAndOpenAsync(Func<Task<StartOutcome>> start) =>
-        WhileSavingAsync(async () =>
-        {
-            var outcome = await start();
-            if (outcome.Commit is { } commit)
-            {
-                Notice.Report(commit);
-            }
-
-            if (outcome.Workout is { } workout)
-            {
-                Navigation.NavigateTo($"log/{workout.Id}");
-            }
-
-            return outcome;
-        });
 
     private async Task StartAsync(Session session) => await StartSessionAsync(session);
 
@@ -241,14 +226,9 @@ public sealed partial class Home : IDisposable
                 return false;
             case WeighInResult.Valid valid:
                 _weightMessage = null;
-                var result = await WhileSavingAsync(async () =>
-                {
-                    var committed = await Data.CommitAsync(Change.Put(valid.WeighIn));
-                    Notice.Report(committed);
-                    return committed;
-                });
-                _weightOpen = _weightOpen && result is not CommitResult.Committed;
-                return result is CommitResult.Committed;
+                var result = await _save.CommitAsync(Change.Put(valid.WeighIn));
+                _weightOpen = _weightOpen && !result.IsSaved;
+                return result.IsSaved;
             default:
                 return false;
         }

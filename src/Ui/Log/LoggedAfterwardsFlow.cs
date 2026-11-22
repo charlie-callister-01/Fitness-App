@@ -24,7 +24,6 @@ public sealed class LoggedAfterwardsFlow(AppData data, SaveFailureNotice notice)
     {
         Open = false;
         Message = null;
-        Saving = false;
     }
 
     public void Begin()

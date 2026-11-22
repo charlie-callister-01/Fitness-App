@@ -13,7 +13,7 @@
 
     <div class="fa-home__columns">
         <div class="fa-home__main">
-            <TodayCard Card="_view.Today" Today="Today" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Starting="_saving"
+            <TodayCard Card="_view.Today" Today="Today" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Starting="_save.IsBusy"
                        OnStart="StartAsync" OnContinue="OnContinue" OnOpenSummary="OnOpenSummary" />
 
             @if (_view.ShowAlternatives)
@@ -62,11 +62,11 @@
         </div>
     </div>
 
-    <DifferentSessionSheet Open="_differentOpen" Sessions="UndoneSessions" Saving="_saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
+    <DifferentSessionSheet Open="_differentOpen" Sessions="UndoneSessions" Saving="_save.IsBusy" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
                            OnPick="PickDifferentAsync" OnBuildCustom="BuildCustomFromSheet" OnClose="CloseDifferent" />
-    <LogPastWorkoutSheet Open="_pastOpen" Today="Today" Sessions="PlanSessions" Saving="_saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
+    <LogPastWorkoutSheet Open="_pastOpen" Today="Today" Sessions="PlanSessions" Saving="_save.IsBusy" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
                          Message="@_pastMessage" OnStart="StartPastAsync" OnClose="ClosePast" />
     <LogWeightSheet Open="_weightOpen" InitialText="@LatestWeightText" LastText="@LastWeightText" UnitLabel="@Converter.WeightLabel"
-                    Saving="_saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Message="@_weightMessage"
+                    Saving="_save.IsBusy" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Message="@_weightMessage"
                     OnSave="SaveWeightAsync" OnClose="CloseWeight" />
 </div>

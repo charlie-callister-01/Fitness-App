@@ -18,7 +18,7 @@ public sealed partial class CustomWorkoutDraft : IDisposable
     private string? _initialisedFor;
     private bool _initialised;
     private bool _pickerOpen;
-    private bool _saving;
+    private GuardedSave _save = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
 
@@ -64,7 +64,11 @@ public sealed partial class CustomWorkoutDraft : IDisposable
         }
     }
 
-    protected override void OnInitialized() => Data.Changed += OnDataChanged;
+    protected override void OnInitialized()
+    {
+        _save = new GuardedSave(Data, Notice);
+        Data.Changed += OnDataChanged;
+    }
 
     protected override void OnParametersSet()
     {
@@ -121,29 +125,21 @@ public sealed partial class CustomWorkoutDraft : IDisposable
 
     private async Task StartAsync()
     {
-        // A second tap while the first is saving must not start another Workout.
-        if (_saving || !CanWrite || _draft.Count == 0 || ActivePlan is not { } plan)
+        if (_draft.Count == 0 || ActivePlan is not { } plan)
         {
             return;
         }
 
-        _saving = true;
-        try
+        // A second tap while the first is saving is refused by the guard, so it cannot start another Workout.
+        StartOutcome? outcome = null;
+        await _save.RunAsync(async () =>
         {
-            var outcome = await new WorkoutStarter(Data, Ids, Clock).StartCustomAsync(plan, RowsToStart(plan), Today);
-            if (outcome.Commit is { } commit)
-            {
-                Notice.Report(commit);
-            }
-
-            if (outcome.Workout is { } workout)
-            {
-                Navigation.NavigateTo($"log/{workout.Id}");
-            }
-        }
-        finally
+            outcome = await new WorkoutStarter(Data, Ids, Clock).StartCustomAsync(plan, RowsToStart(plan), Today);
+            return outcome.Commit is { } commit ? SaveWork.Committed(commit) : SaveWork.None;
+        });
+        if (outcome?.Workout is { } workout)
         {
-            _saving = false;
+            Navigation.NavigateTo($"log/{workout.Id}");
         }
     }
 }

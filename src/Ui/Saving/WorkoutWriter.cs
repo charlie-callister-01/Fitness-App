@@ -5,23 +5,23 @@ using Core.Storage;
 namespace Ui.Saving;
 
 /// <summary>
-/// What an edit that can be refused came to: committed (<see cref="Commit"/> is the commit's result), refused (<see cref="Refusal"/> is the
-/// plain reason, nothing was committed), or neither because the Workout is gone (<see cref="Commit"/> is null).
+/// What an edit that can be refused came to: <see cref="Save"/> is how the guarded save ended, and <see cref="Refusal"/> is the plain
+/// reason when the edit's rule refused it (nothing was committed, and it is not a save failure).
 /// </summary>
-public sealed record WriteOutcome(CommitResult? Commit, string? Refusal)
+public sealed record WriteOutcome(SaveResult Save, string? Refusal)
 {
-    public bool IsCommitted => Commit is CommitResult.Committed;
+    public bool IsCommitted => Save.IsSaved;
 }
 
 /// <summary>
 /// Saves changes to one Workout. Each change is applied to the snapshot's latest copy of the Workout (never a copy held since an
-/// earlier render, which other changes may have replaced), committed at once, and the outcome reported to the save-failure notice.
+/// earlier render, which other changes may have replaced) and committed through the <see cref="GuardedSave"/>.
 /// </summary>
-public sealed class WorkoutWriter(AppData data, SaveFailureNotice notice)
+public sealed class WorkoutWriter(AppData data, GuardedSave save)
 {
-    /// <summary>The commit's result, or null when the Workout is no longer there (the notice then says so).</summary>
-    public async Task<CommitResult?> ChangeAsync(string workoutId, Func<Workout, Workout> change) =>
-        (await EditAsync(workoutId, w => EditResult.Changed(change(w)))).Commit;
+    /// <summary>How the save ended; <see cref="SaveStatus.Gone"/> when the Workout is no longer there (the notice then says so).</summary>
+    public async Task<SaveResult> ChangeAsync(string workoutId, Func<Workout, Workout> change) =>
+        (await EditAsync(workoutId, w => EditResult.Changed(change(w)))).Save;
 
     /// <summary>
     /// Applies an edit that may be refused. The rule runs once, against the latest copy: a refusal commits nothing and comes back in
@@ -29,20 +29,23 @@ public sealed class WorkoutWriter(AppData data, SaveFailureNotice notice)
     /// </summary>
     public async Task<WriteOutcome> EditAsync(string workoutId, Func<Workout, EditResult> edit)
     {
-        if (data.Snapshot.Workouts.FirstOrDefault(w => w.Id == workoutId) is not { } latest)
+        string? refusal = null;
+        var result = await save.RunAsync(async () =>
         {
-            notice.ReportMessage("That Workout is no longer open, so nothing was saved.");
-            return new WriteOutcome(null, null);
-        }
+            if (data.Snapshot.Workouts.FirstOrDefault(w => w.Id == workoutId) is not { } latest)
+            {
+                return SaveWork.Gone("That Workout is no longer open, so nothing was saved.");
+            }
 
-        var result = edit(latest);
-        if (result.Workout is not { } changed)
-        {
-            return new WriteOutcome(null, result.Refusal);
-        }
+            var edited = edit(latest);
+            if (edited.Workout is not { } changed)
+            {
+                refusal = edited.Refusal;
+                return SaveWork.None;
+            }
 
-        var commit = await data.CommitAsync(Change.Put(changed));
-        notice.Report(commit);
-        return new WriteOutcome(commit, null);
+            return SaveWork.Committed(await data.CommitAsync(Change.Put(changed)));
+        });
+        return new WriteOutcome(result, refusal);
     }
 }
