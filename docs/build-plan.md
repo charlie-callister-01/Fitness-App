@@ -1,16 +1,8 @@
 # Build plan and workflow
 
-## Workflow (every stage; also in `../CLAUDE.md`)
+## Workflow
 
-1. **`/to-spec`**: write the spec for the stage.
-2. **`/to-tickets`**: break the spec into tickets. Each ticket must fit one agent in roughly **150-200k tokens** of context (reading, writing, tests and fixes). Split anything bigger.
-3. **Implement** the tickets (test-first; each ticket includes its tests).
-4. **`/mattpocock-skills:code-review`**: review of the stage's changes. Always this skill, not the built-in `/code-review`.
-5. **`/thermo-nuclear-code-quality-review`**: strict maintainability review (`../.claude/skills/thermo-nuclear-code-quality-review/SKILL.md`). User-invoked only; if it can't be run as a skill, read the file and apply it. Its rules are TypeScript-flavoured; apply the same intent to C# (nullable abuse, `object`, casts, files over 1k lines, ad-hoc branching).
-6. **Apply the fixes** from both reviews.
-7. **`/pr`**: write the PR body with extra explanation of what changed and why, and any non-obvious decisions.
-
-Don't skip or merge steps, and don't start the next stage until the current stage's PR is written. Issues live in GitHub Issues (`gh` CLI; see `agents/issue-tracker.md`). Labels: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix.
+Follow the build workflow in [`../AGENTS.md`](../AGENTS.md). Issues and tickets live in local markdown (see [`agents/issue-tracker.md`](agents/issue-tracker.md)).
 
 ## Two tracks
 
@@ -78,21 +70,7 @@ Notes for the specs:
 None of these block A0 to A4.
 
 ## Status and next step
-**A0 is merged and deployed** (spec #1, tickets #2 to #6, PR #7; deploy fix PR #9). GitHub Pages source is set to "GitHub Actions" and the Deploy run succeeds. Still to confirm by hand, because they need a phone or a throwaway PR: install, offline open and update pickup (see `pwa-manual-checks.md`); that a deep link restores in a real browser; that CI fails on a deliberately failing test; and the `lan` run profile from a phone.
-
-**Track B design is delivered and sliced into stages B0 to B11** (see above); the first UI stage to spec is **B0 (design system and app shell)**, which only needs A0 and A3. B9 needs A4 and A4.5 PR 1; B10 no longer needs A5 (A5 now only supplies an example and test dataset, so First run has no bundled starter Plan: re-decide its content when Data and settings is specced).
-
-**B0 (design system and app shell) is merged and deployed** (PR #18; Core 814, Ui 103, Web 37 tests plus 47 browser tests). Delivered: Theme and Mode as Settings, the design assets and PWA identity, Theme switching, Button/Icon/StatusOrb/EmptyState, the shell (tab bar and rail, three layouts, placeholder routes), and the More page with temporary Appearance pickers (and a Debug-only component showcase). Still owed by hand on a phone: the B0 sections of `pwa-manual-checks.md`. Review items deferred: see `.scratch/b0-design-system-and-shell/pr-body.md`. **Next: B1 (Workout log, core input) and, in parallel if wanted, A5 (starter data) and B4/B6/B7 (screens that depend only on B0 and Core).** See `.scratch/b1-workout-log/HANDOFF.md`.
-
-**A1 and A2 are merged** (539 Core and 9 Ui tests green). **A3 (Storage) is implemented** (all nine tickets). Remaining for A3: the two reviews, their fixes, and the PR. **Next stage: A4 (Export, Import and prompt pack)**, once A3's PR is written. Read `docs/README.md`, `CLAUDE.md` and `GLOSSARY.md` first. The storage manual checks (quota-full, persistence grant, cleared data, blocked upgrade, iOS Safari) still need doing by hand on a phone; see `pwa-manual-checks.md`.
-
-**B1 (Workout log, core input) is merged** (PR #20; spec [`specs/b1-workout-log-core-input.md`](specs/b1-workout-log-core-input.md); tickets in `.scratch/b1-workout-log/issues/`; PR body `.scratch/b1-workout-log/pr-body.md`). Both reviews and their fix pass are done. Tests: Core 939, Ui 210, Web 37 (browser tests not run for B1). Owed by hand on a phone: the "Workout log manual checks (B1)" section of `pwa-manual-checks.md`. B1 alone is not yet a daily tool (no Skip, Swap, rest timer or summary); start logging real Workouts after B2.
-
-**B2 (Workout log, menus and finishing) is merged** (PR #21, 20 Nov 2026; branch `b2-implementation`; spec [`specs/b2-workout-log-menus-and-finishing.md`](specs/b2-workout-log-menus-and-finishing.md); nine tickets in `.scratch/b2-workout-log-menus-and-finishing/issues/`, four review-fix tickets in `.../fixes/`, PR body `.../pr-body.md`). Delivered: the Exercise menu and Workout menu (§8.4: benchmark, Theme, Mode, rest timer), the shared Sheet shell, the skip sheet, the Swap and Add picker (C-14), View Guide as a sheet, the rest countdown and Wake Lock, Finish with the Partial prompt, the Pain check (C-13) and the finish summary (§8.5), reopening a finished Workout to its summary, Logged afterwards (§8.6: re-date, banner, no timers, PRs judged as of that date, undo), the unit-aware Suggested target reason, and error and read-only states for every action. Tests: Core 1048, Ui 358, Web 39 (browser tests not run for B2). Owed by hand on a phone: the "Workout log manual checks (B2)" section of `pwa-manual-checks.md` (and the B1 section, still unticked). **Both reviews and their fix pass are done.** **Next stage: B3 (Home).** Read `.scratch/b3-home/HANDOFF.md` first. A5 and B4/B6/B7 can still run in parallel.
-
-**B3 (Home) is implemented** on the `b3-implementation` branch (spec [`specs/b3-home.md`](specs/b3-home.md); fourteen tickets in `.scratch/b3-home/issues/`). Delivered: the real Home (S-01) built from one Core seam (`HomeViewBuilder`): the TodayCard in all eight states, the week strip, week line and three orbs, up to two Nudges with per-week dismissals kept on the device, Recent PRs, the Weight panel and the Log weight sheet, Do a different Session, Build a Custom workout (also Make up a Missed session) and Log a past Workout. The first stage planned with the agent workflow trial; tickets 06 to 14 were done by the planning session itself after the implementer tool hit its usage limit (see `agents/workflow-change-log.md`). Known gap: the shell caps the content column at 560 px, so the two-column desktop layout (from 900 px) only shows once the layouts allow a wider column.
-
-**Editors (B4 + B5) is implemented** on the `b4-implementation` branch (spec [`specs/editors-b4-b5.md`](specs/editors-b4-b5.md), issue #24; ten tickets in `.scratch/editors/issues/`). Delivered: the guarded save, page context and form sheet modules with Home, the Custom workout draft and the log moved onto them; the Guide page, the Exercise library with New Exercise and a live "Add a new Exercise" in the picker; the Plans list and Plan editor (Settings, Phases, Sessions); the Week view with Move, Add a Break and the suggested week. Tests: Core 1309, Ui 597, Web 39 (browser tests not run). Owed: both reviews, the fix pass and the PR body (`.scratch/editors/pr-body.md`), the "Editors manual checks (B4 + B5)" in `pwa-manual-checks.md`, and the architecture pass. Open items for the owner are in `.scratch/data-and-settings/HANDOFF.md`. **Next group: Data and settings (B9 + B10).**
+Live status and the next action live in [`STATUS.md`](STATUS.md) and [`HANDOFF.md`](HANDOFF.md); session history is in [`LOG.md`](LOG.md).
 
 ### Open items for the owner (from B2)
 - **Added Exercise position is approximate.** The data model does not record which row an added Exercise follows, so it is placed after the row that owns the nearest earlier entry. After a swap or skip it can land somewhere other than where you added it. A proper fix needs a position field on the entry (a data-model change, A-stage).
