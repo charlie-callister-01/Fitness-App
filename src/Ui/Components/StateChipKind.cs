@@ -8,4 +8,6 @@ public enum StateChipKind
     Skipped,
     Swapped,
     Pain,
+    Missed,
+    Today,
 }

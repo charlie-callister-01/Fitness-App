@@ -19,6 +19,8 @@
             StateChipKind.Skipped => ("skipped", "—", "Skipped"),
             StateChipKind.Swapped => ("swapped", "⇄", "Swapped"),
             StateChipKind.Pain => ("pain", "✚", "Pain"),
+            StateChipKind.Missed => ("missed", "○", "Missed"),
+            StateChipKind.Today => ("today", "●", "Today"),
             _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "Unknown state."),
         };
 }
