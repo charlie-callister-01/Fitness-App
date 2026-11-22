@@ -180,8 +180,16 @@ public sealed record PlanSettingsForm
     /// Applies the Plan settings and every Track's name and rhythm settings to <paramref name="plan"/>, or returns the plain reason they
     /// cannot be read or are refused by the Plan or Track rules (checking the selected Track first so its message is shown on screen).
     /// </summary>
-    public PlanEditResult<Plan> ApplyTo(Plan plan, string selectedTrackId)
+    public PlanEditResult<Plan> ApplyTo(Plan plan, string selectedTrackId) =>
+        ApplyTo(plan, selectedTrackId, out _);
+
+    /// <summary>
+    /// Applies the Plan settings and every Track's name and rhythm settings to <paramref name="plan"/>, setting <paramref name="problemTrack"/>
+    /// when a specific Track's name or settings caused the refusal.
+    /// </summary>
+    public PlanEditResult<Plan> ApplyTo(Plan plan, string selectedTrackId, out Track? problemTrack)
     {
+        problemTrack = null;
         if (!DateOnly.TryParseExact(StartDate, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
         {
             return Invalid("Pick a start date.");
@@ -208,6 +216,7 @@ public sealed record PlanSettingsForm
             var selectedCheck = ValidateAndApplyTrack(plan, selectedTrack);
             if (!selectedCheck.TryGet(out _, out var selectedReason))
             {
+                problemTrack = selectedTrack;
                 return Invalid(selectedReason);
             }
         }
@@ -222,6 +231,7 @@ public sealed record PlanSettingsForm
         {
             if (!ValidateAndApplyTrack(current, track).TryGet(out var updated, out var trackReason))
             {
+                problemTrack = track;
                 return Invalid(trackReason);
             }
 

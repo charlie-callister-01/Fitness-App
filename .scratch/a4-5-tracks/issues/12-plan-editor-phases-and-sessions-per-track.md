@@ -13,7 +13,13 @@
 
 **Blocked by:** 11.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] bUnit tests: switching Track swaps the Phases and Sessions shown; Phase overlap inside one Track refused naming both Phases; a Phase in another Track with the same weeks is allowed; a Track with no Phases; add a daily Session (no day picker); weekly day list has no Daily; Mobility offered as a type; benchmark controls only on the main Track; override Session list is the Track's own; a problem on a non-selected Track still disables Save and names the Track; past Workouts unchanged after Save; read-only reasons.
-- [ ] `dotnet build` 0 warnings; Ui tests green.
+- [x] bUnit tests: switching Track swaps the Phases and Sessions shown; Phase overlap inside one Track refused naming both Phases; a Phase in another Track with the same weeks is allowed; a Track with no Phases; add a daily Session (no day picker); weekly day list has no Daily; Mobility offered as a type; benchmark controls only on the main Track; override Session list is the Track's own; a problem on a non-selected Track still disables Save and names the Track; past Workouts unchanged after Save; read-only reasons.
+- [x] `dotnet build` 0 warnings; Ui tests green.
+
+## Comments
+- Updated `PlanPhasesTab.razor(.cs)` to render and edit the selected Track's Phases (`State.SelectedTrack.Phases`, keyed by `State.SelectedTrackId`), showing `"No Phases for this Track"` when empty, computing week dates from `State.Snapshot.Preview`, and listing only the selected Track's Sessions (`TrackRules.SessionsOf(State.Draft, State.SelectedTrack)`) in the Phase Session override dropdown.
+- Updated `PlanSessionsTab.razor(.cs)` to render and edit the selected Track's Sessions (`TrackRules.SessionsOf(State.Draft, State.SelectedTrack)`), showing `"Every day"` (and omitting the day picker) when adding a Session on a daily Track or editing a daily Session, listing only `Monday` to `Sunday` on weekly Tracks, offering `Mobility` in the `Type` dropdown, and showing both the row `"Benchmark exercise"` checkbox and the Session sheet `"Benchmark interval (weeks)"` field on the main Track only (`State.IsMainTrackSelected`).
+- Extended `PlanEditState`, `PlanEditSnapshot` and `PlanSettingsForm` so validation runs across all Tracks in the draft (checking the selected Track first) and any problem on a non-selected Track still disables Save and names the tab and Track (`"Phases (Mobility)"`, `"Sessions (Cardio)"`, `"Settings (Cardio)"`).
+- Added 8 bUnit tests in `PlanEditorTests.cs` covering all ticket 12 checklist items.

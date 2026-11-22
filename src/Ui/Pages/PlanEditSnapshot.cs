@@ -7,11 +7,18 @@ namespace Ui.Pages;
 /// owner sees it now (for dates). <see cref="Composed"/> is null exactly when <see cref="ProblemTab"/> is not.
 /// </summary>
 public sealed record PlanEditSnapshot(
-    string? SettingsProblem, string? PhasesProblem, string? SessionsProblem, Plan? Composed, Plan Preview)
+    string? SettingsProblem,
+    string? PhasesProblem,
+    string? SessionsProblem,
+    Plan? Composed,
+    Plan Preview,
+    string? ProblemTabOverride = null)
 {
     /// <summary>The tab to open to fix the first problem, or null when there is none.</summary>
     public string? ProblemTab =>
-        SettingsProblem is not null ? "Settings" : PhasesProblem is not null ? "Phases" : SessionsProblem is not null ? "Sessions" : null;
+        ProblemTabOverride
+        ?? (SettingsProblem is not null ? "Settings" : PhasesProblem is not null ? "Phases" : SessionsProblem is not null ? "Sessions" : null);
 
     public bool IsValid => ProblemTab is null;
 }
+

@@ -209,27 +209,93 @@ public sealed class PlanEditState
 
     private PlanEditSnapshot Read()
     {
-        var settings = Form.ApplyTo(Draft, SelectedTrack.Id);
-        var mainTrack = TrackRules.Main(Draft);
-        var mainPhases = mainTrack.Phases;
-        var phasesProblem = PlanPhaseRules.ValidatePhases(Draft, mainTrack.Id, mainPhases);
-        var sessionsProblem = Draft.Sessions
-            .Select(s => s.Exercises.Select(r => RowProblem(s.Id, r)).FirstOrDefault(p => p is not null) is { } reason ? $"{s.Name}: {reason}" : null)
-            .FirstOrDefault(p => p is not null);
+        var selectedTrack = SelectedTrack;
+        var settings = Form.ApplyTo(Draft, selectedTrack.Id, out var settingsTrack);
 
+        var selectedPhasesProblem = PlanPhaseRules.ValidatePhases(Draft, selectedTrack.Id, selectedTrack.Phases);
+        var anyPhasesProblem = selectedPhasesProblem;
+        var phasesProblemTrack = selectedPhasesProblem is not null ? selectedTrack : null;
+        if (anyPhasesProblem is null)
+        {
+            foreach (var track in Draft.Tracks)
+            {
+                if (PlanPhaseRules.ValidatePhases(Draft, track.Id, track.Phases) is { } reason)
+                {
+                    anyPhasesProblem = reason;
+                    phasesProblemTrack = track;
+                    break;
+                }
+            }
+        }
+
+        string? selectedSessionsProblem = null;
+        string? anySessionsProblem = null;
+        Track? sessionsProblemTrack = null;
+        foreach (var session in Draft.Sessions)
+        {
+            if (session.Exercises.Select(r => RowProblem(session.Id, r)).FirstOrDefault(p => p is not null) is not { } reason)
+            {
+                continue;
+            }
+
+            var message = $"{session.Name}: {reason}";
+            if (session.TrackId == selectedTrack.Id && selectedSessionsProblem is null)
+            {
+                selectedSessionsProblem = message;
+            }
+
+            if (anySessionsProblem is null || session.TrackId == selectedTrack.Id && sessionsProblemTrack?.Id != selectedTrack.Id)
+            {
+                anySessionsProblem = message;
+                sessionsProblemTrack = TrackRules.TrackOf(Draft, session) ?? selectedTrack;
+            }
+        }
+
+        var phasesProblem = selectedPhasesProblem ?? anyPhasesProblem;
+        var sessionsProblem = selectedSessionsProblem ?? anySessionsProblem;
+
+        string? problemTab = null;
         if (!settings.TryGet(out var withSettings, out var settingsProblem))
         {
-            return new PlanEditSnapshot(settingsProblem, phasesProblem, sessionsProblem, null, Draft);
+            problemTab = FormatProblemTab("Settings", settingsTrack);
+            return new PlanEditSnapshot(settingsProblem, phasesProblem, sessionsProblem, null, Draft, problemTab);
+        }
+
+        if (anyPhasesProblem is not null)
+        {
+            problemTab = FormatProblemTab("Phases", phasesProblemTrack);
+        }
+        else if (anySessionsProblem is not null)
+        {
+            problemTab = FormatProblemTab("Sessions", sessionsProblemTrack);
         }
 
         var preview = Draft with { StartDate = withSettings.StartDate };
         Plan? composed = null;
-        if (sessionsProblem is null
-            && PlanPhaseRules.WithPhases(withSettings, mainTrack.Id, mainPhases).TryGet(out var withPhases, out _))
+        if (problemTab is null)
         {
-            composed = withPhases;
+            var current = withSettings;
+            var allPhasesValid = true;
+            foreach (var track in Draft.Tracks)
+            {
+                if (!PlanPhaseRules.WithPhases(current, track.Id, track.Phases).TryGet(out var next, out _))
+                {
+                    allPhasesValid = false;
+                    break;
+                }
+
+                current = next;
+            }
+
+            if (allPhasesValid)
+            {
+                composed = current;
+            }
         }
 
-        return new PlanEditSnapshot(null, phasesProblem, sessionsProblem, composed, preview);
+        return new PlanEditSnapshot(null, phasesProblem, sessionsProblem, composed, preview, problemTab);
     }
+
+    private string FormatProblemTab(string tab, Track? track) =>
+        Draft.Tracks.Count > 1 && track is not null && track.Id != SelectedTrack.Id ? $"{tab} ({track.Name})" : tab;
 }
