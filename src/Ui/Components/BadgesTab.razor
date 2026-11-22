@@ -1,0 +1,94 @@
+@using Core.Rules.Insight
+@using Core.Storage
+@using Core.Rules.Units
+@using Core.Time
+@implements IDisposable
+@* Badges tab of Trophies (design S-13): "Badges unlocked: x / y", ProgressBars for the closest few, then the BadgeTile grid. A tap opens the
+   Badge detail in place. What is drawn comes from the Core TrophyViewBuilder. *@
+<div class="fa-badges">
+    @if (Selected is { } selected)
+    {
+        <BadgeDetail Badge="selected" OnClose="() => _selectedId = null" OnEdit="OpenEdit" />
+    }
+    else if (!_view.HasHistory)
+    {
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Badges yet" Message="Finish a Workout and your Badges will start to fill in here."
+                    ActionLabel="Add a Badge" OnAction="OpenAdd" />
+    }
+    else
+    {
+        <div class="fa-badges__header">
+            <p class="fa-label fa-badges__count">Badges unlocked: @_view.UnlockedCount / @_view.TotalCount</p>
+            <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite" OnClick="OpenAdd">Add a Badge</Button>
+        </div>
+
+        @foreach (var badge in _view.Closest)
+        {
+            <ProgressBar Label="@badge.Name" Value="@badge.ProgressText" Percent="badge.Percent" />
+        }
+
+        <div class="fa-badgegrid">
+            @foreach (var badge in _view.Badges)
+            {
+                <BadgeTile Badge="badge" OnOpen="id => _selectedId = id" />
+            }
+        </div>
+    }
+
+    <BadgeEditor Open="_editorOpen" Badge="_editing" OnClose="() => _editorOpen = false" />
+</div>
+
+@code {
+    private TrophyView _view = new([], 0, [], false);
+    private string? _selectedId;
+    private bool _editorOpen;
+    private Core.Model.Badge? _editing;
+
+    private Ui.Pages.PageContext Page => new(Data, Clock);
+
+    private void OpenAdd()
+    {
+        _editing = null;
+        _editorOpen = true;
+    }
+
+    private void OpenEdit()
+    {
+        _editing = Data.Snapshot.Badges.FirstOrDefault(b => b.Id == _selectedId);
+        _editorOpen = _editing is not null;
+    }
+
+    /// <summary>A Badge to open straight away (from the UnlockToast link).</summary>
+    [Parameter]
+    public string? InitialBadgeId { get; set; }
+
+    [Inject] private AppData Data { get; set; } = default!;
+
+    [Inject] private IClock Clock { get; set; } = default!;
+
+    private TrophyBadge? Selected => _selectedId is null ? null : _view.Badges.FirstOrDefault(b => b.Id == _selectedId);
+
+    protected override void OnInitialized()
+    {
+        _selectedId = InitialBadgeId;
+        Data.Changed += OnDataChanged;
+        Rebuild();
+    }
+
+    public void Dispose() => Data.Changed -= OnDataChanged;
+
+    private void OnDataChanged() => _ = InvokeAsync(() =>
+    {
+        Rebuild();
+        StateHasChanged();
+    });
+
+    private void Rebuild()
+    {
+        var snapshot = Data.Snapshot;
+        var context = new Ui.Pages.PageContext(Data, Clock);
+        _view = TrophyViewBuilder.Build(
+            context.ActivePlan, snapshot.Exercises, snapshot.Badges, snapshot.Workouts, snapshot.Breaks, snapshot.WeighIns,
+            context.Today, new UnitConverter(snapshot.Settings));
+    }
+}

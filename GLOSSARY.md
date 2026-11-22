@@ -76,6 +76,10 @@ _Avoid_: Missed exercise (a Missed session is a different thing)
 A Set marked as a maximum attempt (e.g. a 1-rep or 3-rep max). When one exists for an Exercise it is the source of truth for that Exercise's best; otherwise the best is worked out from ordinary Sets.
 _Avoid_: Test set, 1RM entry
 
+**Estimated 1RM**:
+The one-rep max worked out from a Set by the Epley formula: weight x (1 + reps / 30). It ranks Load Sets and is what a strength chart plots, so sets of different weights and reps compare fairly. Never stored. A Max set is separate: it is a real attempt, not an estimate.
+_Avoid_: Calculated max
+
 **PR**:
 A Workout's best Set for an Exercise that strictly beats the previous best, by the rules for how that Exercise is measured.
 _Avoid_: Record, personal best
@@ -96,6 +100,14 @@ _Avoid_: Run, chain
 A user-editable achievement with a metric and a target, whose progress is always worked out from history.
 _Avoid_: Trophy, achievement
 
+
+**Best of the week**:
+The strongest PR of the current Monday-to-Sunday week, shown on the Bests tab: the biggest relative jump over the previous Best. None when no PR was set that week.
+_Avoid_: PR of the week
+
+**Weekly review**:
+The Sunday summary of one week (Monday to Sunday): a verdict (Target hit, On track, Behind, On a Break), Workouts against target, Streak, Missed Sessions, PRs, weight average and Pain checks. Derived, never stored; past weeks show Behind, not On track.
+_Avoid_: Report, recap
 **RPE**:
 How hard an Exercise felt, rated by the user per Exercise, as a small optional input used as progress data.
 _Avoid_: Effort, difficulty

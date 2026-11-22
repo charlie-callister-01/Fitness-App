@@ -45,10 +45,11 @@ public sealed class OrbRowTests : BunitContext
     }
 
     [Fact]
-    public void Each_orb_is_a_button_that_raises_OnOpenProgress()
+    public void Each_orb_is_a_button_the_Streak_opens_the_Calendar_and_the_others_Progress()
     {
-        var count = 0;
-        var cut = Render<OrbRow>(p => p.Add(o => o.Orbs, Orbs()).Add(o => o.OnOpenProgress, () => count++));
+        var progress = 0;
+        var calendar = 0;
+        var cut = Render<OrbRow>(p => p.Add(o => o.Orbs, Orbs()).Add(o => o.OnOpenProgress, () => progress++).Add(o => o.OnOpenCalendar, () => calendar++));
 
         var buttons = cut.FindAll("button.fa-orbrow__orb");
         Assert.Equal(3, buttons.Count);
@@ -57,6 +58,6 @@ public sealed class OrbRowTests : BunitContext
             button.Click();
         }
 
-        cut.WaitForAssertion(() => Assert.Equal(3, count));
+        cut.WaitForAssertion(() => Assert.Equal((2, 1), (progress, calendar)));
     }
 }

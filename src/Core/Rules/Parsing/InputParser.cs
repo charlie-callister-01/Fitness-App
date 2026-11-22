@@ -189,7 +189,7 @@ public sealed partial class InputParser
     {
         value = 0;
         return DecimalNumber().IsMatch(text)
-            && double.TryParse(text.Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value)
+            && DecimalText.TryParse(text, out value)
             && double.IsFinite(value);
     }
 

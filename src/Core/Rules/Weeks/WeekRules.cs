@@ -113,7 +113,7 @@ public static class WeekRules
         return (WeekCalendar.MondayOf(date).DayNumber - WeekCalendar.MondayOf(plan.StartDate).DayNumber) / 7 + 1;
     }
 
-    private static bool IsCounted(Plan plan, Track track, Workout w)
+    public static bool IsCounted(Plan plan, Track track, Workout w)
     {
         if (track.Rhythm is not TrackRhythm.Weekly weekly) return false;
         if (!w.Entries.Any(e => e.Status is EntryStatus.Done or EntryStatus.Swapped)) return false;

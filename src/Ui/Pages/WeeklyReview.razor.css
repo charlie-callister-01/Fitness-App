@@ -1,0 +1,83 @@
+.fa-review {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.fa-review h1,
+.fa-review h2 {
+    margin: 0;
+}
+
+.fa-review__weeks {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.fa-review__week {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-weight: 600;
+}
+
+.fa-review__verdict {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+}
+
+.fa-review__message {
+    margin: 0;
+}
+
+.fa-review__facts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+    margin: 0;
+}
+
+.fa-review__facts dt,
+.fa-review__facts dd {
+    margin: 0;
+}
+
+.fa-review__facts dd {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.fa-review__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-review__section p {
+    margin: 0;
+}
+
+.fa-review__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fa-review__rows li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.fa-review__exportnote {
+    margin: 0;
+}
+

@@ -6,8 +6,13 @@ namespace Core.Rules.Performance;
 /// </summary>
 internal static class SetRanking
 {
+    private const double EpleyDivisor = 30.0;
+
     /// <summary>Epley: kg x (1 + reps / 30).</summary>
-    public static double EstimatedOneRepMax(double weightKg, int reps) => weightKg * (1 + reps / 30.0);
+    public static double EstimatedOneRepMax(double weightKg, int reps) => weightKg * (1 + reps / EpleyDivisor);
+
+    /// <summary>The inverse of <see cref="EstimatedOneRepMax"/>: the weight in kg that gives <paramref name="oneRepMax"/> at <paramref name="reps"/>.</summary>
+    public static double WeightForOneRepMax(double oneRepMax, int reps) => oneRepMax / (1 + reps / EpleyDivisor);
 
     public static int Compare(double[] a, double[] b)
     {

@@ -1,6 +1,97 @@
 @page "/weekly-review"
-
-<div class="fa-root">
+@using Core.Rules.Insight
+@* Weekly review (design S-09, F-07): a verdict card, rows for Missed sessions, PRs, weight and Pain checks, and a week selector. Everything shown
+   comes from the Core WeeklyReviewView. The Export for the LLM button waits for the Export screen (B9), so a plain note stands in for it. *@
+<div class="fa-root fa-review">
     <h1 class="fa-title fa-title--l">Weekly review</h1>
-    <EmptyState Kind="EmptyStateKind.NoHistory" Title="Your weekly review will live here" Message="It arrives in a later stage." />
+
+    @if (!_view.HasPlan)
+    {
+        <EmptyState Kind="EmptyStateKind.NoPlan" Title="No active Plan" Message="Make a Plan active and its weekly review will show here." />
+    }
+    else
+    {
+        <nav class="fa-review__weeks" aria-label="Week">
+            <Button Variant="ButtonVariant.Secondary" Disabled="_view.PreviousMonday is null" AccessibleName="Previous week" OnClick="() => Select(_view.PreviousMonday)">Previous</Button>
+            <span class="fa-review__week" aria-live="polite">@WeekText</span>
+            <Button Variant="ButtonVariant.Secondary" Disabled="_view.NextMonday is null" AccessibleName="Next week" OnClick="() => Select(_view.NextMonday)">Next</Button>
+        </nav>
+
+        <section class="fa-well fa-review__verdict fa-review__verdict--@_view.Verdict.ToString().ToLowerInvariant()" aria-label="Verdict">
+            <h2 class="fa-title fa-title--m fa-review__verdicttitle">@VerdictTitle</h2>
+            <p class="fa-review__message">@_view.Message</p>
+            <dl class="fa-review__facts">
+                <div><dt class="fa-muted">Workouts</dt><dd class="fa-review__workouts">@_view.Counted of @_view.Target</dd></div>
+                <div><dt class="fa-muted">Streak</dt><dd class="fa-review__streak">@_view.Streak @(_view.Streak == 1 ? "week" : "weeks")</dd></div>
+            </dl>
+        </section>
+
+        <div class="fa-twocol fa-review__sections">
+        <section class="fa-review__section fa-review__missed" aria-label="Missed sessions">
+            <h2 class="fa-title fa-title--m">Missed sessions</h2>
+            @if (_view.Missed.Count == 0)
+            {
+                <p class="fa-muted">None missed.</p>
+            }
+            else
+            {
+                <ul class="fa-review__rows">
+                    @foreach (var missed in _view.Missed)
+                    {
+                        <li><span>@missed.SessionName</span> <span class="fa-muted">@Day(missed.Date)</span></li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="fa-review__section fa-review__prs" aria-label="PRs this week">
+            <h2 class="fa-title fa-title--m">PRs this week</h2>
+            @if (_view.Prs.Count == 0)
+            {
+                <p class="fa-muted">No PRs this week.</p>
+            }
+            else
+            {
+                <ul class="fa-review__rows">
+                    @foreach (var pr in _view.Prs)
+                    {
+                        <li><span>@pr.ExerciseName</span> <span>@ResultText(pr)</span> <span class="fa-muted">@Day(pr.WorkoutDate)</span></li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="fa-review__section fa-review__weight" aria-label="Weight">
+            <h2 class="fa-title fa-title--m">Weight</h2>
+            @if (_view.WeightAverage is { } average)
+            {
+                <p class="fa-review__average">Average @Num(average) @_view.UnitLabel, @LastWeekText</p>
+            }
+            else
+            {
+                <p class="fa-muted">No Weigh-ins this week.</p>
+            }
+        </section>
+
+        <section class="fa-review__section fa-review__pain" aria-label="Pain checks">
+            <h2 class="fa-title fa-title--m">Pain checks</h2>
+            @if (_view.PainChecks.Count == 0)
+            {
+                <p class="fa-muted">No pain reported.</p>
+            }
+            else
+            {
+                <ul class="fa-review__rows">
+                    @foreach (var pain in _view.PainChecks)
+                    {
+                        <li><span>@pain.Text</span> <span class="fa-muted">@Day(pain.Date)</span></li>
+                    }
+                </ul>
+            }
+        </section>
+
+        </div>
+
+        <p class="fa-muted fa-review__exportnote">Export for the LLM arrives with Export and Import.</p>
+    }
 </div>

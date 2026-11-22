@@ -1,6 +1,66 @@
 @page "/progress"
-
-<div class="fa-root">
+@using Core.Rules.Insight
+@* Progress (design S-07): three tabs. Progress shows group chips and a LineChart per Exercise logged twice or more; Benchmarks and Calendar are
+   placeholders until their own tickets. What is drawn comes from the Core ProgressList; this page holds the tab and the chip. *@
+<div class="fa-root fa-progress">
     <h1 class="fa-title fa-title--l">Progress</h1>
-    <EmptyState Kind="EmptyStateKind.NoHistory" Title="Your progress will live here" Message="Charts, Benchmarks and the calendar arrive in a later stage." />
+
+    <div class="fa-chips fa-progress__tabs" role="group" aria-label="Progress sections">
+        @foreach (var tab in Tabs)
+        {
+            var value = tab;
+            <Button Variant="ButtonVariant.Secondary" Pressed="_tab == value" OnClick="() => _tab = value">@value</Button>
+        }
+    </div>
+
+    @if (_tab == "Benchmarks")
+    {
+        <BenchmarksTab />
+    }
+    else if (_tab == "Calendar")
+    {
+        <CalendarTab />
+    }
+    else if (!HasHistory)
+    {
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No history yet" Message="Log a Workout and your Exercises will chart here once they have two entries." />
+    }
+    else
+    {
+        <DateRangePicker Value="_range" Today="Today" PlanStart="PlanStart" OnChanged="OnRangeChanged" />
+
+        @if (List.IsEmpty)
+        {
+            <p class="fa-muted">Nothing logged in this range.</p>
+        }
+
+        <div class="fa-chips fa-progress__chips" role="group" aria-label="Filter by group">
+            <Button Variant="ButtonVariant.Secondary" Pressed="_group is null" OnClick="() => _group = null">All</Button>
+            @foreach (var group in GroupChips)
+            {
+                var value = group;
+                <Button Variant="ButtonVariant.Secondary" Pressed="_group == value" OnClick="() => _group = value">@value</Button>
+            }
+        </div>
+
+        @if (Shown.Count == 0 && _group is not null)
+        {
+            <p class="fa-muted">Nothing logged in @_group yet.</p>
+        }
+
+        <div class="fa-twocol fa-progress__charts">
+            @foreach (var chart in Shown.SelectMany(g => g.Charts))
+            {
+                <LineChart Series="chart" />
+            }
+        </div>
+
+        @foreach (var row in Shown.SelectMany(g => g.NeedsTwo))
+        {
+            <div class="fa-progress__single fa-well">
+                <span class="fa-progress__single-name">@row.Name</span>
+                <span class="fa-muted">1 entry · needs 2 for a chart</span>
+            </div>
+        }
+    }
 </div>

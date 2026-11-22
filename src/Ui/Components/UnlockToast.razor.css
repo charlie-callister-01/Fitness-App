@@ -1,0 +1,12 @@
+.fa-unlocktoast {
+    display: block;
+    margin: 0;
+    color: inherit;
+    text-decoration: none;
+    animation: fa-unlocktoast-in 200ms ease-out;
+}
+
+@keyframes fa-unlocktoast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}

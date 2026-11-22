@@ -1,6 +1,7 @@
 using System.Globalization;
 using Core.Ids;
 using Core.Model;
+using Core.Rules.Parsing;
 using Core.Rules.PlanEditing;
 using Core.Rules.Tracks;
 using Core.Storage;
@@ -73,7 +74,7 @@ public partial class PlanPhasesTab
         ChangeGoal(id, index, g => g with { ExerciseId = e.Value?.ToString() ?? "" });
 
     private Task SetGoalWeight(string id, int index, ChangeEventArgs e) =>
-        double.TryParse(e.Value?.ToString()?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var kg)
+        DecimalText.TryParse(e.Value?.ToString(), out var kg)
             ? ChangeGoal(id, index, g => g with { WeightKg = kg })
             : Task.CompletedTask;
 

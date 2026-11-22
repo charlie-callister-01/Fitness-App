@@ -1,0 +1,13 @@
+.fa-badgetile__art {
+    display: block;
+    flex: none;
+    object-fit: contain;
+}
+
+.fa-tile--progress .fa-tile__v {
+    color: var(--art-ochre);
+}
+
+.fa-badgetile__mark {
+    font-weight: var(--w-label);
+}

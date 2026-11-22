@@ -1,0 +1,277 @@
+@using Core.Ids
+@using Core.Model
+@using Core.Rules.Badges
+@using Core.Rules.Insight
+@using Core.Rules.PlanEditing
+@using Core.Rules.Units
+@using Core.Storage
+@using Core.Time
+@using Ui.Saving
+@implements IDisposable
+@* C-22 BadgeEditor: a form sheet to create, change or delete a Badge. The rules (checking, the live line, the metric names) are Core's
+   BadgeEditingRules; saving goes through the one GuardedSave. A failed save keeps the draft and shows the usual notice. *@
+<FormSheet Open="Open" Title="@(Badge is null ? "Add a Badge" : "Edit Badge")" Saving="_save.IsBusy" CanWrite="_page.CanWrite"
+           ReadOnlyMessage="@_page.ReadOnlyMessage" Message="@_message" OnClose="CloseAsync">
+    <ChildContent>
+        <img class="fa-badgeeditor__art" src="@ArtPath" alt="" width="48" height="56" />
+
+        <label class="fa-badgeeditor__field">
+            <span class="fa-label">Name</span>
+            <input class="fa-badgeeditor__control fa-badgeeditor__name" type="text" @bind="_name" @bind:event="oninput" />
+        </label>
+
+        <label class="fa-badgeeditor__field">
+            <span class="fa-label">Counts</span>
+            <select class="fa-badgeeditor__control fa-badgeeditor__metric" @bind="MetricText">
+                @foreach (var choice in Choices)
+                {
+                    <option value="@choice.Value">@choice.Label</option>
+                }
+            </select>
+        </label>
+
+        @if (_metric == BadgeMetricChoice.ExerciseBest)
+        {
+            <label class="fa-badgeeditor__field">
+                <span class="fa-label">Exercise</span>
+                <select class="fa-badgeeditor__control fa-badgeeditor__exercise" @bind="ExerciseText">
+                    <option value="">Choose an Exercise</option>
+                    @foreach (var exercise in MeasurableExercises)
+                    {
+                        <option value="@exercise.Id">@exercise.Name</option>
+                    }
+                </select>
+            </label>
+        }
+
+        <label class="fa-badgeeditor__field">
+            <span class="fa-label">@TargetLabel</span>
+            <input class="fa-badgeeditor__control fa-badgeeditor__target" type="text" inputmode="decimal" @bind="_target" @bind:event="oninput" />
+        </label>
+
+        @if (UsesReps)
+        {
+            <label class="fa-badgeeditor__field">
+                <span class="fa-label">Reps</span>
+                <input class="fa-badgeeditor__control fa-badgeeditor__reps" type="text" inputmode="numeric" @bind="_reps" @bind:event="oninput" />
+            </label>
+        }
+
+        @if (_metric == BadgeMetricChoice.BodyWeight)
+        {
+            <label class="fa-badgeeditor__check">
+                <input class="fa-badgeeditor__drop" type="checkbox" @bind="_drop" />
+                <span>Drop by this much from my first Weigh-in</span>
+            </label>
+        }
+
+        @if (BadgeEditingText.OneRepMaxLine(Draft, Library, Units) is { } oneRepMax)
+        {
+            <p class="fa-muted fa-badgeeditor__onerm">@oneRepMax</p>
+        }
+
+        <p class="fa-well fa-badgeeditor__live" aria-live="polite">@LiveLine</p>
+
+        @if (_confirmingDelete)
+        {
+            <p class="fa-well fa-badgeeditor__confirm" role="alert">Delete this Badge? It is removed from your data and from Backups made from now on.</p>
+        }
+    </ChildContent>
+    <Actions Context="state">
+        @if (_confirmingDelete)
+        {
+            <Button Variant="ButtonVariant.Primary" Disabled="state.WriteDisabled" OnClick="DeleteAsync">Delete Badge</Button>
+            <Button Variant="ButtonVariant.Secondary" Disabled="state.Saving" OnClick="() => _confirmingDelete = false">Keep</Button>
+        }
+        else
+        {
+            <Button Variant="ButtonVariant.Primary" Disabled="state.WriteDisabled" OnClick="SaveAsync">Save</Button>
+            @if (Badge is not null)
+            {
+                <Button Variant="ButtonVariant.Secondary" Disabled="state.WriteDisabled" OnClick="() => _confirmingDelete = true">Delete</Button>
+            }
+        }
+    </Actions>
+</FormSheet>
+
+@code {
+    private sealed record MetricOption(string Value, string Label);
+
+    private static readonly MetricOption[] Choices =
+    [
+        new(nameof(BadgeMetricChoice.Workouts), "Workouts"),
+        new(nameof(BadgeMetricChoice.Streak), "Streak"),
+        new(nameof(BadgeMetricChoice.BestWeek), "Best week"),
+        new(nameof(BadgeMetricChoice.PrCount), "PR count"),
+        new(nameof(BadgeMetricChoice.ExerciseBest), "Exercise best"),
+        new(nameof(BadgeMetricChoice.BodyWeight), "Body weight"),
+    ];
+
+    private Ui.Pages.PageContext _page = default!;
+    private GuardedSave _save = default!;
+    private bool _wasOpen;
+    private string _name = "";
+    private BadgeMetricChoice _metric;
+    private string? _exerciseId;
+    private string _target = "";
+    private string _reps = "";
+    private bool _drop;
+    private bool _confirmingDelete;
+    private string? _message;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    /// <summary>The Badge being changed, or null to add a new one.</summary>
+    [Parameter]
+    public Badge? Badge { get; set; }
+
+    /// <summary>The sheet was closed (cancelled, saved or deleted).</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Inject] private AppData Data { get; set; } = default!;
+
+    [Inject] private IClock Clock { get; set; } = default!;
+
+    [Inject] private IIdGenerator Ids { get; set; } = default!;
+
+    [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+
+    private IReadOnlyList<Exercise> Library => Data.Snapshot.Exercises;
+
+    private UnitConverter Units => new(Data.Snapshot.Settings);
+
+    private IEnumerable<Exercise> MeasurableExercises =>
+        Library.Where(BadgeEditingRules.CanMeasure).OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase);
+
+    private Exercise? ChosenExercise => _metric == BadgeMetricChoice.ExerciseBest ? Library.FirstOrDefault(e => e.Id == _exerciseId) : null;
+
+    private bool UsesReps => ChosenExercise is { } e && BadgeEditingRules.UsesWeightAndReps(e);
+
+    private BadgeDraft Draft => new(_name, _metric, _exerciseId, _target, _reps, _drop);
+
+    private string MetricText
+    {
+        get => _metric.ToString();
+        set => _metric = Enum.TryParse<BadgeMetricChoice>(value, out var choice) ? choice : _metric;
+    }
+
+    private string ExerciseText
+    {
+        get => _exerciseId ?? "";
+        set => _exerciseId = value.Length == 0 ? null : value;
+    }
+
+    private string TargetLabel => _metric switch
+    {
+        BadgeMetricChoice.Workouts => "Workouts to complete",
+        BadgeMetricChoice.Streak => "Weeks in a row",
+        BadgeMetricChoice.BestWeek => "Workouts in one week",
+        BadgeMetricChoice.PrCount => "PRs to set",
+        BadgeMetricChoice.BodyWeight => (_drop ? "Drop by" : "Target weight") + $" ({Units.WeightLabel})",
+        _ => UsesReps ? $"Weight ({Units.WeightLabel})" : "Target",
+    };
+
+    private string LiveLine
+    {
+        get
+        {
+            var today = _page.Today;
+            var plan = _page.ActivePlan ?? new Plan("none", "No Plan", false, today, null, null, 2.5, [new Track("main", "Main", new TrackRhythm.Weekly(0, 1, false), [])], []);
+            var snapshot = Data.Snapshot;
+            var history = new BadgeHistory(plan, snapshot.Exercises, snapshot.Workouts, snapshot.Breaks, snapshot.WeighIns);
+            return BadgeEditingText.LiveLine(Draft, history, today, Units);
+        }
+    }
+
+    private string ArtPath
+    {
+        get
+        {
+            var stem = BadgeEditingRules.Validate(Draft, "draft", Library, Units).TryGet(out var badge, out _)
+                ? BadgeArt.Stem(badge.Metric, badge.Target)
+                : BadgeArt.Frame;
+            return $"_content/Ui/badges/{stem}.svg";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _page = new Ui.Pages.PageContext(Data, Clock);
+        _save = new GuardedSave(Data, Notice);
+        _save.Started += OnSaveStarted;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Open && !_wasOpen)
+        {
+            Begin();
+        }
+
+        _wasOpen = Open;
+    }
+
+    public void Dispose() => _save.Started -= OnSaveStarted;
+
+    private void OnSaveStarted() => StateHasChanged();
+
+    private void Begin()
+    {
+        var draft = Badge is null
+            ? new BadgeDraft("", BadgeMetricChoice.Workouts, null, "", "", false)
+            : BadgeEditingRules.DraftFor(Badge, Library, Units);
+        (_name, _metric, _exerciseId, _target, _reps, _drop) = (draft.Name, draft.Metric, draft.ExerciseId, draft.Target, draft.Reps, draft.DropBy);
+        _confirmingDelete = false;
+        _message = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        var result = Badge is null
+            ? BadgeEditingRules.Add(Draft, Library, Units, Ids)
+            : BadgeEditingRules.Replace(Data.Snapshot.Badges, Badge.Id, Draft, Library, Units);
+        if (!result.TryGet(out var badge, out var reason))
+        {
+            _message = reason;
+            return;
+        }
+
+        await CommitAsync(Change.Put(badge));
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (Badge is null)
+        {
+            return;
+        }
+
+        if (!BadgeEditingRules.Delete(Data.Snapshot.Badges, Badge.Id).TryGet(out var badge, out var reason))
+        {
+            _message = reason;
+            _confirmingDelete = false;
+            return;
+        }
+
+        await CommitAsync(Change.Delete(RecordKind.Badge, badge.Id));
+    }
+
+    private async Task CommitAsync(Change change)
+    {
+        _message = null;
+        var saved = await _save.CommitAsync(change);
+        if (saved.IsSaved)
+        {
+            await OnClose.InvokeAsync();
+        }
+        else if (saved.Status == SaveStatus.Failed)
+        {
+            _message = Notice.Message;
+            _confirmingDelete = false;
+        }
+    }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+}

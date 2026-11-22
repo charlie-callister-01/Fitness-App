@@ -14,7 +14,8 @@
     <div class="fa-home__columns">
         <div class="fa-home__main">
             <TodayCard Card="_view.Today" Today="Page.Today" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Starting="_save.IsBusy"
-                       OnStart="StartAsync" OnContinue="OnContinue" OnOpenSummary="OnOpenSummary" />
+                       OnStart="StartAsync" OnContinue="OnContinue" OnOpenSummary="OnOpenSummary"
+                       ReviewReady="ReviewReady" OnOpenReview="OnOpenReview" />
 
             @if (_view.ShowAlternatives)
             {
@@ -46,7 +47,7 @@
         <div class="fa-home__side">
             @if (_view.Orbs is { } orbs)
             {
-                <OrbRow Orbs="orbs" OnOpenProgress="OnOpenProgress" />
+                <OrbRow Orbs="orbs" OnOpenProgress="OnOpenProgress" OnOpenCalendar="OnOpenCalendar" />
             }
 
             @if (_view.ShowNudges)

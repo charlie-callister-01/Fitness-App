@@ -1,0 +1,37 @@
+.fa-bests {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.fa-bests__week h2 {
+    margin: 0 0 var(--space-2);
+}
+
+.fa-bests__weektext,
+.fa-bests__week p {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: baseline;
+}
+
+.fa-bests__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.fa-bests__row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: var(--space-3);
+    padding: var(--space-2) 0;
+}
+
+.fa-bests__date {
+    grid-column: 1 / -1;
+}

@@ -1,0 +1,78 @@
+@using System.Globalization
+@using Core.Rules.Formatting
+@using Core.Rules.Insight
+@using Core.Rules.LogKinds
+@using Core.Rules.Units
+@using Core.Storage
+@using Core.Time
+@implements IDisposable
+@* Bests tab of Trophies (design S-13): "Best of the week" over a table of every Exercise's personal Best with its date. What is drawn
+   comes from the Core BestsViewBuilder; nothing here is stored. *@
+<div class="fa-bests">
+    @if (_view.IsEmpty)
+    {
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Bests yet" Message="Log a Workout and your personal Bests will be listed here." />
+    }
+    else
+    {
+        <section class="fa-well fa-bests__week" aria-label="Best of the week">
+            <h2 class="fa-label">Best of the week</h2>
+            @if (_view.BestOfTheWeek is { } week)
+            {
+                <p class="fa-bests__weektext">
+                    <b>@week.ExerciseName</b>
+                    <span>@SetText.Result(week.LogKind, week.Set, _units)</span>
+                    <span class="fa-muted">@Date(week.Date)</span>
+                </p>
+            }
+            else
+            {
+                <p class="fa-muted">No PR this week</p>
+            }
+        </section>
+
+        <ul class="fa-bests__list">
+            @foreach (var best in _view.Bests)
+            {
+                <li class="fa-bests__row">
+                    <span class="fa-bests__name">@best.ExerciseName</span>
+                    <span class="fa-bests__result">@SetText.Result(best.LogKind, best.Result.Set, _units)</span>
+                    <span class="fa-muted fa-bests__date">@Date(best.Date)</span>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private BestsView _view = new([], null);
+    private UnitConverter _units = default!;
+
+    [Inject] private AppData Data { get; set; } = default!;
+
+    [Inject] private IClock Clock { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Data.Changed += OnDataChanged;
+        Rebuild();
+    }
+
+    public void Dispose() => Data.Changed -= OnDataChanged;
+
+    private void OnDataChanged() => _ = InvokeAsync(() =>
+    {
+        Rebuild();
+        StateHasChanged();
+    });
+
+    private void Rebuild()
+    {
+        var snapshot = Data.Snapshot;
+        var context = new Ui.Pages.PageContext(Data, Clock);
+        _units = new UnitConverter(snapshot.Settings);
+        _view = BestsViewBuilder.Build(snapshot.Exercises, snapshot.Workouts, context.Today);
+    }
+
+    private static string Date(DateOnly date) => DisplayFormat.DayMonthYear(date);
+}

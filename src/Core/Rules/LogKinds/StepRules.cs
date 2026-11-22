@@ -1,4 +1,5 @@
-using System.Globalization;
+using Core.Rules.Formatting;
+using Core.Rules.Parsing;
 
 namespace Core.Rules.LogKinds;
 
@@ -22,7 +23,7 @@ public readonly record struct StepSize(StepField Field, double Amount, string Un
     /// <param name="direction">-1 for minus, 1 for plus.</param>
     public string Apply(string typed, int direction)
     {
-        var start = double.TryParse(typed.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ? number : 0;
-        return Math.Max(0, Math.Round(start + direction * Amount, 2)).ToString("0.##", CultureInfo.InvariantCulture);
+        var start = DecimalText.TryParse(typed, out var number) ? number : 0;
+        return DisplayFormat.Trimmed(Math.Max(0, Math.Round(start + direction * Amount, 2)));
     }
 }

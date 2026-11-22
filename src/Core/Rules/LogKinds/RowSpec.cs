@@ -1,4 +1,5 @@
 using System.Globalization;
+using Core.Rules.Formatting;
 using Core.Model;
 using Core.Rules.Parsing;
 using Core.Rules.Units;
@@ -188,5 +189,5 @@ public sealed record RowSpec
 
     private static string Whole(int value) => value.ToString(CultureInfo.InvariantCulture);
 
-    private static string Number(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+    private static string Number(double value) => DisplayFormat.Trimmed(value);
 }

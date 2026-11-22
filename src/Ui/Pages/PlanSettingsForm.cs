@@ -1,5 +1,6 @@
 using System.Globalization;
 using Core.Model;
+using Core.Rules.Parsing;
 using Core.Rules.PlanEditing;
 using Core.Rules.Tracks;
 
@@ -74,7 +75,7 @@ public sealed record PlanSettingsForm
             return Invalid("The Streak minimum must be a whole number, at least 1.");
         }
 
-        if (!double.TryParse(WeightIncrement.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var increment))
+        if (!DecimalText.TryParse(WeightIncrement, out var increment))
         {
             return Invalid("The weight increment must be a number, more than 0.");
         }

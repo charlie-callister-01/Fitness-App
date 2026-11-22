@@ -1,6 +1,44 @@
 @page "/trophies"
-
-<div class="fa-root">
+@* Trophies (design S-13): three tabs. Badges is the BadgeTile grid and detail; Bests is the personal-bests table; Calendar reuses the
+   Progress calendar. Each tab is its own component. *@
+<div class="fa-root fa-trophies">
     <h1 class="fa-title fa-title--l">Trophies</h1>
-    <EmptyState Kind="EmptyStateKind.NoHistory" Title="Your Badges will live here" Message="Badges and Bests arrive in a later stage." />
+
+    <div class="fa-chips fa-trophies__tabs" role="group" aria-label="Trophies sections">
+        @foreach (var tab in Tabs)
+        {
+            var value = tab;
+            <Button Variant="ButtonVariant.Secondary" Pressed="_tab == value" OnClick="() => _tab = value">@value</Button>
+        }
+    </div>
+
+    @if (_tab == "Bests")
+    {
+        <BestsTab />
+    }
+    else if (_tab == "Calendar")
+    {
+        <CalendarTab />
+    }
+    else
+    {
+        <BadgesTab InitialBadgeId="@_openBadge" />
+    }
 </div>
+
+@code {
+    private static readonly string[] Tabs = ["Badges", "Bests", "Calendar"];
+
+    private string _tab = "Badges";
+    private string? _openBadge;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    /// <summary>The UnlockToast links here as trophies?badge=ID, which opens that Badge detail on the Badges tab.</summary>
+    protected override void OnInitialized()
+    {
+        _tab = TabQuery.Pick(Navigation.Uri, Tabs, "Badges");
+        _openBadge = new Uri(Navigation.Uri).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2)).Where(p => p.Length == 2 && p[0] == "badge").Select(p => Uri.UnescapeDataString(p[1])).FirstOrDefault();
+    }
+}

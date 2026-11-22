@@ -1,0 +1,64 @@
+@using System.Globalization
+@using Core.Rules.Formatting
+@using Core.Rules.Insight
+@* Badge detail (design S-13): large art, name, what it needs, progress, and the events that contributed. Progress is worked out by the
+   Core TrophyViewBuilder; nothing here is stored. *@
+<section class="fa-badgedetail" aria-label="@Badge.Name">
+    <div class="fa-badgedetail__bar">
+        <Button Variant="ButtonVariant.Secondary" OnClick="() => OnClose.InvokeAsync()">Back to Badges</Button>
+        <Button Variant="ButtonVariant.Secondary" OnClick="() => OnEdit.InvokeAsync()">Edit</Button>
+    </div>
+
+    <img class="fa-badgedetail__art" src="@ArtPath" alt="" width="96" height="112" />
+    <h2 class="fa-title fa-title--m fa-badgedetail__name">@Badge.Name</h2>
+    <p class="fa-chip fa-badgedetail__status">@StatusWord</p>
+    <p class="fa-badgedetail__needs">@Badge.Needs</p>
+
+    @if (Badge.IsMeasurable)
+    {
+        <ProgressBar Label="Progress" Value="@Badge.ProgressText" Percent="Badge.Percent"
+                     State="Badge.Standing == BadgeStanding.Unlocked ? ProgressBarState.Done : ProgressBarState.Active" />
+    }
+    else
+    {
+        <p class="fa-muted fa-badgedetail__unmeasurable">Progress: not measurable</p>
+    }
+
+    <h3 class="fa-label">What counted</h3>
+    @if (Badge.Events.Count == 0)
+    {
+        <p class="fa-muted fa-badgedetail__none">Nothing has counted yet.</p>
+    }
+    else
+    {
+        <ul class="fa-badgedetail__events">
+            @foreach (var e in Badge.Events)
+            {
+                <li class="fa-badgedetail__event"><span class="fa-muted">@DisplayFormat.DayMonthYear(e.Date)</span> @e.Text</li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public TrophyBadge Badge { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnEdit { get; set; }
+
+    private bool Locked => Badge.Standing is BadgeStanding.Locked or BadgeStanding.NotMeasurable && BadgeArt.HasLockedVariant(Badge.ArtStem);
+
+    private string ArtPath => $"_content/Ui/badges/{Badge.ArtStem}{(Locked ? "-locked" : "")}.svg";
+
+    private string StatusWord => Badge.Standing switch
+    {
+        BadgeStanding.Unlocked => "Unlocked",
+        BadgeStanding.InProgress => "In progress",
+        BadgeStanding.NotMeasurable => "Not measurable",
+        _ => "Locked",
+    };
+}

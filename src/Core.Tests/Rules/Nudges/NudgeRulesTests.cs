@@ -142,6 +142,28 @@ public class NudgeRulesTests
         Assert.Equal(nudges.Count, nudges.Distinct().Count());
     }
 
+    // C-08 copy review (Insight ticket 10): neutral (no exclamation, no blame), specific (names the Session, day, area or number), short.
+    [Fact]
+    public void Every_Nudge_kind_has_neutral_specific_copy_with_no_exclamation_and_one_sentence_ask_at_most()
+    {
+        var basePlan = new HistoryBuilder().Plan;
+        var plan = basePlan with
+        {
+            Sessions = [new Session("s-mon", "Lower", basePlan.Tracks[0].Id, DefaultDay.Monday, SessionType.Strength, null, [])],
+        };
+        var counted = new HistoryBuilder().Did(Tue, Wed).Workouts.Select(w => w with { SessionId = "other" });
+        Workout[] workouts = [.. counted, Pain(Mon, BodyArea.Knee), Pain(Tue, BodyArea.Knee)];
+
+        var nudges = NudgeRules.Compute(plan, [], [], workouts, OldBackup, Thu);
+
+        Assert.Equal("Knee pain reported twice this week. Consider an easier variation.", nudges.Single(n => n.Kind == NudgeKind.RepeatedPain).Message);
+        Assert.Equal("You missed Lower on Monday. Make it up this week?", nudges.Single(n => n.Kind == NudgeKind.MissedSession).Message);
+        Assert.Equal("One workout short of your target of 3 this week.", nudges.Single(n => n.Kind == NudgeKind.OneShortOfTarget).Message);
+        Assert.Equal("No Backup in 14 days. Make one so you don't lose your data.", nudges.Single(n => n.Kind == NudgeKind.NoRecentBackup).Message);
+        Assert.All(nudges, n => Assert.DoesNotContain('!', n.Message));
+        Assert.All(nudges, n => Assert.True(n.Message.Length <= 70, n.Message));
+    }
+
     [Fact]
     public void One_weekly_Track_keeps_existing_wording_even_with_a_daily_Track()
     {

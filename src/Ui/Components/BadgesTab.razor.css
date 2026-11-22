@@ -1,0 +1,22 @@
+.fa-badges {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-badges__count {
+    margin: 0;
+}
+
+.fa-badges__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+@media (min-width: 900px) {
+    .fa-badgegrid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}

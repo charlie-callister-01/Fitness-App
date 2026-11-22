@@ -45,13 +45,22 @@ public sealed class UnitConverter
     /// <summary>The display distance unit as a word: "km" or "mi".</summary>
     public string DistanceLabel => _distanceUnit == DistanceUnit.Km ? "km" : "mi";
 
-    /// <summary>A canonical weight (kg) in the display unit, rounded for display.</summary>
-    public double DisplayWeight(double kg) =>
-        _weightUnit == WeightUnit.Kg ? RoundWeightKg(kg) : RoundWeightLb(kg / KgPerLb);
+    /// <summary>
+    /// A canonical weight (kg) in the display unit, rounded to the display step by default. Pass <paramref name="rounded"/> false for
+    /// chart and editor values, which round only when written.
+    /// </summary>
+    public double DisplayWeight(double kg, bool rounded = true)
+    {
+        var shown = _weightUnit == WeightUnit.Kg ? kg : kg / KgPerLb;
+        return rounded ? RoundToStep(shown, _weightUnit == WeightUnit.Kg ? KgDisplayStep : LbDisplayStep) : shown;
+    }
 
-    /// <summary>A canonical distance (km) in the display unit, rounded to two decimals.</summary>
-    public double DisplayDistance(double km) =>
-        RoundDistance(_distanceUnit == DistanceUnit.Km ? km : km / KmPerMile);
+    /// <summary>A canonical distance (km) in the display unit, rounded to two decimals by default, or <paramref name="rounded"/> false for the exact value.</summary>
+    public double DisplayDistance(double km, bool rounded = true)
+    {
+        var shown = _distanceUnit == DistanceUnit.Km ? km : km / KmPerMile;
+        return rounded ? RoundDistance(shown) : shown;
+    }
 
     /// <summary>A weight typed in the display unit, as exact canonical kg.</summary>
     public double WeightFromDisplay(double value) =>

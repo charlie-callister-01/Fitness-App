@@ -9,6 +9,23 @@ public class WeightPanelRulesTests
     private static WeighIn Entry(string id, DateOnly date, double kg) => new(id, date, kg);
 
     [Fact]
+    public void Weigh_ins_by_week_give_each_Monday_its_average_and_agree_with_the_panel()
+    {
+        var weighIns = new[]
+        {
+            Entry("a", new DateOnly(2026, 1, 5), 90), Entry("b", new DateOnly(2026, 1, 11), 88),
+            Entry("c", new DateOnly(2026, 1, 12), 86),
+        };
+
+        var weeks = WeightPanelRules.ByWeek(weighIns);
+
+        Assert.Equal([new DateOnly(2026, 1, 12), new DateOnly(2026, 1, 5)], weeks.Select(w => w.WeekStart));
+        Assert.Equal([86.0, 89.0], weeks.Select(w => w.AverageKg));
+        Assert.Equal([1, 2], weeks.Select(w => w.Count));
+        Assert.Equal(WeightPanelRules.Compute(weighIns, new DateOnly(2026, 1, 14)).WeekAverageKg, weeks[0].AverageKg);
+    }
+
+    [Fact]
     public void Compute_with_no_weigh_ins_returns_all_null()
     {
         var panel = WeightPanelRules.Compute([], Dates.Mon);

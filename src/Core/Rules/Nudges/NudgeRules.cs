@@ -1,3 +1,4 @@
+using System.Globalization;
 using Core.Model;
 using Core.Rules.Schedule;
 using Core.Rules.Tracks;
@@ -78,7 +79,7 @@ public static class NudgeRules
             .Where(g => g.Select(x => x.Id).Distinct().Count() >= 2)
             .OrderBy(g => g.Key)
             .Select(g => new Nudge(NudgeKind.RepeatedPain,
-                $"{g.Key} pain reported twice this week. Consider easing off.", Area: g.Key));
+                $"{g.Key} pain reported twice this week. Consider an easier variation.", Area: g.Key));
     }
 
     /// <summary>The distinct body areas a Workout's Pain check reported, each tagged with the Workout. None when no pain was reported.</summary>
@@ -99,8 +100,8 @@ public static class NudgeRules
             .Select(x =>
             {
                 var message = nameTrack
-                    ? $"You missed {x.Missed.SessionName} ({x.Track.Name}) on {x.Missed.Date:dddd}. Make it up this week?"
-                    : $"You missed {x.Missed.SessionName} on {x.Missed.Date:dddd}. Make it up this week?";
+                    ? $"You missed {x.Missed.SessionName} ({x.Track.Name}) on {x.Missed.Date.ToString("dddd", CultureInfo.InvariantCulture)}. Make it up this week?"
+                    : $"You missed {x.Missed.SessionName} on {x.Missed.Date.ToString("dddd", CultureInfo.InvariantCulture)}. Make it up this week?";
                 return new Nudge(NudgeKind.MissedSession, message, x.Missed.SessionId, TrackId: x.Track.Id);
             });
 }

@@ -1,3 +1,5 @@
+@using Core.Rules.Formatting
+@using Core.Rules.Insight
 @using System.Globalization
 @* The Plan editor's Phases tab (design S-05, C-20): a row per Phase with the weeks and dates it covers; Edit expands the row in place to
    change the focus, the first and last week and the optional Phase goals. Overlaps and reversed ranges are named in a message under the
@@ -63,7 +65,7 @@
                                 <div class="fa-phase__pair">
                                     <label class="fa-phase__field">
                                         <span class="fa-label">Weight (kg)</span>
-                                        <input class="fa-phase__control" type="text" inputmode="decimal" disabled="@Disabled" value="@goal.WeightKg.ToString("0.##", CultureInfo.InvariantCulture)" @onchange="e => SetGoalWeight(id, index, e)" />
+                                        <input class="fa-phase__control" type="text" inputmode="decimal" disabled="@Disabled" value="@DisplayFormat.Trimmed(goal.WeightKg)" @onchange="e => SetGoalWeight(id, index, e)" />
                                     </label>
                                     <label class="fa-phase__field">
                                         <span class="fa-label">Reps</span>

@@ -1,6 +1,6 @@
-using System.Globalization;
 using Core.Ids;
 using Core.Model;
+using Core.Rules.Parsing;
 using Core.Rules.Units;
 
 namespace Core.Rules.Home;
@@ -25,9 +25,7 @@ public static class WeighInRules
             return new WeighInResult.Invalid(UnparsableMessage);
         }
 
-        var cleaned = text.Trim().Replace(',', '.');
-        if (!double.TryParse(cleaned, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value)
-            || !double.IsFinite(value))
+        if (!DecimalText.TryParse(text, out var value) || !double.IsFinite(value))
         {
             return new WeighInResult.Invalid(UnparsableMessage);
         }
