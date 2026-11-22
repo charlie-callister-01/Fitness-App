@@ -8,18 +8,6 @@
     margin: 0;
 }
 
-.fa-progress__charts {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
-}
-
-@media (min-width: 900px) {
-    .fa-progress__charts {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
 .fa-progress__single {
     display: flex;
     flex-wrap: wrap;

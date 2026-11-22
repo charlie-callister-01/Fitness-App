@@ -254,7 +254,7 @@ bUnit and Core tests cover what each Insight screen shows and stores. They canno
 - [ ] 8. UnlockToast: finish a Workout that unlocks a Badge; the toast shows for about 4 s, tapping opens the Badge; with reduced motion it appears and goes without animation.
 - [ ] 9. Weekly review: the current week, then Previous week back through past weeks; a Break week says so; the export note appears instead of the button until Export.
 - [ ] 10. Nudges (Home only, at most two): copy reads calmly: "Knee pain reported twice this week. Consider an easier variation." (no button, Dismiss only), "You missed Lower on Monday. Make it up this week?" (Make up), "One workout short of your target of 3 this week." (Pick a Session), "No Backup in 14 days. Make one so you don't lose your data." (Back up).
-- [ ] 11. Desktop (900 px and wider): Progress and Benchmarks charts sit two across, Weight puts the chart beside the weekly table, the Weekly review lists its sections two across, the Badge grid widens to six columns. Note anything the shell's 560 px column cap stops from showing.
+- [ ] 11. Desktop (900 px and wider): Progress and Benchmarks charts sit two across, Weight puts the chart beside the weekly table, the Weekly review lists its sections two across, the Badge grid widens to six columns. The shell column now widens to 960 px from 900 px on the Insight pages, as on Home: check Home looks unchanged, and that 360 px and 600 px stay one column capped at 560 px.
 - [ ] 12. Read-only (second window open): charts and lists show; Badge saves and Log weight are disabled with the usual message.
 - [ ] 13. Offline (airplane mode): every Insight screen opens and Badge and Weigh-in saves work.
 

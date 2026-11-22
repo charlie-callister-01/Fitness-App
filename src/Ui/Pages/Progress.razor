@@ -48,7 +48,7 @@
             <p class="fa-muted">Nothing logged in @ExerciseGroups.Label(_group!.Value) yet.</p>
         }
 
-        <div class="fa-progress__charts">
+        <div class="fa-twocol fa-progress__charts">
             @foreach (var chart in Shown.SelectMany(g => g.Charts))
             {
                 <LineChart Series="chart" />
