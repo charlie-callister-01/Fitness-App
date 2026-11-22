@@ -269,7 +269,7 @@ public class BadgeEditingRulesTests
     {
         var draft = Draft(BadgeMetricChoice.ExerciseBest, "Squat", "24", "squat", "8");
 
-        var line = BadgeEditingRules.OneRepMaxLine(draft, Library, Kg);
+        var line = BadgeEditingText.OneRepMaxLine(draft, Library, Kg);
 
         Assert.Equal("This target is stored as an estimated 1RM of 30.4 kg (24 kg for 8 reps).", line);
     }
@@ -277,9 +277,9 @@ public class BadgeEditingRulesTests
     [Fact]
     public void The_estimated_1RM_line_is_only_for_a_Load_Exercise_with_a_complete_draft()
     {
-        Assert.Null(BadgeEditingRules.OneRepMaxLine(Draft(BadgeMetricChoice.ExerciseBest, "Plank", "60", "plank"), Library, Kg));
-        Assert.Null(BadgeEditingRules.OneRepMaxLine(Draft(BadgeMetricChoice.Workouts), Library, Kg));
-        Assert.Null(BadgeEditingRules.OneRepMaxLine(Draft(BadgeMetricChoice.ExerciseBest, "Squat", "", "squat", "8"), Library, Kg));
+        Assert.Null(BadgeEditingText.OneRepMaxLine(Draft(BadgeMetricChoice.ExerciseBest, "Plank", "60", "plank"), Library, Kg));
+        Assert.Null(BadgeEditingText.OneRepMaxLine(Draft(BadgeMetricChoice.Workouts), Library, Kg));
+        Assert.Null(BadgeEditingText.OneRepMaxLine(Draft(BadgeMetricChoice.ExerciseBest, "Squat", "", "squat", "8"), Library, Kg));
     }
 
     [Fact]
@@ -298,7 +298,7 @@ public class BadgeEditingRulesTests
             Library, workouts ?? [], [], weighIns ?? []);
 
     private static string Line(BadgeDraft d, BadgeHistory h, UnitConverter? units = null) =>
-        BadgeEditingRules.LiveLine(d, h, D(2026, 2, 1), units ?? Kg);
+        BadgeEditingText.LiveLine(d, h, D(2026, 2, 1), units ?? Kg);
 
     [Fact]
     public void The_live_line_for_a_count_says_where_it_stands_and_what_unlocks_it()

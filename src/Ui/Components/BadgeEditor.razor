@@ -65,7 +65,7 @@
             </label>
         }
 
-        @if (BadgeEditingRules.OneRepMaxLine(Draft, Library, Units) is { } oneRepMax)
+        @if (BadgeEditingText.OneRepMaxLine(Draft, Library, Units) is { } oneRepMax)
         {
             <p class="fa-muted fa-badgeeditor__onerm">@oneRepMax</p>
         }
@@ -181,7 +181,7 @@
             var plan = _page.ActivePlan ?? new Plan("none", "No Plan", false, today, null, null, 0, 1, false, 2.5, [], []);
             var snapshot = Data.Snapshot;
             var history = new BadgeHistory(plan, snapshot.Exercises, snapshot.Workouts, snapshot.Breaks, snapshot.WeighIns);
-            return BadgeEditingRules.LiveLine(Draft, history, today, Units);
+            return BadgeEditingText.LiveLine(Draft, history, today, Units);
         }
     }
 

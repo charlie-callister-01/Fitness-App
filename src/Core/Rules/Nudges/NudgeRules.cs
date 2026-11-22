@@ -1,3 +1,4 @@
+using System.Globalization;
 using Core.Model;
 using Core.Rules.Schedule;
 using Core.Rules.Weeks;
@@ -82,5 +83,5 @@ public static class NudgeRules
         WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
             .OrderBy(m => m.Date)
             .Select(m => new Nudge(
-                NudgeKind.MissedSession, $"You missed {m.SessionName} on {m.Date.ToString("dddd", System.Globalization.CultureInfo.InvariantCulture)}. Make it up this week?", m.SessionId));
+                NudgeKind.MissedSession, $"You missed {m.SessionName} on {m.Date.ToString("dddd", CultureInfo.InvariantCulture)}. Make it up this week?", m.SessionId));
 }

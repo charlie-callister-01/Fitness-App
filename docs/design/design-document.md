@@ -473,6 +473,7 @@ Purpose: one Exercise (or body weight) over time.
 Purpose: the whole Plan from start to race day.
 - Spec: columns = weeks (Monday at the top), cells 26 × 26 with 4px gaps, `surface-sunken` empty slots. Fill = Session type colour (`session-*`) when done; **Partial** = bottom half filled plus outline; **Missed** = dashed outline in `state-missed`; **Break** = hatched; **PR** = small `pr` triangle in the top-right corner; today = 2px `focus` outline; future days empty. A Phase strip runs above the weeks (Phase colour, name, length). Legend below.
 - Interaction: horizontal scroll in a panel; tap a day for its Workout. Screen readers get one label per day ("Wed 18 Nov: Session C, done, 1 PR").
+- Documented exception: the 26 px cell is below `tap-min` (44 px) on purpose, so a week fits a phone and the whole Plan reads at a glance. Every day stays keyboard-reachable and carries its own label; this is the one intended exception to `tap-min`.
 - Sample: [`chart-heatmap.svg`](assets/charts/chart-heatmap.svg).
 
 ### C-19 ProgressBar

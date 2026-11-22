@@ -24,7 +24,7 @@
 }
 
 .fa-pbar__track {
-    height: 12px;
+    height: var(--space-3);
     background: var(--orb-track);
     border: var(--border-thin) solid var(--outline);
     border-radius: var(--radius-round);
