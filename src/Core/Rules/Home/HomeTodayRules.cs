@@ -6,6 +6,7 @@ using Core.Rules.Phases;
 using Core.Rules.Schedule;
 using Core.Rules.Starting;
 using Core.Rules.Summary;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Storage;
 
@@ -49,14 +50,15 @@ public static class HomeTodayRules
                 summary.IsPartial));
         }
 
-        var position = PhaseRules.Position(plan, today);
+        var position = PhaseRules.Position(plan, TrackRules.Main(plan), today);
         if (position.State == PhaseState.AfterEnd)
             return TodayCard.PlanFinished();
 
         if (position.State == PhaseState.BeforeStart)
             return TodayCard.NotStarted(plan.StartDate);
 
-        var layout = WeekScheduleRules.Layout(plan, snapshot.WeekSchedules, snapshot.Breaks, today);
+        var main = TrackRules.Main(plan);
+        var layout = WeekScheduleRules.Layout(plan, main, snapshot.WeekSchedules, snapshot.Breaks, today);
         var doneThisWeek = snapshot.Workouts
             .Where(w => WeekCalendar.InWeek(layout.Monday, w.Date))
             .Select(w => w.SessionId)
@@ -74,7 +76,7 @@ public static class HomeTodayRules
             return TodayCard.RestDay(nextThisWeek.Session, nextThisWeek.Date);
 
         var nextMonday = WeekCalendar.AddWeeks(layout.Monday, 1);
-        var nextLayout = WeekScheduleRules.Layout(plan, snapshot.WeekSchedules, snapshot.Breaks, nextMonday);
+        var nextLayout = WeekScheduleRules.Layout(plan, main, snapshot.WeekSchedules, snapshot.Breaks, nextMonday);
         var nextScheduled = nextLayout.Sessions.FirstOrDefault();
         return TodayCard.RestDay(nextScheduled?.Session, nextScheduled?.Date);
     }
@@ -85,7 +87,7 @@ public static class HomeTodayRules
         if (plan is null)
             return [];
 
-        var layout = WeekScheduleRules.Layout(plan, snapshot.WeekSchedules, snapshot.Breaks, today);
+        var layout = WeekScheduleRules.Layout(plan, TrackRules.Main(plan), snapshot.WeekSchedules, snapshot.Breaks, today);
         var doneThisWeek = snapshot.Workouts
             .Where(w => WeekCalendar.InWeek(layout.Monday, w.Date))
             .Select(w => w.SessionId)

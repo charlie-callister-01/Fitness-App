@@ -183,12 +183,12 @@ public static class WeekEditRules
         Plan plan, IReadOnlyList<Exercise> exercises, IReadOnlyList<WeekSchedule> schedules,
         IReadOnlyList<Break> breaks, IReadOnlyList<Workout> workouts, DateOnly today)
     {
-        if (WeekRearrangement.Suggest(plan, exercises, schedules, breaks, workouts, today) is not RearrangementResult.Proposal proposal)
+        if (WeekRearrangement.Suggest(plan, TrackRules.Main(plan), exercises, schedules, breaks, workouts, today) is not RearrangementResult.Proposal proposal)
         {
             return null;
         }
 
-        var layout = WeekScheduleRules.Layout(plan, schedules, breaks, today);
+        var layout = WeekScheduleRules.Layout(plan, TrackRules.Main(plan), schedules, breaks, today);
         var rows = proposal.Placements
             .Select(p => (Placement: p, Now: layout.Sessions.FirstOrDefault(s => s.SessionId == p.SessionId)))
             .Where(x => x.Now is not null)

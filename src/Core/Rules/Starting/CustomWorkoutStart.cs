@@ -19,15 +19,14 @@ public static class CustomWorkoutStart
     /// <summary>
     /// Builds the rows for Exercises picked from the library: for each id in <paramref name="exerciseIds"/> (order kept,
     /// duplicates dropped keeping the first), the row of that Exercise in the active Plan (search the Plan's Sessions
-    /// using <see cref="PhaseRules.ExerciseRows(Plan, Phase?, string)"/> so the current Phase's rows apply; first match wins)
+    /// using <see cref="PhaseRules.ExerciseRows(Plan, string, DateOnly)"/> so each Session's Track's current Phase rows apply; first match wins)
     /// with its Sets, Reps, RepsMax and Cue kept; if the Exercise is in no Session, a plain row SessionExercise(id, 3, null, null, null).
     /// </summary>
     public static IReadOnlyList<SessionExercise> RowsForExercises(Plan plan, IReadOnlyList<string> exerciseIds, DateOnly today)
     {
         var distinctIds = exerciseIds.Distinct().ToList();
-        var currentPhase = PhaseRules.CurrentPhase(plan, today);
         var sessionRows = plan.Sessions
-            .Select(s => PhaseRules.ExerciseRows(plan, currentPhase, s.Id))
+            .Select(s => PhaseRules.ExerciseRows(plan, s.Id, today))
             .ToList();
 
         var result = new List<SessionExercise>(distinctIds.Count);

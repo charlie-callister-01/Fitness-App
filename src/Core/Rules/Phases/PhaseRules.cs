@@ -30,16 +30,16 @@ public sealed record PhaseReadiness(IReadOnlyList<GoalStatus> Goals, bool AllMet
 /// <summary>Phase position, Phase goal readiness and Override row resolution, all derived from the data and an explicit date.</summary>
 public static class PhaseRules
 {
-    public static PhasePosition Position(Plan plan, DateOnly today)
+    public static PhasePosition Position(Plan plan, Track track, DateOnly today)
     {
         if (WeekRules.PlanWeekNumber(plan, today) is not { } week)
             return new(PhaseState.BeforeStart, null, null, null, null);
 
-        var phase = PhaseOfWeek(plan, week);
+        var phase = PhaseOfWeek(track, week);
         if (phase is not null)
             return new(PhaseState.InPhase, week, phase, week - phase.StartWeek + 1, phase.EndWeek - phase.StartWeek + 1);
 
-        var phases = TrackRules.Main(plan).Phases;
+        var phases = track.Phases;
         var state = phases.Count > 0 && week > phases.Max(p => p.EndWeek) ? PhaseState.AfterEnd : PhaseState.NoPhase;
         return new(state, week, null, null, null);
     }
@@ -64,9 +64,15 @@ public static class PhaseRules
             : new(goals, false, $"{met} of {goals.Count} Phase goals met.");
     }
 
-    /// <summary>The Exercise rows of a Session today: the current Phase's Override when it has one, else the Plan default. Empty for an unknown Session.</summary>
-    public static IReadOnlyList<SessionExercise> ExerciseRows(Plan plan, string sessionId, DateOnly today) =>
-        ExerciseRows(plan, CurrentPhase(plan, today), sessionId);
+    /// <summary>The Exercise rows of a Session today: its Track's current Phase's Override when it has one, else the Plan default. Empty for an unknown Session.</summary>
+    public static IReadOnlyList<SessionExercise> ExerciseRows(Plan plan, string sessionId, DateOnly today)
+    {
+        var session = plan.Sessions.FirstOrDefault(s => s.Id == sessionId);
+        if (session is null) return [];
+        var track = TrackRules.TrackOf(plan, session);
+        var phase = track is null ? null : CurrentPhase(plan, track, today);
+        return ExerciseRows(plan, phase, sessionId);
+    }
 
     /// <summary>As <see cref="ExerciseRows(Plan, string, DateOnly)"/>, for a caller that has already resolved the current Phase (null when none).</summary>
     public static IReadOnlyList<SessionExercise> ExerciseRows(Plan plan, Phase? currentPhase, string sessionId)
@@ -77,12 +83,12 @@ public static class PhaseRules
         return over?.Exercises ?? session.Exercises;
     }
 
-    /// <summary>The Phase whose week range contains today, or null before the Plan starts, in a gap, or after the last Phase.</summary>
-    public static Phase? CurrentPhase(Plan plan, DateOnly today) =>
-        WeekRules.PlanWeekNumber(plan, today) is { } week ? PhaseOfWeek(plan, week) : null;
+    /// <summary>The Phase of <paramref name="track"/> whose week range contains today, or null before the Plan starts, in a gap, or after the last Phase.</summary>
+    public static Phase? CurrentPhase(Plan plan, Track track, DateOnly today) =>
+        WeekRules.PlanWeekNumber(plan, today) is { } week ? PhaseOfWeek(track, week) : null;
 
-    private static Phase? PhaseOfWeek(Plan plan, int week) =>
-        TrackRules.Main(plan).Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek);
+    private static Phase? PhaseOfWeek(Track track, int week) =>
+        track.Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek);
 
     /// <summary>
     /// A goal's Set meets it when it has a weight and reps, each at least the goal's. A Set missing either (a time, a distance)

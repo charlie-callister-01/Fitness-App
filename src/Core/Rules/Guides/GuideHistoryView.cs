@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.Performance;
 using Core.Rules.Phases;
+using Core.Rules.Tracks;
 
 namespace Core.Rules.Guides;
 
@@ -43,7 +44,7 @@ public static class GuideHistoryView
             return null;
         }
 
-        var phase = PhaseRules.CurrentPhase(plan, today);
+        var phase = PhaseRules.CurrentPhase(plan, TrackRules.Main(plan), today);
         var placements = plan.Sessions
             .Select(s => (Session: s, Row: PhaseRules.ExerciseRows(plan, phase, s.Id).FirstOrDefault(r => r.ExerciseId == exercise.Id)))
             .Where(x => x.Row is not null)

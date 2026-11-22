@@ -39,8 +39,9 @@ public static class NudgeRules
         nudges.AddRange(RepeatedPain(workouts, monday));
         nudges.AddRange(Missed(plan, schedules, breaks, workouts, today));
 
-        var done = WeekRules.CountedWorkouts(plan, workouts, monday);
-        if (TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly weekly
+        var main = TrackRules.Main(plan);
+        var done = WeekRules.CountedWorkouts(plan, main, workouts, monday);
+        if (main.Rhythm is TrackRhythm.Weekly weekly
             && today.DayNumber - monday.DayNumber >= OneShortFromDayIndex
             && done == weekly.WeeklyTarget - 1)
             nudges.Add(new(NudgeKind.OneShortOfTarget,
@@ -82,7 +83,7 @@ public static class NudgeRules
     private static IEnumerable<Nudge> Missed(
         Plan plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
         IReadOnlyList<Workout> workouts, DateOnly today) =>
-        WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
+        WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), schedules, breaks, workouts, today, today)
             .OrderBy(m => m.Date)
             .Select(m => new Nudge(
                 NudgeKind.MissedSession, $"You missed {m.SessionName} on {m.Date:dddd}. Make it up this week?", m.SessionId));

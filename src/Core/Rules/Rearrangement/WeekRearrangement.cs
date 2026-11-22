@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Rearrangement;
@@ -24,26 +25,28 @@ public abstract record RearrangementResult
 public static class WeekRearrangement
 {
     /// <summary>
-    /// Outstanding Sessions in today's week (Missed, or not yet reached) are re-placed on the coming non-Break days
-    /// (today to Sunday) in Plan order. Each goes on the day with the fewest Sessions already, then the fewest
-    /// shared <c>muscleGroups</c> tags with Sessions on the same or an adjacent day, then the earliest.
-    /// Returns <see cref="RearrangementResult.NothingToRearrange"/> when nothing is outstanding or the outstanding
-    /// Sessions already sit on distinct coming non-Break days with no back-to-back shared muscle group.
+    /// Outstanding Sessions of <paramref name="track"/> in today's week (Missed, or not yet reached) are re-placed on
+    /// the coming non-Break days (today to Sunday) in Plan order. Each goes on the day with the fewest Sessions already,
+    /// then the fewest shared <c>muscleGroups</c> tags with Sessions on the same or an adjacent day, then the earliest.
+    /// Returns <see cref="RearrangementResult.NothingToRearrange"/> for a non-weekly Track, when nothing is outstanding,
+    /// or when the outstanding Sessions already sit on distinct coming non-Break days with no back-to-back shared muscle group.
     /// </summary>
     public static RearrangementResult Suggest(
-        Plan plan, IReadOnlyList<Exercise> exercises, IReadOnlyList<WeekSchedule> schedules,
+        Plan plan, Track track, IReadOnlyList<Exercise> exercises, IReadOnlyList<WeekSchedule> schedules,
         IReadOnlyList<Break> breaks, IReadOnlyList<Workout> workouts, DateOnly today)
     {
-        var layout = WeekScheduleRules.Layout(plan, schedules, breaks, today);
+        if (track.Rhythm is not TrackRhythm.Weekly) return new RearrangementResult.NothingToRearrange();
+
+        var layout = WeekScheduleRules.Layout(plan, track, schedules, breaks, today);
         var sunday = WeekCalendar.SundayOf(layout.Monday);
-        var missed = WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
+        var missed = WeekScheduleRules.MissedInWeek(plan, track, schedules, breaks, workouts, today, today)
             .Select(m => m.SessionId).ToHashSet();
 
         var doneThisWeek = workouts
             .Where(w => WeekCalendar.InWeek(layout.Monday, w.Date))
             .Select(w => w.SessionId).OfType<string>().ToHashSet();
         var placedById = ByIdFirstWins(layout.Sessions, l => l.SessionId);
-        var outstanding = plan.Sessions
+        var outstanding = TrackRules.SessionsOf(plan, track)
             .Select(s => placedById.GetValueOrDefault(s.Id))
             .OfType<ScheduledSession>()
             .Where(l => missed.Contains(l.SessionId) || (l.Date >= today && !doneThisWeek.Contains(l.SessionId)))

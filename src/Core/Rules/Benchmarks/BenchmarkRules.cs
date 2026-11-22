@@ -2,6 +2,7 @@ using Core.Model;
 using Core.Rules.LogKinds;
 using Core.Rules.Performance;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Benchmarks;
@@ -43,7 +44,7 @@ public static class BenchmarkRules
         Plan plan, IReadOnlyList<WeekSchedule> schedules, IEnumerable<Workout> history, DateOnly today)
     {
         var all = history.ToList();
-        return plan.Sessions
+        return TrackRules.SessionsOf(plan, TrackRules.Main(plan))
             .Where(BenchmarkWeeks.IsBenchmark)
             .Select(s => DueOf(plan, schedules, s, all, today))
             .OfType<BenchmarkDue>()
@@ -95,7 +96,7 @@ public static class BenchmarkRules
     /// <summary>Workouts made from a benchmark Session, oldest first.</summary>
     private static List<Workout> TestWorkouts(Plan plan, List<Workout> all)
     {
-        var ids = plan.Sessions.Where(BenchmarkWeeks.IsBenchmark).Select(s => s.Id).ToHashSet();
+        var ids = TrackRules.SessionsOf(plan, TrackRules.Main(plan)).Where(BenchmarkWeeks.IsBenchmark).Select(s => s.Id).ToHashSet();
         return all.Where(w => w.SessionId is not null && ids.Contains(w.SessionId))
             .OrderBy(w => w.Date).ThenBy(w => w.StartedAt ?? DateTimeOffset.MinValue).ThenBy(w => w.Id, StringComparer.Ordinal)
             .ToList();

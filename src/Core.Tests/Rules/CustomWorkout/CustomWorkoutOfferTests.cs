@@ -74,4 +74,23 @@ public class CustomWorkoutOfferTests
 
         Assert.Equal(["press", "curl", "run", "squat", "lunge"], Ids(order));
     }
+
+    [Fact]
+    public void Only_missed_Sessions_on_the_main_Track_are_offered_first()
+    {
+        var main = new Track("main", "Main", new TrackRhythm.Weekly(2, 1, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(1, 1, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(), []);
+        var plan = PlanFixture.Make(start: Start, tracks: [main, cardio, mobility], sessions:
+        [
+            PlanFixture.Session("lower", DayOfWeek.Wednesday, name: "Lower", exercises: [Row("squat")], trackId: "main"),
+            PlanFixture.Session("run", DayOfWeek.Monday, SessionType.Cardio, name: "Run", exercises: [Row("run")], trackId: "cardio"),
+            PlanFixture.Session("mob", DefaultDay.Daily, SessionType.Mobility, name: "Mob", exercises: [Row("lunge")], trackId: "mob"),
+        ]);
+
+        // Tuesday: Cardio's Run (Mon) is missed, Main's Lower (Wed) is not yet due. Custom workout offer stays main-Track only.
+        var order = CustomWorkoutOffer.Order(plan, [], [], [], Library, Mon.AddDays(1));
+
+        Assert.Equal(["curl", "run", "squat", "press", "lunge"], Ids(order));
+    }
 }

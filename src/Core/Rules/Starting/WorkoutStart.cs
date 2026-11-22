@@ -2,6 +2,7 @@ using Core.Ids;
 using Core.Model;
 using Core.Rules.Phases;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Time;
 
@@ -31,17 +32,17 @@ public static class WorkoutStart
     public static Workout? InProgress(IEnumerable<Workout> workouts) => workouts.FirstOrDefault(w => w.EndedAt is null);
 
     /// <summary>
-    /// The Session Start offers: among this week's scheduled Sessions with no Workout from them this week, the one due
-    /// today or, failing that, the next one due later this week; when only earlier (Missed) ones remain, the earliest of
-    /// those. Null when there is no active Plan or nothing is left to start.
+    /// The Session Start offers for <paramref name="track"/>: among this week's scheduled Sessions with no Workout from
+    /// them this week, the one due today or, failing that, the next one due later this week; when only earlier (Missed)
+    /// ones remain, the earliest of those. Null when there is no active Plan, no weekly Track, or nothing left to start.
     /// </summary>
     public static ScheduledSession? NextToStart(
-        Plan? plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
+        Plan? plan, Track? track, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
         IReadOnlyList<Workout> workouts, DateOnly today)
     {
-        if (plan is not { IsActive: true }) return null;
+        if (plan is not { IsActive: true } || track is not { Rhythm: TrackRhythm.Weekly }) return null;
 
-        var layout = WeekScheduleRules.Layout(plan, schedules, breaks, today);
+        var layout = WeekScheduleRules.Layout(plan, track, schedules, breaks, today);
         var doneThisWeek = workouts
             .Where(w => WeekCalendar.InWeek(layout.Monday, w.Date))
             .Select(w => w.SessionId).OfType<string>().ToHashSet();
