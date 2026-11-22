@@ -283,6 +283,20 @@ public class WeekEditRulesTests
         Assert.Equal("Pick a day in this week.", Reason(WeekEditRules.MoveSession(Standard, [], "push", Mon, Mon.AddDays(8), false)));
     }
 
+    [Fact]
+    public void Moving_a_daily_Session_or_changing_its_default_day_is_refused()
+    {
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(75), []);
+        var stretch = PlanFixture.Session("stretch", DefaultDay.Daily, SessionType.Mobility, trackId: "mob");
+        var plan = Standard with { Tracks = [Standard.Tracks[0], mobility], Sessions = [.. Standard.Sessions, stretch] };
+
+        Assert.Contains("daily", Reason(WeekEditRules.MoveThisWeek(plan, [], "stretch", Mon, Mon.AddDays(2))));
+        Assert.Contains("daily", Reason(WeekEditRules.MakeDefaultDay(plan, "stretch", DefaultDay.Tuesday)));
+        Assert.Contains("daily", Reason(WeekEditRules.MoveSession(plan, [], "stretch", Mon, Mon.AddDays(2), makeDefaultDay: false)));
+        Assert.Contains("daily", Reason(WeekEditRules.MoveSession(plan, [], "stretch", Mon, Mon.AddDays(2), makeDefaultDay: true)));
+        Assert.Contains("daily", Reason(WeekEditRules.MakeDefaultDay(plan, "push", DefaultDay.Daily)));
+    }
+
     // WeekSchedule holds a list, so it compares by reference; compare its week and moves.
     private static readonly IEqualityComparer<WeekSchedule?> ScheduleComparer = EqualityComparer<WeekSchedule?>.Create(
         (a, b) => a is not null && b is not null && a.WeekStart == b.WeekStart && a.Moves.SequenceEqual(b.Moves));

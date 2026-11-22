@@ -31,7 +31,8 @@ public static class PlanSaveRules
         return changes;
     }
 
-    private static bool IsDifferent(Plan composed, Plan saved) =>
+    /// <summary>Whether <paramref name="composed"/> differs from <paramref name="saved"/> (comparing Tracks, each Track's Phases, and Sessions by sequence).</summary>
+    public static bool IsDifferent(Plan composed, Plan saved) =>
         composed with { Tracks = saved.Tracks, Sessions = saved.Sessions } != saved
         || TracksDiffer(composed.Tracks, saved.Tracks)
         || !composed.Sessions.SequenceEqual(saved.Sessions);

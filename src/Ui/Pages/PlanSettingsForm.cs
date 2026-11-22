@@ -5,6 +5,9 @@ using Core.Rules.Tracks;
 
 namespace Ui.Pages;
 
+/// <summary>The Plan settings and main Track settings parsed from <see cref="PlanSettingsForm"/>.</summary>
+public sealed record PlanFormSettings(PlanSettings Plan, TrackSettings Track);
+
 /// <summary>
 /// The Settings tab's fields as the owner typed them. Text stays text until it is read (<see cref="Read"/>), so a half-typed number is
 /// kept on screen and only blocks Save, and the form survives a switch of tab. Two forms are equal when every field is.
@@ -42,8 +45,8 @@ public sealed record PlanSettingsForm
         };
     }
 
-    /// <summary>The settings these fields spell out, or the plain reason they cannot be read or are refused by the Plan rules.</summary>
-    public PlanEditResult<PlanSettings> Read(Plan plan)
+    /// <summary>The settings these fields spell out, or the plain reason they cannot be read or are refused by the Plan or Track rules.</summary>
+    public PlanEditResult<PlanFormSettings> Read(Plan plan)
     {
         if (!DateOnly.TryParseExact(StartDate, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
         {
@@ -76,10 +79,18 @@ public sealed record PlanSettingsForm
             return Invalid("The weight increment must be a number, more than 0.");
         }
 
-        var settings = new PlanSettings(start, Goal, goalDate, target, minimum, CustomWorkoutsCount, increment);
-        return PlanSettingsRules.WithSettings(plan, settings)
-            .Match<PlanEditResult<PlanSettings>>(_ => new PlanEditResult<PlanSettings>.Valid(settings), Invalid);
+        var planSettings = new PlanSettings(start, Goal, goalDate, increment);
+        var trackSettings = new TrackSettings.Weekly(target, minimum, CustomWorkoutsCount);
+        if (!PlanSettingsRules.WithTrackSettings(TrackRules.Main(plan), trackSettings).TryGet(out _, out var trackReason))
+        {
+            return Invalid(trackReason);
+        }
+
+        return PlanSettingsRules.WithSettings(plan, planSettings)
+            .Match<PlanEditResult<PlanFormSettings>>(
+                _ => new PlanEditResult<PlanFormSettings>.Valid(new PlanFormSettings(planSettings, trackSettings)),
+                Invalid);
     }
 
-    private static PlanEditResult<PlanSettings> Invalid(string message) => new PlanEditResult<PlanSettings>.Invalid(message);
+    private static PlanEditResult<PlanFormSettings> Invalid(string message) => new PlanEditResult<PlanFormSettings>.Invalid(message);
 }
