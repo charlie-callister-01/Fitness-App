@@ -10,3 +10,4 @@ TestResults/
 
 # Local publish output (scripts/publish-pages.sh)
 /out*/
+.scratch/a5-starter-data/out/
