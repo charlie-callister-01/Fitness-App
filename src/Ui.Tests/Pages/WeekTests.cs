@@ -313,6 +313,43 @@ public sealed class WeekTests : BunitContext
     }
 
     [Fact]
+    public async Task A_failed_Apply_keeps_the_earlier_Undo_and_shows_the_notice()
+    {
+        var store = new FaultInjectingDataStore(new InMemoryDataStore());
+        var data = await OpenSeededAsync(store, TwoSessionPlan());
+        await data.CommitAsync([Change.Put(new Break("b1", Today, Today.AddDays(2), "Flu"))]);
+        var cut = RenderWeek(data);
+        Assert.Equal(2, ChangedDraftRows(cut).Count);
+        cut.Find("button[aria-label='Undo move of Upper']").Click();
+        var changed = ChangedDraftRows(cut);
+        store.FailAllWrites(StoreFailureKind.StorageFull);
+
+        cut.FindAll("button").First(b => b.TextContent.Trim() == "Apply").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("out of storage", _notice.Message));
+        Assert.Empty(Schedules(data));
+        Assert.Equal(changed, ChangedDraftRows(cut));
+        Assert.Contains("lower", ChangedDraftRows(cut));
+        Assert.DoesNotContain("upper", ChangedDraftRows(cut));
+        Assert.NotEmpty(cut.FindAll(".fa-week__draft"));
+    }
+
+    [Fact]
+    public async Task Cancel_stays_put_on_a_new_page_load_until_a_Break_is_added()
+    {
+        var (data, cut) = await RenderDraftAsync();
+        cut.FindAll("button").First(b => b.TextContent.Trim() == "Cancel").Click();
+
+        var reloaded = Render<Week>();
+        Assert.Empty(reloaded.FindAll(".fa-week__draft"));
+
+        await data.CommitAsync([Change.Put(new Break("b2", Today.AddDays(4), Today.AddDays(4), "Trip"))]);
+
+        reloaded.WaitForAssertion(() => Assert.NotEmpty(reloaded.FindAll(".fa-week__draft")));
+        Assert.NotEmpty(Render<Week>().FindAll(".fa-week__draft"));
+    }
+
+    [Fact]
     public async Task A_week_with_no_Break_offers_no_draft_even_with_a_Missed_Session()
     {
         var cut = RenderWeek(await OpenSeededAsync(plan: TwoSessionPlan()), daysLater: 2);

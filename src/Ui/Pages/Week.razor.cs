@@ -24,7 +24,10 @@ public sealed partial class Week : IDisposable
 
     // The suggested week is a proposal held here until Apply; Cancel and Apply both put it away until a Break is added.
     private WeekDraft? _draft;
-    private bool _draftPutAway;
+    private string? _draftBasis;
+
+    // Cancel and Apply put the draft away until the Week schedule or a Break changes. Held per AppData (one per session), never stored.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<AppData, System.Runtime.CompilerServices.StrongBox<string?>> PutAway = [];
 
     private WeekRow? _moveRow;
     private DateOnly _moveDate;
@@ -87,10 +90,27 @@ public sealed partial class Week : IDisposable
         }
 
         _rows = WeekRows.Build(_plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, Page.Today);
-        _draft = !_draftPutAway && WeekRows.BreakTouchesWeek(snapshot.Breaks, Page.Today)
+        var basis = Fingerprint(snapshot);
+        if (basis == _draftBasis)
+        {
+            return;
+        }
+
+        _draftBasis = basis;
+        _draft = basis != PutAwayBasis && WeekRows.BreakTouchesWeek(snapshot.Breaks, Page.Today)
             ? WeekEditRules.SuggestDraft(_plan, snapshot.Exercises, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, Page.Today)
             : null;
     }
+
+    private string? PutAwayBasis
+    {
+        get => PutAway.TryGetValue(Data, out var box) ? box.Value : null;
+        set => PutAway.GetOrCreateValue(Data).Value = value;
+    }
+
+    private string Fingerprint(DataSnapshot snapshot) => string.Join(";", snapshot.Breaks.OrderBy(b => b.Id, StringComparer.Ordinal).Select(b => $"{b.Id}|{b.StartDate:yyyy-MM-dd}|{b.EndDate:yyyy-MM-dd}"))
+        + "#" + string.Join(";", snapshot.WeekSchedules.OrderBy(s => s.WeekStart).Select(s => $"{s.WeekStart:yyyy-MM-dd}:" + string.Join(",", s.Moves.Select(m => $"{m.SessionId}>{m.Date:yyyy-MM-dd}"))))
+        + "#" + Page.Today.ToString(DateFormat, CultureInfo.InvariantCulture);
 
     private static string DayText(DateOnly date) => date.ToString("ddd d MMM", CultureInfo.InvariantCulture);
 
@@ -196,7 +216,6 @@ public sealed partial class Week : IDisposable
         }
 
         _breakMessage = null;
-        _draftPutAway = false;
         var saved = await _save.CommitAsync(Change.Put(created.Value));
         if (saved.IsSaved)
         {
@@ -213,7 +232,7 @@ public sealed partial class Week : IDisposable
 
     private void OnCancelDraft()
     {
-        _draftPutAway = true;
+        PutAwayBasis = _draftBasis;
         _draft = null;
     }
 
@@ -225,12 +244,13 @@ public sealed partial class Week : IDisposable
         }
 
         var schedule = draft.Apply(plan, Data.Snapshot.WeekSchedules);
-        _draftPutAway = true;
         var saved = await _save.CommitAsync(Change.Put(schedule));
-        if (!saved.IsSaved)
+        if (saved.IsSaved)
         {
-            // The draft stays, with its Undos, so the owner can try again.
-            _draftPutAway = false;
+            // Only a saved Apply puts the draft away; a failure leaves the draft and its Undos as they were.
+            PutAwayBasis = Fingerprint(Data.Snapshot);
+            _draftBasis = PutAwayBasis;
+            _draft = null;
         }
     }
 }
