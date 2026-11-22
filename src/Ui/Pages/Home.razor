@@ -13,20 +13,20 @@
 
     <div class="fa-home__columns">
         <div class="fa-home__main">
-            <TodayCard Card="_view.Today" Today="Today" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Starting="_save.IsBusy"
+            <TodayCard Card="_view.Today" Today="Page.Today" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Starting="_save.IsBusy"
                        OnStart="StartAsync" OnContinue="OnContinue" OnOpenSummary="OnOpenSummary" />
 
             @if (_view.ShowAlternatives)
             {
                 <div class="fa-home__alts">
-                    <Button Variant="ButtonVariant.Secondary" Disabled="!CanWrite" OnClick="OnDifferentSessionAsync">Do a different Session</Button>
+                    <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite" OnClick="OnDifferentSessionAsync">Do a different Session</Button>
                     <Button Variant="ButtonVariant.Secondary" OnClick="OnBuildCustom">Build a Custom workout</Button>
                 </div>
                 @if (_view.ShowLogPastWorkout)
                 {
-                    <button type="button" class="fa-home__link" disabled="@(!CanWrite)" @onclick="OnLogPastWorkout">Log a past Workout</button>
+                    <button type="button" class="fa-home__link" disabled="@(!Page.CanWrite)" @onclick="OnLogPastWorkout">Log a past Workout</button>
                 }
-                @if (!CanWrite && ReadOnlyMessage is { } reason)
+                @if (!Page.CanWrite && Page.ReadOnlyMessage is { } reason)
                 {
                     <p class="fa-muted">@reason</p>
                 }
@@ -62,11 +62,11 @@
         </div>
     </div>
 
-    <DifferentSessionSheet Open="_differentOpen" Sessions="UndoneSessions" Saving="_save.IsBusy" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
+    <DifferentSessionSheet Open="_differentOpen" Sessions="UndoneSessions" Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage"
                            OnPick="PickDifferentAsync" OnBuildCustom="BuildCustomFromSheet" OnClose="CloseDifferent" />
-    <LogPastWorkoutSheet Open="_pastOpen" Today="Today" Sessions="PlanSessions" Saving="_save.IsBusy" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage"
+    <LogPastWorkoutSheet Open="_pastOpen" Today="Page.Today" Sessions="PlanSessions" Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage"
                          Message="@_pastMessage" OnStart="StartPastAsync" OnClose="ClosePast" />
     <LogWeightSheet Open="_weightOpen" InitialText="@LatestWeightText" LastText="@LastWeightText" UnitLabel="@Converter.WeightLabel"
-                    Saving="_save.IsBusy" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Message="@_weightMessage"
+                    Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Message="@_weightMessage"
                     OnSave="SaveWeightAsync" OnClose="CloseWeight" />
 </div>

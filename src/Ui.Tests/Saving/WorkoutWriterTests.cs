@@ -1,7 +1,7 @@
 using Core.Rules.Finishing;
 using Core.Storage;
 using Ui.Saving;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Saving;
 

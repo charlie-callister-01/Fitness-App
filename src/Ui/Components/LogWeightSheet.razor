@@ -1,5 +1,5 @@
 @* The Log weight sheet (design S-08). It only collects the text; the caller validates it and answers through Message. *@
-<Sheet Open="Open" Title="Log weight" OnClose="OnClose">
+<FormSheet Open="Open" Title="Log weight" Saving="Saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" Message="@Message" OnClose="OnClose">
     <ChildContent>
         <label class="fa-weightfield">
             <span class="fa-label">Weight (@UnitLabel)</span>
@@ -9,20 +9,11 @@
         {
             <p class="fa-muted">@LastText</p>
         }
-        @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
-        {
-            <p class="fa-well" role="status">@ReadOnlyMessage</p>
-        }
-        @if (Message is { Length: > 0 })
-        {
-            <p class="fa-well" role="alert">@Message</p>
-        }
     </ChildContent>
     <Actions>
-        <Button Variant="ButtonVariant.Primary" Disabled="Saving || !CanWrite" OnClick="() => OnSave.InvokeAsync(_value ?? string.Empty)">Save</Button>
-        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnClose">Cancel</Button>
+        <Button Variant="ButtonVariant.Primary" Disabled="context.WriteDisabled" OnClick="() => OnSave.InvokeAsync(_value ?? string.Empty)">Save</Button>
     </Actions>
-</Sheet>
+</FormSheet>
 
 @code {
     private string? _value;

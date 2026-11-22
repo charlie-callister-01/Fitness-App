@@ -1,3 +1,4 @@
+using Core.Rules.PlanEditing;
 using Core.Model;
 using Core.Serialisation;
 using Core.Storage;
@@ -14,7 +15,7 @@ internal static class ExportSlicer
             return snapshot.ToDocument();
         }
 
-        var plans = request.Plan ? ActivePlan(snapshot) : null;
+        var plans = request.Plan ? ActivePlans(snapshot) : null;
         var workouts = SliceWorkouts(snapshot, request, plans);
         var referenced = ReferencedExerciseIds(plans, workouts);
         var exercises = request.Exercises ? snapshot.Exercises : [.. snapshot.Exercises.Where(e => referenced.Contains(e.Id))];
@@ -38,7 +39,8 @@ internal static class ExportSlicer
 
     private static bool Overlaps(ExportRequest request, DateOnly first, DateOnly last) => request.Range?.Overlaps(first, last) ?? true;
 
-    private static IReadOnlyList<Plan> ActivePlan(DataSnapshot snapshot) => [.. snapshot.Plans.Where(p => p.IsActive).Take(1)];
+    private static IReadOnlyList<Plan> ActivePlans(DataSnapshot snapshot) =>
+        ActivePlan.Of(snapshot.Plans) is { } active ? [active] : [];
 
     private static IReadOnlyList<Workout>? SliceWorkouts(DataSnapshot snapshot, ExportRequest request, IReadOnlyList<Plan>? plans)
     {

@@ -1,3 +1,4 @@
+using Core.Rules.PlanEditing;
 using Core.Model;
 using Core.Rules.Outcomes;
 using Core.Rules.Editing;
@@ -167,7 +168,7 @@ public sealed class LogViewBuilder(AppData data, LogEditState state)
 
     private Plan? PlanOf(Workout workout) =>
         Snapshot.Plans.FirstOrDefault(p => p.Sessions.Any(s => s.Id == workout.SessionId))
-            ?? Snapshot.Plans.FirstOrDefault(p => p.IsActive);
+            ?? ActivePlan.Of(Snapshot.Plans);
 
     /// <summary>Every other finished Workout on or before this one's date: Last, the Suggested target and PRs never come from the open one, nor from a day after it (a Workout logged afterwards is judged as of its date).</summary>
     private IEnumerable<Workout> FinishedHistory(Workout workout) =>

@@ -1,13 +1,8 @@
 @using Core.Model
 @using Core.Rules.Home
 @* The Do a different Session sheet (design F-03): this week's undone Sessions as tap rows. It raises events only; Home starts the Workout. *@
-<Sheet Open="Open" Title="Do a different Session" OnClose="OnClose">
+<FormSheet Open="Open" Title="Do a different Session" Saving="Saving" CanWrite="CanWrite" ReadOnlyMessage="@ReadOnlyMessage" OnClose="OnClose">
     <ChildContent>
-        @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
-        {
-            <p class="fa-well" role="alert">@ReadOnlyMessage</p>
-        }
-
         @if (Sessions.Count == 0)
         {
             <p>No Sessions left this week.</p>
@@ -20,7 +15,7 @@
                 {
                     var picked = session;
                     <li>
-                        <button type="button" class="fa-sessionrow" disabled="@(Saving || !CanWrite)" @onclick="() => OnPick.InvokeAsync(picked)">
+                        <button type="button" class="fa-sessionrow" disabled="@context.WriteDisabled" @onclick="() => OnPick.InvokeAsync(picked)">
                             <span class="fa-sessionrow__code">@HomeWeekRules.SessionCode(session)</span>
                             <span class="fa-sessionrow__name">@session.Name</span>
                             <span class="fa-sessionrow__meta">@session.Type · @session.DefaultDay.ToString()[..3]</span>
@@ -30,10 +25,7 @@
             </ul>
         }
     </ChildContent>
-    <Actions>
-        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnClose">Cancel</Button>
-    </Actions>
-</Sheet>
+</FormSheet>
 
 @code {
     [Parameter]

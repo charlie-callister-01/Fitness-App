@@ -29,7 +29,10 @@ public abstract class WorkoutSavingFlow
     public event Action? Changed;
 
     /// <summary>Whether a tap should do anything: no save is running and this window can write.</summary>
-    protected bool CanAct(bool canWrite) => !Saving && canWrite;
+    protected bool CanAct() => _save.CanAct;
+
+    /// <summary>This window can write.</summary>
+    protected bool CanWrite => _data.Health.CanWrite;
 
     /// <summary>The open Workout's latest stored copy, or null when it is gone or already has an end time.</summary>
     protected Workout? FindOpen(string workoutId) =>

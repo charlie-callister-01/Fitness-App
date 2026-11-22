@@ -4,7 +4,7 @@ using Core.Model;
 using Core.Rules.Starting;
 using Core.Storage;
 using Ui.Pages;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
 

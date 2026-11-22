@@ -2,7 +2,7 @@ using Core.Model;
 using Core.Storage;
 using Core.Tests.Storage;
 using Ui.Saving;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Saving;
 

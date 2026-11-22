@@ -18,6 +18,7 @@ public sealed partial class CustomWorkoutDraft : IDisposable
     private string? _initialisedFor;
     private bool _initialised;
     private bool _pickerOpen;
+    private PageContext Page = default!;
     private GuardedSave _save = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
@@ -34,38 +35,35 @@ public sealed partial class CustomWorkoutDraft : IDisposable
     [Parameter]
     public string? SessionId { get; set; }
 
-    private Plan? ActivePlan => Data.Snapshot.Plans.FirstOrDefault(p => p.IsActive);
 
     private Session? MakeUpSession =>
-        SessionId is null ? null : ActivePlan?.Sessions.FirstOrDefault(s => s.Id == SessionId);
+        SessionId is null ? null : Page.ActivePlan?.Sessions.FirstOrDefault(s => s.Id == SessionId);
 
     private bool UnknownSession => SessionId is not null && MakeUpSession is null;
 
     private string Title => MakeUpSession is { } session ? $"Make up {session.Name}" : "Custom workout";
 
-    private DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.ToLocalTime().DateTime);
 
-    private bool CanWrite => Data.Health.CanWrite;
 
-    private string? ReadOnlyMessage => ReadOnlyWording.For(Data, "page");
 
     private ExercisePickerChoices PickerChoices
     {
         get
         {
             var library = Data.Snapshot.Exercises;
-            if (ActivePlan is not { } plan)
+            if (Page.ActivePlan is not { } plan)
             {
                 return new([], [.. library.Where(e => !_draft.Contains(e.Id))], library.Count > MaxLibraryWithoutSearch);
             }
 
-            var ordered = CustomWorkoutOffer.Order(plan, Data.Snapshot.WeekSchedules, Data.Snapshot.Breaks, Data.Snapshot.Workouts, library, Today);
+            var ordered = CustomWorkoutOffer.Order(plan, Data.Snapshot.WeekSchedules, Data.Snapshot.Breaks, Data.Snapshot.Workouts, library, Page.Today);
             return new([], [.. ordered.Where(e => !_draft.Contains(e.Id))], library.Count > MaxLibraryWithoutSearch);
         }
     }
 
     protected override void OnInitialized()
     {
+        Page = new PageContext(Data, Clock);
         _save = new GuardedSave(Data, Notice);
         Data.Changed += OnDataChanged;
     }
@@ -79,8 +77,8 @@ public sealed partial class CustomWorkoutDraft : IDisposable
 
         _initialised = true;
         _initialisedFor = SessionId;
-        _draft = MakeUpSession is { } session && ActivePlan is { } plan
-            ? [.. CustomWorkoutStart.RowsForMakeUp(plan, session, Today).Select(r => r.ExerciseId).Distinct()]
+        _draft = MakeUpSession is { } session && Page.ActivePlan is { } plan
+            ? [.. CustomWorkoutStart.RowsForMakeUp(plan, session, Page.Today).Select(r => r.ExerciseId).Distinct()]
             : [];
     }
 
@@ -111,21 +109,21 @@ public sealed partial class CustomWorkoutDraft : IDisposable
     {
         if (MakeUpSession is not { } session)
         {
-            return CustomWorkoutStart.RowsForExercises(plan, _draft, Today);
+            return CustomWorkoutStart.RowsForExercises(plan, _draft, Page.Today);
         }
 
-        var sessionRows = CustomWorkoutStart.RowsForMakeUp(plan, session, Today);
+        var sessionRows = CustomWorkoutStart.RowsForMakeUp(plan, session, Page.Today);
         return
         [
             .. _draft.Select(id =>
                 sessionRows.FirstOrDefault(r => r.ExerciseId == id)
-                ?? CustomWorkoutStart.RowsForExercises(plan, [id], Today)[0]),
+                ?? CustomWorkoutStart.RowsForExercises(plan, [id], Page.Today)[0]),
         ];
     }
 
     private async Task StartAsync()
     {
-        if (_draft.Count == 0 || ActivePlan is not { } plan)
+        if (_draft.Count == 0 || Page.ActivePlan is not { } plan)
         {
             return;
         }
@@ -134,7 +132,7 @@ public sealed partial class CustomWorkoutDraft : IDisposable
         StartOutcome? outcome = null;
         await _save.RunAsync(async () =>
         {
-            outcome = await new WorkoutStarter(Data, Ids, Clock).StartCustomAsync(plan, RowsToStart(plan), Today);
+            outcome = await new WorkoutStarter(Data, Ids, Clock).StartCustomAsync(plan, RowsToStart(plan), Page.Today);
             return outcome.Commit is { } commit ? SaveWork.Committed(commit) : SaveWork.None;
         });
         if (outcome?.Workout is { } workout)

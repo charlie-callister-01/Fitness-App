@@ -3,7 +3,7 @@ using Core.Rules.Finishing;
 using Core.Storage;
 using Ui.Log;
 using Ui.Saving;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
 
@@ -27,7 +27,7 @@ public sealed class FinishFlowTests
     {
         var (data, flow) = await OpenAsync();
 
-        await flow.RequestAsync("w-now", canWrite: true);
+        await flow.RequestAsync("w-now");
 
         Assert.NotNull(flow.Message);
         Assert.Equal(FinishPhase.None, flow.Phase);
@@ -39,10 +39,10 @@ public sealed class FinishFlowTests
     public async Task Pain_Yes_without_an_area_is_refused_by_the_write_and_the_Pain_check_stays_open()
     {
         var (data, flow) = await OpenAsync(SquatDone(), LungeDone());
-        await flow.RequestAsync("w-now", canWrite: true);
+        await flow.RequestAsync("w-now");
         Assert.Equal(FinishPhase.PainCheck, flow.Phase);
 
-        await flow.AnswerAsync("w-now", new PainAnswer.Yes([], null, null, null, null), canWrite: true);
+        await flow.AnswerAsync("w-now", new PainAnswer.Yes([], null, null, null, null));
 
         Assert.NotNull(flow.PainMessage);
         Assert.Equal(FinishPhase.PainCheck, flow.Phase);
@@ -50,13 +50,14 @@ public sealed class FinishFlowTests
     }
 
     [Fact]
-    public async Task Skip_closes_the_Pain_check_even_when_the_window_can_no_longer_write()
+    public async Task Skip_closes_the_Pain_check_and_writes_nothing()
     {
-        var (_, flow) = await OpenAsync(SquatDone(), LungeDone());
-        await flow.RequestAsync("w-now", canWrite: true);
+        var (data, flow) = await OpenAsync(SquatDone(), LungeDone());
+        await flow.RequestAsync("w-now");
 
-        await flow.AnswerAsync("w-now", new PainAnswer.Skipped(), canWrite: false);
+        await flow.AnswerAsync("w-now", new PainAnswer.Skipped());
 
         Assert.Equal(FinishPhase.None, flow.Phase);
+        Assert.Null(data.Snapshot.Workouts.Single().PainCheck);
     }
 }

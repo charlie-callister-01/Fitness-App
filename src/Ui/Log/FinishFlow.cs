@@ -57,9 +57,9 @@ public sealed class FinishFlow(AppData data, SaveFailureNotice notice, IClock cl
     }
 
     /// <summary>Finish was tapped: the Partial prompt when planned Exercises are not done, else the finish write (which refuses with no confirmed Set).</summary>
-    public async Task RequestAsync(string workoutId, bool canWrite)
+    public async Task RequestAsync(string workoutId)
     {
-        if (!CanAct(canWrite) || FindOpen(workoutId) is not { } workout)
+        if (!CanAct() || FindOpen(workoutId) is not { } workout)
         {
             return;
         }
@@ -84,9 +84,9 @@ public sealed class FinishFlow(AppData data, SaveFailureNotice notice, IClock cl
         RaiseChanged();
     }
 
-    public async Task ConfirmPartialAsync(string workoutId, bool canWrite)
+    public async Task ConfirmPartialAsync(string workoutId)
     {
-        if (!CanAct(canWrite) || Phase != FinishPhase.PartialPrompt)
+        if (!CanAct() || Phase != FinishPhase.PartialPrompt)
         {
             return;
         }
@@ -95,9 +95,9 @@ public sealed class FinishFlow(AppData data, SaveFailureNotice notice, IClock cl
     }
 
     /// <summary>Records the Pain check answer. A refused or failed save keeps the Pain check open; Skip records nothing, so it needs no write.</summary>
-    public async Task AnswerAsync(string workoutId, PainAnswer answer, bool canWrite)
+    public async Task AnswerAsync(string workoutId, PainAnswer answer)
     {
-        if (Saving || Phase != FinishPhase.PainCheck || (answer is not PainAnswer.Skipped && !canWrite))
+        if (Saving || Phase != FinishPhase.PainCheck || (answer is not PainAnswer.Skipped && !CanWrite))
         {
             return;
         }

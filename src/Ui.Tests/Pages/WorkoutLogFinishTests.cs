@@ -6,7 +6,7 @@ using Core.Tests.Storage;
 using Microsoft.AspNetCore.Components.Web;
 using Ui.Pages;
 using Ui.Saving;
-using static Ui.Tests.Pages.LogFixture;
+using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
 

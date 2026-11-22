@@ -13,7 +13,7 @@ using Ui.Theming;
 namespace Ui.Tests.Pages;
 
 /// <summary>Shared seed data and wiring for the page tests that run over a real <see cref="AppData"/> on the in-memory store.</summary>
-internal static class LogFixture
+internal static class PageFixture
 {
     /// <summary>A Monday, so the Plan's Monday Session is due today.</summary>
     public static readonly DateTimeOffset Now = new(2026, 11, 16, 9, 0, 0, TimeSpan.Zero);

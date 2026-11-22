@@ -1,3 +1,4 @@
+using Core.Rules.PlanEditing;
 using Core.Rules.Nudges;
 using Core.Rules.Phases;
 using Core.Storage;
@@ -15,7 +16,7 @@ public static class HomeViewBuilder
         IReadOnlySet<string> dismissedNudgeKeys,
         DateTimeOffset? lastBackup)
     {
-        var plan = snapshot.Plans.FirstOrDefault(p => p.IsActive);
+        var plan = ActivePlan.Of(snapshot.Plans);
         var card = HomeTodayRules.Compute(snapshot, now, today);
 
         IReadOnlyList<Nudge> computed = plan is null
