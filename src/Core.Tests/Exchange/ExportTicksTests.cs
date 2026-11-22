@@ -206,4 +206,49 @@ public class ExportTicksTests
         Assert.Empty(document.Plans!);
         Assert.Empty(document.Exercises!);
     }
+
+    [Fact]
+    public void Export_JSON_carries_tracks_trackId_daily_and_mobility_and_keeps_sessionId_when_plan_is_unticked()
+    {
+        var baseSnapshot = ExchangeTestData.Snapshot();
+        var active = baseSnapshot.Plans.Single(p => p.IsActive);
+        var twoTrack = active with
+        {
+            Tracks =
+            [
+                active.Tracks[0],
+                new Track("mobility", "Morning mobility", new TrackRhythm.Daily(75), [new Phase("mob-habit", "Habit", 1, 4, [], [])]),
+            ],
+            Sessions =
+            [
+                .. active.Sessions,
+                new Session("m-mobility", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [new SessionExercise("ex-tickonly", 1, null, null, null)]),
+            ],
+        };
+        var mobWorkout = new Workout(
+            "w-mob", new DateOnly(2026, 11, 16), "m-mobility", false, null, null,
+            [new SessionExercise("ex-tickonly", 1, null, null, null)],
+            [new WorkoutEntry("ex-tickonly", EntryStatus.Done, null, null, null, [])],
+            null);
+        var snapshot = baseSnapshot with
+        {
+            Plans = [.. baseSnapshot.Plans.Select(p => p.IsActive ? twoTrack : p)],
+            Workouts = [.. baseSnapshot.Workouts, mobWorkout],
+        };
+
+        var withPlanJson = Exporter.Export(snapshot, Everything(), "test", ExchangeTestData.Now).Text;
+        Assert.Contains("\"tracks\"", withPlanJson);
+        Assert.Contains("\"trackId\": \"mobility\"", withPlanJson);
+        Assert.Contains("\"defaultDay\": \"daily\"", withPlanJson);
+        Assert.Contains("\"type\": \"mobility\"", withPlanJson);
+        var withPlanDoc = ExchangeTestData.ReadBack(withPlanJson);
+        Assert.Equal("m-mobility", withPlanDoc.Workouts!.Single(w => w.Id == "w-mob").SessionId);
+
+        var withoutPlan = Export(Everything() with { Plan = false }, snapshot);
+        Assert.Null(withoutPlan.Plans);
+        Assert.Equal("m-mobility", withoutPlan.Workouts!.Single(w => w.Id == "w-mob").SessionId);
+
+        var withoutExercises = Export(Everything() with { Exercises = false }, snapshot);
+        Assert.Contains(withoutExercises.Exercises!, e => e.Id == "ex-tickonly");
+    }
 }

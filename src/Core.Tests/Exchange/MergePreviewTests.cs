@@ -195,4 +195,43 @@ public class MergePreviewTests
 
         Assert.Equal(["Adds 1 Weigh-in.", "Touches no Workouts."], preview.Summary);
     }
+
+    [Fact]
+    public void Merging_a_plan_treats_tracks_as_part_of_the_plan()
+    {
+        var oneTrack = MakePlan("a", true, "s-a");
+        var twoTrack = oneTrack with
+        {
+            Tracks =
+            [
+                oneTrack.Tracks[0],
+                new Track("mobility", "Morning mobility", new TrackRhythm.Daily(75), [new Phase("mob-1", "Habit", 1, 4, [], [])]),
+            ],
+            Sessions =
+            [
+                .. oneTrack.Sessions,
+                new Session("m-mob", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [new SessionExercise("squat", 1, null, null, null)]),
+            ],
+        };
+
+        var addedTrack = Merge(Library() with { Plans = [oneTrack] }, Doc() with { Plans = [twoTrack] });
+
+        Assert.True(addedTrack.IsReady, string.Join("; ", addedTrack.Blockers.Select(b => b.Text)));
+        Assert.Equal(["Changes 1 Plan.", "Touches no Workouts."], addedTrack.Summary);
+        var afterAdd = Applied(addedTrack);
+        Assert.True(afterAdd.Plans[0].IsActive);
+        Assert.Equal(["a-main", "mobility"], afterAdd.Plans[0].Tracks.Select(t => t.Id));
+
+        var unchanged = Merge(afterAdd, Doc() with { Plans = [twoTrack] });
+        Assert.Empty(unchanged.Changes);
+        Assert.Equal(["Nothing to change."], unchanged.Summary);
+
+        var updatedRule = twoTrack with
+        {
+            Tracks = [twoTrack.Tracks[0], twoTrack.Tracks[1] with { Rhythm = new TrackRhythm.Daily(80) }],
+        };
+        var changedRule = Merge(afterAdd, Doc() with { Plans = [updatedRule] });
+        Assert.Equal(["Changes 1 Plan.", "Touches no Workouts."], changedRule.Summary);
+        Assert.Equal(80, Assert.IsType<TrackRhythm.Daily>(Applied(changedRule).Plans[0].Tracks[1].Rhythm).DayDonePercent);
+    }
 }

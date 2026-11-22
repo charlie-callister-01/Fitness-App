@@ -64,25 +64,48 @@ internal static class MarkdownRenderer
                 text.AppendLine($"- Goal: {goal}{(plan.GoalDate is { } goalDate ? $" on {Date(goalDate)}" : "")}");
             }
 
-            var main = TrackRules.Main(plan);
-            var target = main.Rhythm is TrackRhythm.Weekly weekly ? weekly.WeeklyTarget : 0;
-            text.AppendLine($"- Starts {Date(plan.StartDate)}; weekly target {target} Workouts");
-            foreach (var phase in main.Phases)
+            text.AppendLine($"- Starts {Date(plan.StartDate)}");
+            for (var i = 0; i < plan.Tracks.Count; i++)
             {
-                text.AppendLine($"- {PhaseText(phase, plan, names)}");
-            }
-
-            foreach (var session in plan.Sessions)
-            {
-                var interval = session.BenchmarkIntervalWeeks is { } weeks ? $", every {weeks} weeks" : "";
-                text.AppendLine().AppendLine($"#### {session.Name} ({session.DefaultDay}, {session.Type}{interval})").AppendLine();
-                foreach (var row in session.Exercises)
-                {
-                    text.AppendLine($"- {RowText(row, names)}");
-                }
+                TrackSection(text, plan, plan.Tracks[i], isMain: i == 0, names);
             }
         }
     }
+
+    private static void TrackSection(StringBuilder text, Plan plan, Track track, bool isMain, Dictionary<string, string> names)
+    {
+        var cadence = track.Rhythm.Cadence.ToString().ToLowerInvariant();
+        var qualifier = isMain ? $"main, {cadence}" : cadence;
+        text.AppendLine().AppendLine($"#### {track.Name} ({qualifier})").AppendLine();
+        text.AppendLine($"- {TrackRuleText(track.Rhythm, isMain)}");
+        foreach (var phase in track.Phases)
+        {
+            text.AppendLine($"- {PhaseText(phase, plan, names)}");
+        }
+
+        foreach (var session in TrackRules.SessionsOf(plan, track))
+        {
+            var interval = session.BenchmarkIntervalWeeks is { } weeks ? $", every {weeks} weeks" : "";
+            text.AppendLine().AppendLine($"##### {session.Name} ({session.DefaultDay}, {session.Type}{interval})").AppendLine();
+            foreach (var row in session.Exercises)
+            {
+                text.AppendLine($"- {RowText(row, names)}");
+            }
+        }
+    }
+
+    private static string TrackRuleText(TrackRhythm rhythm, bool isMain) => rhythm switch
+    {
+        TrackRhythm.Weekly w when isMain =>
+            $"Weekly target: {WorkoutsCount(w.WeeklyTarget)}; Streak minimum: {WorkoutsCount(w.StreakMinWorkoutsPerWeek)}; Custom workouts {(w.StreakCountsCustomWorkouts ? "count" : "do not count")}",
+        TrackRhythm.Weekly w =>
+            $"Weekly target: {WorkoutsCount(w.WeeklyTarget)}; Streak minimum: {WorkoutsCount(w.StreakMinWorkoutsPerWeek)}",
+        TrackRhythm.Daily d =>
+            $"Day done at {d.DayDonePercent}% of planned rows",
+        _ => throw new InvalidOperationException(),
+    };
+
+    private static string WorkoutsCount(int n) => $"{n} Workout{(n == 1 ? "" : "s")}";
 
     private static string PhaseText(Phase phase, Plan plan, Dictionary<string, string> names)
     {

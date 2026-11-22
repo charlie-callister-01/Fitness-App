@@ -299,4 +299,119 @@ public class ImportPreviewTests
         Assert.Contains("Creates a new Plan called \"Plan B\", inactive.", preview.Summary);
         Assert.Contains(preview.Items, i => i.Key == "a" && i.Text.Contains("active"));
     }
+
+    private static Plan MakeTwoTrackPlan(string id, string mainTrackId, string mobilityTrackId, string strengthSessionId, string mobilitySessionId, string phaseId) =>
+        new(
+            id, "Two Track", true, new DateOnly(2026, 12, 1), null, null, 2.5,
+            [
+                new Track(mainTrackId, "Main", new TrackRhythm.Weekly(3, 2, false),
+                    [new Phase(phaseId, "Base", 1, 4, [], [new SessionOverride(strengthSessionId, [new SessionExercise("squat", 4, 5, null, null)])])]),
+                new Track(mobilityTrackId, "Morning mobility", new TrackRhythm.Daily(75),
+                    [new Phase($"{phaseId}-mob", "Habit", 1, 4, [], [new SessionOverride(mobilitySessionId, [new SessionExercise("squat", 1, null, null, null)])])]),
+            ],
+            [
+                Sess(strengthSessionId, mainTrackId),
+                PlanFixture.Session(mobilitySessionId, DefaultDay.Daily, SessionType.Mobility, "Morning mobility",
+                    exercises: [new SessionExercise("squat", 1, null, null, null)], trackId: mobilityTrackId),
+            ]);
+
+    [Fact]
+    public void Colliding_track_ids_are_remapped_with_sessions_overrides_and_qualified_badge_metrics_and_second_import_has_nothing_to_change()
+    {
+        var existing = MakeTwoTrackPlan("existing", "main", "mobility", "s1", "m1", "ph1");
+        var library = Library([existing], null, Squat) with
+        {
+            Badges = [new Badge("b-existing", "Existing mobility", "streak:mobility", 7)],
+        };
+        var incoming = MakeTwoTrackPlan("incoming", "main", "mobility", "s2", "m2", "ph2");
+        var document = Doc(plans: [incoming]) with
+        {
+            Badges =
+            [
+                new Badge("b-streak", "Mobility streak", "streak:mobility", 14),
+                new Badge("b-days", "Mobility days", "days:mobility", 30),
+                new Badge("b-best", "Main best week", "bestweek:main", 4),
+            ],
+        };
+
+        var preview = Preview(library, document, ImportKind.Plan);
+
+        Assert.True(preview.IsReady, string.Join("; ", preview.Blockers.Select(b => b.Text)));
+        var after = Applied(preview);
+        var added = Assert.Single(after.Plans, p => p.Id == "incoming");
+        Assert.Equal(["main-2", "mobility-2"], added.Tracks.Select(t => t.Id));
+        Assert.Equal(["main-2", "mobility-2"], added.Sessions.Select(s => s.TrackId));
+        Assert.Equal("m2", Assert.Single(added.Tracks[1].Phases[0].SessionOverrides).SessionId);
+        Assert.Equal("streak:mobility-2", after.Badges.Single(b => b.Id == "b-streak").Metric);
+        Assert.Equal("days:mobility-2", after.Badges.Single(b => b.Id == "b-days").Metric);
+        Assert.Equal("bestweek:main-2", after.Badges.Single(b => b.Id == "b-best").Metric);
+        Assert.Equal("streak:mobility", after.Badges.Single(b => b.Id == "b-existing").Metric);
+
+        var again = Preview(after, document, ImportKind.Plan);
+
+        Assert.True(again.IsReady);
+        Assert.Empty(again.Changes);
+        Assert.Equal(["Nothing to change."], again.Summary);
+    }
+
+    [Fact]
+    public void A_v1_plan_file_imports_into_a_main_track_and_remaps_if_planId_main_collides()
+    {
+        var existing = MakePlan("hyrox", "Existing", true, "s1", "ph1");
+        var library = Library([existing], null, Squat);
+        const string v1PlanJson = """
+            {
+              "formatVersion": 1,
+              "plans": [
+                {
+                  "id": "hyrox",
+                  "name": "Imported V1",
+                  "isActive": true,
+                  "startDate": "2026-12-07",
+                  "weeklyTarget": 3,
+                  "streakMinWorkoutsPerWeek": 2,
+                  "streakCountsCustomWorkouts": false,
+                  "weightIncrementKg": 2.5,
+                  "phases": [{ "id": "ph-v1", "focus": "Base", "startWeek": 1, "endWeek": 4 }],
+                  "sessions": [
+                    {
+                      "id": "s-v1",
+                      "name": "Day 1",
+                      "defaultDay": "monday",
+                      "type": "strength",
+                      "exercises": [{ "exerciseId": "squat", "sets": 3, "reps": 5 }]
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+        var inspected = ImportInput.Inspect(v1PlanJson);
+        Assert.True(inspected.IsAccepted, string.Join("; ", inspected.Rejections));
+
+        var preview = ImportPreviewer.Preview(library, inspected.Inspected!, ImportKind.Plan, ImportDecisions.None);
+
+        Assert.True(preview.IsReady, string.Join("; ", preview.Blockers.Select(b => b.Text)));
+        var after = Applied(preview);
+        var added = Assert.Single(after.Plans, p => p.Name == "Imported V1");
+        Assert.Equal("hyrox-2", added.Id);
+        Assert.Equal("hyrox-main-2", Assert.Single(added.Tracks).Id);
+        Assert.Equal("hyrox-main-2", Assert.Single(added.Sessions).TrackId);
+
+        var again = ImportPreviewer.Preview(after, inspected.Inspected!, ImportKind.Plan, ImportDecisions.None);
+        Assert.Empty(again.Changes);
+        Assert.Equal(["Nothing to change."], again.Summary);
+    }
+
+    [Fact]
+    public void The_plan_import_preview_mentions_tracks_when_the_plan_has_more_than_one()
+    {
+        var twoTracks = MakeTwoTrackPlan("two", "main", "mobility", "s1", "m1", "ph1");
+
+        var preview = Preview(Library(exercises: Squat), Doc(plans: [twoTracks]), ImportKind.Plan);
+
+        Assert.True(preview.IsReady);
+        Assert.Contains(preview.Summary, l => l.Contains("2 Tracks"));
+        Assert.Contains(preview.Items, i => i.Action == ImportItemAction.Add && i.Kind == RecordKind.Plan && i.Text.Contains("2 Tracks"));
+    }
 }

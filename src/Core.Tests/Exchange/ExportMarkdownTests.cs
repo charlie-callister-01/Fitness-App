@@ -91,10 +91,10 @@ public class ExportMarkdownTests
         Assert.Contains("- Goal: HYROX London Doubles on Sat 24 Apr 2027", plan);
         Assert.Contains("- Weeks 1-8: Foundation. Goal: Goblet Squat 24 kg x 10", plan);
         Assert.Contains("- Weeks 9-19: Build. A: Lower + core becomes: Romanian Deadlift: 4 x 6 (Hinge, don't squat)", plan);
-        Assert.Contains("#### A: Lower + core (Monday, Strength)", plan);
+        Assert.Contains("##### A: Lower + core (Monday, Strength)", plan);
         Assert.Contains("- Goblet Squat: 3 x 8-12 (Chest tall)", plan);
         Assert.Contains("- Farmers Carry: 3 sets", plan);
-        Assert.Contains("#### Benchmark test (Saturday, Test, every 4 weeks)", plan);
+        Assert.Contains("##### Benchmark test (Saturday, Test, every 4 weeks)", plan);
     }
 
     [Fact]
@@ -144,6 +144,7 @@ public class ExportMarkdownTests
         var snapshot = ExchangeTestData.Snapshot();
         var ids = snapshot.Exercises.Select(e => e.Id)
             .Concat(snapshot.Plans.SelectMany(p => new[] { p.Id }
+                .Concat(p.Tracks.Select(t => t.Id))
                 .Concat(p.Tracks.SelectMany(t => t.Phases).Select(ph => ph.Id))
                 .Concat(p.Sessions.Select(s => s.Id))))
             .Concat(snapshot.Workouts.SelectMany(w => new[] { w.Id }.Concat(w.Entries.SelectMany(e => e.Sets.Select(s => s.Id))).Concat(w.PainCheck is { } p ? [p.Id] : [])))
@@ -186,5 +187,48 @@ public class ExportMarkdownTests
         Assert.DoesNotContain("## Weigh-ins", text);
         Assert.DoesNotContain("## Plan", text);
         Assert.Contains("## Workouts", text);
+    }
+
+    [Fact]
+    public void Each_Track_is_shown_as_a_heading_with_its_cadence_rules_Phases_and_Sessions()
+    {
+        var baseSnapshot = Snapshot();
+        var active = baseSnapshot.Plans.Single(p => p.IsActive);
+        var multiTrack = active with
+        {
+            Tracks =
+            [
+                active.Tracks[0],
+                new Track("cardio-track-id", "Engine work", new TrackRhythm.Weekly(2, 1, false),
+                    [new Phase("eng-1", "Aerobic base", 1, 6, [], [])]),
+                new Track("mobility-track-id", "Morning flow", new TrackRhythm.Daily(75),
+                    [new Phase("mob-1", "Habit", 1, 4, [], [])]),
+            ],
+            Sessions =
+            [
+                .. active.Sessions,
+                new Session("s-eng", "Easy 5k", "cardio-track-id", DefaultDay.Thursday, SessionType.Cardio, null,
+                    [new SessionExercise("5k-run", 1, null, null, null)]),
+                new Session("s-mob", "Morning stretch", "mobility-track-id", DefaultDay.Daily, SessionType.Mobility, null,
+                    [new SessionExercise("goblet-squat", 1, null, null, null)]),
+            ],
+        };
+        var snapshot = baseSnapshot with { Plans = [.. baseSnapshot.Plans.Select(p => p.IsActive ? multiTrack : p)] };
+
+        var text = Exporter.Export(snapshot, Everything(), "test", ExchangeTestData.Now).Text;
+        var plan = Section(text, "## Plan");
+
+        Assert.Contains("#### Main (main, weekly)", plan);
+        Assert.Contains("- Weekly target: 5 Workouts; Streak minimum: 4 Workouts; Custom workouts do not count", plan);
+        Assert.Contains("#### Engine work (weekly)", plan);
+        Assert.Contains("- Weekly target: 2 Workouts; Streak minimum: 1 Workout", plan);
+        Assert.Contains("- Weeks 1-6: Aerobic base", plan);
+        Assert.Contains("##### Easy 5k (Thursday, Cardio)", plan);
+        Assert.Contains("#### Morning flow (daily)", plan);
+        Assert.Contains("- Day done at 75% of planned rows", plan);
+        Assert.Contains("- Weeks 1-4: Habit", plan);
+        Assert.Contains("##### Morning stretch (Daily, Mobility)", plan);
+        Assert.DoesNotContain("cardio-track-id", text);
+        Assert.DoesNotContain("mobility-track-id", text);
     }
 }
