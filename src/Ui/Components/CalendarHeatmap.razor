@@ -1,0 +1,102 @@
+@using Core.Model
+@using Core.Rules.Insight
+@* C-18 CalendarHeatmap: the whole Plan as columns of weeks (Monday at the top) under a Phase strip. It draws a prepared CalendarView; the
+   Core view decides every state. State is never colour alone: fill, a half fill, dashes, hatching and a PR triangle tell the states apart.
+   Reusable: the Trophies Calendar tab uses it unchanged. *@
+<section class="fa-heat" aria-label="Plan calendar">
+    <div class="fa-heat__panel" tabindex="0" role="region" aria-label="Plan calendar, scrolls sideways">
+        <div class="fa-heat__inner">
+            @if (Strip.Count > 0)
+            {
+                <ol class="fa-heat__phases" style="grid-template-columns: repeat(@View.Weeks.Count, var(--heat-cell))" aria-label="Phases">
+                    @foreach (var phase in Strip)
+                    {
+                        <li class="fa-heat__phase fa-heat__phase--@(phase.Index % 2)" style="grid-column: @phase.Start / span @phase.Span" title="@phase.Text">
+                            @phase.Text
+                        </li>
+                    }
+                </ol>
+            }
+
+            <div class="fa-heat__grid" style="grid-template-columns: repeat(@View.Weeks.Count, var(--heat-cell))">
+                @foreach (var week in View.Weeks)
+                {
+                    @foreach (var day in week.Days)
+                    {
+                        var cell = day;
+                        @if (cell.WorkoutId is { } workoutId)
+                        {
+                            <button type="button" class="@CellClass(cell)" aria-label="@cell.Label" @onclick="() => OnOpenWorkout.InvokeAsync(workoutId)"></button>
+                        }
+                        else
+                        {
+                            <div class="@CellClass(cell)" role="img" aria-label="@cell.Label"></div>
+                        }
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <ul class="fa-heat__legend" aria-label="Legend">
+        <li><span class="fa-heat__swatch fa-heat__cell fa-heat__cell--done fa-heat__cell--strength" aria-hidden="true"></span>Done (colour is the Session type)</li>
+        <li><span class="fa-heat__swatch fa-heat__cell fa-heat__cell--partial fa-heat__cell--strength" aria-hidden="true"></span>Partial</li>
+        <li><span class="fa-heat__swatch fa-heat__cell fa-heat__cell--missed" aria-hidden="true"></span>Missed</li>
+        <li><span class="fa-heat__swatch fa-heat__cell fa-heat__cell--break" aria-hidden="true"></span>Break</li>
+        <li><span class="fa-heat__swatch fa-heat__cell fa-heat__cell--done fa-heat__cell--strength fa-heat__cell--pr" aria-hidden="true"></span>PR</li>
+        <li><span class="fa-heat__swatch fa-heat__cell fa-heat__cell--today" aria-hidden="true"></span>Today</li>
+        <li><span class="fa-heat__swatch fa-heat__cell" aria-hidden="true"></span>Empty or upcoming</li>
+    </ul>
+</section>
+
+@code {
+    private sealed record StripItem(int Index, int Start, int Span, string Text);
+
+    [Parameter, EditorRequired]
+    public CalendarView View { get; set; } = default!;
+
+    /// <summary>Raised with the Workout's ID when a day that has a Workout is tapped.</summary>
+    [Parameter]
+    public EventCallback<string> OnOpenWorkout { get; set; }
+
+    private IReadOnlyList<StripItem> Strip
+    {
+        get
+        {
+            var items = new List<StripItem>();
+            var last = View.Weeks.Count;
+            for (var i = 0; i < View.Phases.Count; i++)
+            {
+                var phase = View.Phases[i];
+                var start = Math.Max(1, phase.StartWeek);
+                var end = Math.Min(phase.EndWeek, last);
+                if (end < start) continue;
+                items.Add(new StripItem(i, start, end - start + 1, $"{phase.Name} · {phase.Weeks} {(phase.Weeks == 1 ? "week" : "weeks")}"));
+            }
+
+            return items;
+        }
+    }
+
+    internal static string CellClass(CalendarDay day)
+    {
+        var state = day.State switch
+        {
+            CalendarDayState.Done => "fa-heat__cell--done",
+            CalendarDayState.Partial => "fa-heat__cell--partial",
+            CalendarDayState.Missed => "fa-heat__cell--missed",
+            CalendarDayState.BreakDay => "fa-heat__cell--break",
+            CalendarDayState.Future => "fa-heat__cell--future",
+            _ => "fa-heat__cell--empty",
+        };
+        var type = day.SessionType switch
+        {
+            SessionType.Strength => "fa-heat__cell--strength",
+            SessionType.Cardio => "fa-heat__cell--cardio",
+            SessionType.Body => "fa-heat__cell--body",
+            SessionType.Test => "fa-heat__cell--test",
+            _ => "",
+        };
+        return $"fa-heat__cell {state} {type}{(day.HasPr ? " fa-heat__cell--pr" : "")}{(day.IsToday ? " fa-heat__cell--today" : "")}".Replace("  ", " ").Trim();
+    }
+}

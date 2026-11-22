@@ -1,0 +1,53 @@
+@using Core.Rules.Insight
+@using Core.Storage
+@using Core.Time
+@using Microsoft.AspNetCore.Components
+@implements IDisposable
+@* The Calendar tab (design S-07): the whole Plan as a CalendarHeatmap. The Core CalendarViewBuilder decides every cell; this holds the tap. *@
+@if (_view is null)
+{
+    <EmptyState Kind="EmptyStateKind.NoPlan" Title="No active Plan" Message="Start a Plan and your weeks will fill in here." />
+}
+else if (!_view.HasHistory)
+{
+    <EmptyState Kind="EmptyStateKind.NoHistory" Title="No history yet" Message="Finish a Workout and your Plan, week by week, will fill in here." />
+}
+else
+{
+    <CalendarHeatmap View="_view" OnOpenWorkout="OnOpenWorkout" />
+}
+
+@code {
+    private CalendarView? _view;
+
+    [Inject] private AppData Data { get; set; } = default!;
+
+    [Inject] private IClock Clock { get; set; } = default!;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Data.Changed += OnDataChanged;
+        Rebuild();
+    }
+
+    public void Dispose() => Data.Changed -= OnDataChanged;
+
+    private void OnDataChanged() => _ = InvokeAsync(() =>
+    {
+        Rebuild();
+        StateHasChanged();
+    });
+
+    private void Rebuild()
+    {
+        var snapshot = Data.Snapshot;
+        var page = new Ui.Pages.PageContext(Data, Clock);
+        _view = page.ActivePlan is { } plan
+            ? CalendarViewBuilder.Build(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, snapshot.Exercises, page.Today)
+            : null;
+    }
+
+    private void OnOpenWorkout(string workoutId) => Navigation.NavigateTo($"log/{workoutId}");
+}

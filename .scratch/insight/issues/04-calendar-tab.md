@@ -2,7 +2,7 @@
 
 Spec: `docs/specs/insight-b6-b8.md` (S-07 Calendar, C-18). Stories 21-29.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Blocked by:** 01 Progress tab with Exercise charts.
 
@@ -10,8 +10,8 @@ Spec: `docs/specs/insight-b6-b8.md` (S-07 Calendar, C-18). Stories 21-29.
 
 New pure Core calendar view built on the existing week, Break and Phase rules: per day a state, Session type, PR flag, today flag, accessible label and Workout reference; plus the Phase strip. Main Track only; take plain inputs so per-Track rows can be added later.
 
-- [ ] Core view has Core.Tests: every state, Break over a Missed day, Partial, PR flag, future days, today, Plan with no Phases, label text
-- [ ] CalendarHeatmap component with bUnit tests: cell state to class and label, tap opens the Workout, legend present
-- [ ] Calendar tab tests via `PageFixture`: populated and no-history empty state
-- [ ] Both Themes, both Modes, 360 px with sideways scroll
-- [ ] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 04 Calendar tab`
+- [x] Core view has Core.Tests: every state, Break over a Missed day, Partial, PR flag, future days, today, Plan with no Phases, label text
+- [x] CalendarHeatmap component with bUnit tests: cell state to class and label, tap opens the Workout, legend present
+- [x] Calendar tab tests via `PageFixture`: populated and no-history empty state
+- [x] Both Themes, both Modes, 360 px with sideways scroll
+- [x] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 04 Calendar tab`

@@ -137,7 +137,7 @@ public sealed class ProgressTests : BunitContext
         cut.FindAll(".fa-progress__tabs button")[1].Click();
         Assert.Contains("No benchmarks yet", cut.Markup);
         cut.FindAll(".fa-progress__tabs button")[2].Click();
-        Assert.Contains("The calendar is coming", cut.Markup);
+        Assert.Contains("Finish a Workout and your Plan", cut.Markup);
         cut.FindAll(".fa-progress__tabs button")[0].Click();
         Assert.NotNull(cut.Find(".empty"));
     }
