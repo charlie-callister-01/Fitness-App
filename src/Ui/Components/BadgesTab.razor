@@ -8,15 +8,19 @@
 <div class="fa-badges">
     @if (Selected is { } selected)
     {
-        <BadgeDetail Badge="selected" OnClose="() => _selectedId = null" />
+        <BadgeDetail Badge="selected" OnClose="() => _selectedId = null" OnEdit="OpenEdit" />
     }
     else if (!_view.HasHistory)
     {
-        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Badges yet" Message="Finish a Workout and your Badges will start to fill in here." />
+        <EmptyState Kind="EmptyStateKind.NoHistory" Title="No Badges yet" Message="Finish a Workout and your Badges will start to fill in here."
+                    ActionLabel="Add a Badge" OnAction="OpenAdd" />
     }
     else
     {
-        <p class="fa-label fa-badges__count">Badges unlocked: @_view.UnlockedCount / @_view.TotalCount</p>
+        <div class="fa-badges__header">
+            <p class="fa-label fa-badges__count">Badges unlocked: @_view.UnlockedCount / @_view.TotalCount</p>
+            <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite" OnClick="OpenAdd">Add a Badge</Button>
+        </div>
 
         @foreach (var badge in _view.Closest)
         {
@@ -30,11 +34,29 @@
             }
         </div>
     }
+
+    <BadgeEditor Open="_editorOpen" Badge="_editing" OnClose="() => _editorOpen = false" />
 </div>
 
 @code {
     private TrophyView _view = new([], 0, [], false);
     private string? _selectedId;
+    private bool _editorOpen;
+    private Core.Model.Badge? _editing;
+
+    private Ui.Pages.PageContext Page => new(Data, Clock);
+
+    private void OpenAdd()
+    {
+        _editing = null;
+        _editorOpen = true;
+    }
+
+    private void OpenEdit()
+    {
+        _editing = Data.Snapshot.Badges.FirstOrDefault(b => b.Id == _selectedId);
+        _editorOpen = _editing is not null;
+    }
 
     /// <summary>A Badge to open straight away (from the UnlockToast link).</summary>
     [Parameter]

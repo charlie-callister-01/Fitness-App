@@ -7,3 +7,10 @@
 .fa-badges__count {
     margin: 0;
 }
+
+.fa-badges__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
