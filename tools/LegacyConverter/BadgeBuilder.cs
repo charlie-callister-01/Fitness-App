@@ -65,21 +65,17 @@ internal static class BadgeBuilder
         IReadOnlyDictionary<string, Exercise> exercisesById,
         string badgeName)
     {
-        var trimmed = raw.Trim();
+        var trimmed = raw.Trim().Replace('\u2212', '-');
 
         // m:ss format (e.g. "4:30" -> 270 seconds)
         if (trimmed.Contains(':', StringComparison.Ordinal))
         {
-            var parts = trimmed.Split(':');
-            if (parts.Length != 2
-                || !int.TryParse(parts[0], CultureInfo.InvariantCulture, out var mins)
-                || !int.TryParse(parts[1], CultureInfo.InvariantCulture, out var secs)
-                || secs is < 0 or >= 60)
+            if (!LegacyParsing.TryParseMinutesSeconds(trimmed, out var totalSeconds))
             {
                 throw new FormatException($"Unreadable time target '{raw}' on badge '{badgeName}'.");
             }
 
-            return (mins * 60) + secs;
+            return totalSeconds;
         }
 
         if (!double.TryParse(trimmed, CultureInfo.InvariantCulture, out var value))

@@ -73,4 +73,43 @@ public sealed class BadgeConversionTests
 
         Assert.Contains(result.Notes, n => n.Kind == ConversionNoteKind.Dropped && n.Subject == "Badge: Bodyweight deadlift");
     }
+
+    [Fact]
+    public void Convert_NormalizesUnicodeMinusInBadgeTarget()
+    {
+        var config = """
+            ## Settings
+            - start: 2026-10-19
+            - race: 2027-04-24
+
+            ## Phases
+            | Phase | From week | To week |
+            | --- | --- | --- |
+            | Foundation | 1 | 8 |
+
+            ## Sessions
+            | Code | Name | Day | Type |
+            | --- | --- | --- | --- |
+            | W | Weigh-in | Sun | body |
+
+            ## Exercises
+            | Session | Exercise | Sets × reps | Log as | Cue |
+            | --- | --- | --- | --- | --- |
+            | W | Waist | monthly | cm | Belly button |
+
+            ## Badges
+            | Badge | Exercise | Target |
+            | --- | --- | --- |
+            | Waist −3 cm | Waist | −3 |
+            """;
+
+        var result = LegacyConverter.Convert(new LegacyFolder(
+            config,
+            new Dictionary<string, string>(),
+            new Dictionary<string, string>()));
+
+        var badge = Assert.Single(result.Document.Badges!);
+        Assert.Equal("waist-3-cm", badge.Id);
+        Assert.Equal(-3, badge.Target);
+    }
 }

@@ -48,7 +48,9 @@ internal static class GuideBuilder
         List<ConversionNote> notes)
     {
         var lines = markdown.Replace("\r\n", "\n").Split('\n');
-        var (exerciseNames, bodyStart) = ParseFrontMatter(lines);
+        var frontMatter = LegacyParsing.ParseFrontMatter(lines);
+        var exerciseNames = frontMatter.Lists.TryGetValue("exercises", out var list) ? list : [];
+        var bodyStart = frontMatter.BodyStartLineIndex;
 
         string? works = null;
         string? whyInPlan = null;
@@ -181,51 +183,6 @@ internal static class GuideBuilder
             PersonalNotes: personalNotes);
 
         return (exerciseNames, template);
-    }
-
-    private static (IReadOnlyList<string> ExerciseNames, int BodyStart) ParseFrontMatter(string[] lines)
-    {
-        var names = new List<string>();
-        if (lines.Length == 0 || lines[0].Trim() != "---")
-        {
-            return (names, 0);
-        }
-
-        var inExercises = false;
-        var i = 1;
-        for (; i < lines.Length; i++)
-        {
-            var trimmed = lines[i].Trim();
-            if (trimmed == "---")
-            {
-                i++;
-                break;
-            }
-
-            if (trimmed.StartsWith("exercises:", StringComparison.OrdinalIgnoreCase))
-            {
-                inExercises = true;
-                continue;
-            }
-
-            if (inExercises)
-            {
-                if (trimmed.StartsWith("- ", StringComparison.Ordinal))
-                {
-                    var item = trimmed[2..].Trim().Trim('"', '\'');
-                    if (!string.IsNullOrWhiteSpace(item))
-                    {
-                        names.Add(item);
-                    }
-                }
-                else if (trimmed.Length > 0 && !lines[i].StartsWith(' '))
-                {
-                    inExercises = false;
-                }
-            }
-        }
-
-        return (names, i);
     }
 
     private static bool TryExtractBoldPrefix(string line, string prefix, out string value)

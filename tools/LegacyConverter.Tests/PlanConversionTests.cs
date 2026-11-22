@@ -32,9 +32,55 @@ public sealed class PlanConversionTests
     }
 
     [Fact]
-    public void ParseSetsReps_ThrowsOnUnreadableInput()
+    public void ParseSetsReps_ThrowsOnUnreadableInputAndRecordsWarningNote()
     {
-        Assert.Throws<FormatException>(() => PlanBuilder.ParseSetsReps("do some stuff", null));
+        var notes = new List<ConversionNote>();
+
+        Assert.Throws<FormatException>(() =>
+            PlanBuilder.ParseSetsReps("do some stuff", null, notes, "Mystery move"));
+
+        var note = Assert.Single(notes);
+        Assert.Equal(ConversionNoteKind.Warning, note.Kind);
+        Assert.Contains("Mystery move", note.Subject);
+        Assert.Contains("do some stuff", note.Reason);
+    }
+
+    [Fact]
+    public void BuildPlan_RecordsWarningNoteBeforeThrowingOnUnreadableSetsReps()
+    {
+        var config = ConfigParser.Parse("""
+            ## Settings
+            - start: 2026-10-19
+            - race: 2027-04-24
+
+            ## Phases
+            | Phase | From week | To week |
+            | --- | --- | --- |
+            | Foundation | 1 | 8 |
+
+            ## Sessions
+            | Code | Name | Day | Type |
+            | --- | --- | --- | --- |
+            | A | Lower | Mon | strength |
+
+            ## Exercises
+            | Session | Exercise | Sets × reps | Log as | Cue |
+            | --- | --- | --- | --- | --- |
+            | A | Mystery move | do some stuff | load | |
+
+            ## Badges
+            | Badge | Exercise | Target |
+            | --- | --- | --- |
+            | First rep | sessions | 1 |
+            """);
+
+        var notes = new List<ConversionNote>();
+
+        Assert.Throws<FormatException>(() => PlanBuilder.BuildPlan(config, notes));
+        Assert.Contains(notes, n =>
+            n.Kind == ConversionNoteKind.Warning
+            && n.Subject.Contains("Mystery move", StringComparison.Ordinal)
+            && n.Reason.Contains("do some stuff", StringComparison.Ordinal));
     }
 
     [Fact]

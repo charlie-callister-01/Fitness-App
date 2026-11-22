@@ -173,4 +173,111 @@ public sealed class HistoryConversionTests
         Assert.Equal(35, row.Sets[0].WeightKg);
         Assert.Equal(10, row.Sets[0].Reps);
     }
+
+    [Fact]
+    public void Convert_ParsesSecsMinsKmTimeTickOnlyScalarAndWarnsOnNonSidePlank23()
+    {
+        var config = """
+            ## Settings
+            - start: 2026-10-19
+            - race: 2027-04-24
+
+            ## Phases
+            | Phase | From week | To week |
+            | --- | --- | --- |
+            | Foundation | 1 | 8 |
+
+            ## Sessions
+            | Code | Name | Day | Type |
+            | --- | --- | --- | --- |
+            | M | Morning mobility | Daily | mobility |
+            | B | Upper + shoulders | Tue | strength |
+            | C | Engine + core | Wed | cardio |
+            | T | Benchmark test | Every 4 weeks | test |
+
+            ## Exercises
+            | Session | Exercise | Sets × reps | Log as | Cue |
+            | --- | --- | --- | --- | --- |
+            | M | Cat-cow | × 8 slow | - | Spine |
+            | B | Dead hang | 2 × 30 s | secs | Shoulder health |
+            | B | Scap pull-up | 3 × 8 | secs | Control |
+            | C | Easy run | 20 min | km | Conversational |
+            | C, T | Longest continuous run | in one go | mins | Unbroken |
+            | T | SkiErg 1000 m | 1 all-out | time | Log as m:ss |
+
+            ## Badges
+            | Badge | Exercise | Target |
+            | --- | --- | --- |
+            | First rep | sessions | 1 |
+            """;
+
+        var logs = new Dictionary<string, string>
+        {
+            ["2026-11-05 M.md"] = """
+                ---
+                type: log
+                session: M
+                date: 2026-11-05
+                cat_cow: yes
+                ---
+                """,
+            ["2026-11-06 B.md"] = """
+                ---
+                type: log
+                session: B
+                date: 2026-11-06
+                dead_hang: 45
+                scap_pull_up: 2.3
+                ---
+                """,
+            ["2026-11-07 C.md"] = """
+                ---
+                type: log
+                session: C
+                date: 2026-11-07
+                easy_run: 5.5
+                longest_continuous_run: 20
+                ---
+                """,
+            ["2026-11-08 T.md"] = """
+                ---
+                type: log
+                session: T
+                date: 2026-11-08
+                skierg_1000_m: 4:30
+                ---
+                """,
+        };
+
+        var result = LegacyConverter.Convert(new LegacyFolder(
+            config,
+            new Dictionary<string, string>(),
+            logs));
+
+        var mWorkout = result.Document.Workouts!.Single(w => w.Id == "w-2026-11-05-m");
+        var catCow = Assert.Single(mWorkout.Entries);
+        Assert.Equal("cat-cow", catCow.ExerciseId);
+        Assert.Equal(EntryStatus.Done, catCow.Status);
+        Assert.Empty(catCow.Sets);
+
+        var bWorkout = result.Document.Workouts!.Single(w => w.Id == "w-2026-11-06-b");
+        var deadHang = Assert.Single(bWorkout.Entries);
+        Assert.Equal("dead-hang", deadHang.ExerciseId);
+        Assert.Equal(45, deadHang.Sets[0].DurationSeconds);
+
+        Assert.Contains(result.Notes, n =>
+            n.Kind == ConversionNoteKind.Warning
+            && n.Subject == "Log: 2026-11-06 B.md (Scap pull-up)"
+            && n.Reason.Contains("2.3", StringComparison.Ordinal));
+
+        var cWorkout = result.Document.Workouts!.Single(w => w.Id == "w-2026-11-07-c");
+        var easyRun = cWorkout.Entries.Single(e => e.ExerciseId == "easy-run");
+        Assert.Equal(5.5, easyRun.Sets[0].DistanceKm);
+        var longRun = cWorkout.Entries.Single(e => e.ExerciseId == "longest-continuous-run");
+        Assert.Equal(1200, longRun.Sets[0].DurationSeconds);
+
+        var tWorkout = result.Document.Workouts!.Single(w => w.Id == "w-2026-11-08-t");
+        var ski = Assert.Single(tWorkout.Entries);
+        Assert.Equal(270, ski.Sets[0].DurationSeconds);
+    }
 }

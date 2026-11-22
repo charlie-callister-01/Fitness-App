@@ -32,6 +32,18 @@ internal static partial class PlanBuilder
         "1 set",
     };
 
+    public static bool TryGetSessionId(string sessionCode, out string sessionId)
+    {
+        if (SessionMap.TryGetValue(sessionCode, out var mapped))
+        {
+            sessionId = mapped.Id;
+            return true;
+        }
+
+        sessionId = string.Empty;
+        return false;
+    }
+
     public static Settings BuildSettings(ParsedConfig config)
     {
         var streakMin = ReadInt(config.Settings, "streak min", 4);
@@ -114,7 +126,7 @@ internal static partial class PlanBuilder
                 .Where(e => e.SessionCodes.Any(c => string.Equals(c, row.Code, StringComparison.OrdinalIgnoreCase)))
                 .Select(e =>
                 {
-                    var parsed = ParseSetsReps(e.SetsReps, e.Cue);
+                    var parsed = ParseSetsReps(e.SetsReps, e.Cue, notes, e.Name);
                     return new SessionExercise(
                         ExerciseId: LegacyIds.ToId(e.Name),
                         Sets: parsed.Sets,
@@ -146,7 +158,11 @@ internal static partial class PlanBuilder
             Sessions: sessions);
     }
 
-    internal static ParsedSetsReps ParseSetsReps(string raw, string? existingCue)
+    internal static ParsedSetsReps ParseSetsReps(
+        string raw,
+        string? existingCue,
+        List<ConversionNote>? notes = null,
+        string? exerciseName = null)
     {
         var text = raw.Trim();
         var cue = string.IsNullOrWhiteSpace(existingCue) ? null : existingCue.Trim();
@@ -214,6 +230,10 @@ internal static partial class PlanBuilder
             return new ParsedSetsReps(1, null, null, AppendCue(cue, text));
         }
 
+        notes?.Add(new ConversionNote(
+            ConversionNoteKind.Warning,
+            exerciseName is null ? $"Sets × reps: {raw}" : $"Exercise: {exerciseName}",
+            $"Unreadable Sets × reps value: '{raw}'."));
         throw new FormatException($"Unreadable Sets × reps value: '{raw}'.");
     }
 
