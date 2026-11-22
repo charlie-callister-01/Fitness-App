@@ -1,5 +1,7 @@
 # 05: Exercise library, New Exercise and the picker's live "Add a new Exercise"
 
+**Read first:** `.scratch/editors/HANDOFF.md`, then the spec.
+
 **Parent:** spec `docs/specs/editors-b4-b5.md` (issue #24), user stories 14 to 23; design S-04.
 
 **What to build:** the library page replaces its placeholder: search, tag chips, groups by Session then "Not in a Session", rows showing log kind, tags and Guide status, a + that opens the New Exercise form sheet (name, how it is logged, tags, optional cue, "Write a Guide now", Cancel and Add Exercise). A no-match search offers "Add '<text>' as a new Exercise". In the Swap, Add and Custom workout picker, "Add a new Exercise" becomes live, opens the same form, and returns to the picker with the new Exercise chosen. The picker uses the Core choice rules from ticket 03. Saves go through the guarded save and sheets through the form sheet. Empty library shows an empty state. "Write a Guide now" goes to the Guide page route (built in ticket 06; link to it by URL).

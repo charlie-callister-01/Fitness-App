@@ -1,5 +1,7 @@
 # 08: Plan editor Sessions tab
 
+**Read first:** `.scratch/editors/HANDOFF.md`, then the spec.
+
 **Parent:** spec `docs/specs/editors-b4-b5.md` (issue #24), user stories 33 to 37; design S-05, C-20, F-04.
 
 **What to build:** the Sessions tab shows each Session's Exercises as C-20 editable rows (drag handle shown decoratively, name and summary, Edit expanding an inline panel with Sets, Reps and max, Step, Cue, Benchmark toggle, and Move up, Move down and Remove text buttons). Add Exercise from library opens the picker (with the live Add a new Exercise from ticket 05) and appends the row. A Session's name, default day and type are editable, and a new Session can be added. Inline messages for invalid sets or reps disable Save. No drag and drop. Saves use the guarded save, rules from ticket 04.

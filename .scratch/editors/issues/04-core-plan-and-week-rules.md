@@ -1,5 +1,7 @@
 # 04: Core rules for Plan editing and the Week view
 
+**Read first:** `.scratch/editors/HANDOFF.md`, then the spec.
+
 **Parent:** spec `docs/specs/editors-b4-b5.md` (issue #24), "Plan rules (Core)" and "Week rules (Core)".
 
 **What to build:** Core rules and Core.Tests only, no Ui.

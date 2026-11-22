@@ -1,5 +1,7 @@
 # 03: Core rules for New Exercise, picker choices and Guides
 
+**Read first:** `.scratch/editors/HANDOFF.md`, then the spec.
+
 **Parent:** spec `docs/specs/editors-b4-b5.md` (issue #24), "Exercise and Guide rules (Core)" and "Picker".
 
 **What to build:** Core rules and Core.Tests only, no Ui.

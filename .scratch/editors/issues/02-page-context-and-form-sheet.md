@@ -1,5 +1,7 @@
 # 02: Page context and form sheet, adopted by existing pages and sheets
 
+**Read first:** `.scratch/editors/HANDOFF.md`, then the spec.
+
 **Parent:** spec `docs/specs/editors-b4-b5.md` (issue #24), "Page context" and "Form sheet module".
 
 **What to build:** two shared modules and the existing callers moved onto them.
