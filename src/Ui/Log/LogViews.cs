@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Insight;
 using Core.Rules.Library;
 using Core.Rules.LogKinds;
 using Ui.Components;
@@ -26,7 +27,7 @@ public sealed record ExerciseInfo(string ExerciseId, string Name, LogKind Kind, 
 /// <param name="RemovableRow">The last row when it is an extra, unconfirmed one that Remove would take away.</param>
 public sealed record RowTools(StepSize? Step, int? MaxTarget, int? RemovableRow)
 {
-    public string? StepAmount => Step?.Amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    public string? StepAmount => Step is { } step ? InsightFormat.Trimmed(step.Amount) : null;
 }
 
 /// <summary>The rows of a loggable Exercise and how each is laid out.</summary>

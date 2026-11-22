@@ -128,10 +128,10 @@ public static class ProgressSeries
 
     private static string Label(double best, double change, int? firstWeek, int decimals)
     {
-        var format = decimals == 0 ? "0" : "0.0";
+        string Fmt(double v) => decimals == 0 ? v.ToString("0", CultureInfo.InvariantCulture) : InsightFormat.OneDecimal(v);
         var sign = Math.Round(change, decimals) < 0 ? "-" : "+";
         var since = firstWeek is { } w ? $"W{w}" : "first entry";
         return
-            $"Best {best.ToString(format, CultureInfo.InvariantCulture)} · {sign}{Math.Abs(change).ToString(format, CultureInfo.InvariantCulture)} since {since}";
+            $"Best {Fmt(best)} · {sign}{Fmt(Math.Abs(change))} since {since}";
     }
 }

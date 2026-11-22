@@ -43,7 +43,6 @@
 </Sheet>
 
 @code {
-    private const string DateFormat = "yyyy-MM-dd";
 
     private bool _open;
     private RangePreset _selected;
@@ -102,5 +101,5 @@
     }
 
     private static DateOnly? Parse(string? text) =>
-        DateOnly.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
+        DateOnly.TryParseExact(text, InsightFormat.IsoFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
 }

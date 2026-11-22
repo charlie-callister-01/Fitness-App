@@ -17,8 +17,11 @@ public static class InsightFormat
     /// <summary>"5 Jan 2026".</summary>
     public static string DayMonthYear(DateOnly date) => date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
 
+    /// <summary>The ISO date format, for parsing a native date input back.</summary>
+    public const string IsoFormat = "yyyy-MM-dd";
+
     /// <summary>"2026-01-05", the value of a native date input.</summary>
-    public static string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    public static string Iso(DateOnly date) => date.ToString(IsoFormat, CultureInfo.InvariantCulture);
 
     /// <summary>One decimal place: "86.3", "86.0".</summary>
     public static string OneDecimal(double value) => value.ToString("0.0", CultureInfo.InvariantCulture);
