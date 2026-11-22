@@ -258,7 +258,7 @@ bUnit and Core tests cover what each Insight screen shows and stores. They canno
 - [ ] 12. Read-only (second window open): charts and lists show; Badge saves and Log weight are disabled with the usual message.
 - [ ] 13. Offline (airplane mode): every Insight screen opens and Badge and Weigh-in saves work.
 
-### Decisions confirmed by the owner (23 Nov 2026)
+### Decisions confirmed by the owner (22 Nov 2026)
 
 - Chart gap rule: a gap of more than 14 days between two points breaks the line. Confirmed, keep 14.
 - Best of the week is the biggest relative jump over the previous Best. Confirmed; a first-ever result is already a baseline and never Best of the week.
