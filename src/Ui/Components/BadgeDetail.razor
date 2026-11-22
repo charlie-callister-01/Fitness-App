@@ -3,7 +3,10 @@
 @* Badge detail (design S-13): large art, name, what it needs, progress, and the events that contributed. Progress is worked out by the
    Core TrophyViewBuilder; nothing here is stored. *@
 <section class="fa-badgedetail" aria-label="@Badge.Name">
-    <Button Variant="ButtonVariant.Secondary" OnClick="() => OnClose.InvokeAsync()">Back to Badges</Button>
+    <div class="fa-badgedetail__bar">
+        <Button Variant="ButtonVariant.Secondary" OnClick="() => OnClose.InvokeAsync()">Back to Badges</Button>
+        <Button Variant="ButtonVariant.Secondary" OnClick="() => OnEdit.InvokeAsync()">Edit</Button>
+    </div>
 
     <img class="fa-badgedetail__art" src="@ArtPath" alt="" width="96" height="112" />
     <h2 class="fa-title fa-title--m fa-badgedetail__name">@Badge.Name</h2>
@@ -42,6 +45,9 @@
 
     [Parameter]
     public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnEdit { get; set; }
 
     private bool Locked => Badge.Standing is BadgeStanding.Locked or BadgeStanding.NotMeasurable && BadgeArt.HasLockedVariant(Badge.ArtStem);
 

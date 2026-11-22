@@ -2,7 +2,7 @@
 
 Spec: `docs/specs/insight-b6-b8.md` (C-22). Stories 44-49, 68, 69.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Blocked by:** 06 Trophies: Badges tab and detail.
 
@@ -10,8 +10,8 @@ Spec: `docs/specs/insight-b6-b8.md` (C-22). Stories 44-49, 68, 69.
 
 New pure Core Badge editing rules in the same shape as the Editors' rules, returning the plain-reason edit result: validate a draft (name required, metric supported, target positive or a negative drop for body weight, Exercise required for Exercise best), the live line, and add, replace and delete with a new permanent ID on add. Metric choices map to the supported metric names.
 
-- [ ] Core rules have Core.Tests: every validation failure reason, each metric mapping, live-line text, add assigns a permanent ID, replace, delete
-- [ ] Editor bUnit tests via `PageFixture`: create, edit, delete with confirm, validation messages, save failure keeps draft (`FaultInjectingDataStore`), read-only app (`WriterLockResult.HeldElsewhere`)
-- [ ] A round-trip test shows an edited Badge survives export and import
-- [ ] Both Themes, both Modes, 360 px
-- [ ] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 07 Badge editor`
+- [x] Core rules have Core.Tests: every validation failure reason, each metric mapping, live-line text, add assigns a permanent ID, replace, delete
+- [x] Editor bUnit tests via `PageFixture`: create, edit, delete with confirm, validation messages, save failure keeps draft (`FaultInjectingDataStore`), read-only app (`WriterLockResult.HeldElsewhere`)
+- [x] A round-trip test shows an edited Badge survives export and import
+- [x] Both Themes, both Modes, 360 px
+- [x] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 07 Badge editor`
