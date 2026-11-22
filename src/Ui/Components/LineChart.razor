@@ -1,0 +1,66 @@
+@using Core.Rules.Insight
+@* C-17 LineChart: one Exercise over time as inline SVG. It draws a prepared series; the Core view decides points, PRs, gaps and Phases. *@
+<section class="fa-chart-card" aria-label="@Series.Name">
+    <header class="fa-chart-card__header">
+        <h3 class="fa-title fa-title--m">@Series.Name</h3>
+        <Button Variant="ButtonVariant.Secondary" Pressed="_table" OnClick="ToggleTable">@(_table ? "Chart" : "Table")</Button>
+    </header>
+
+    @if (_table)
+    {
+        <table class="fa-chart-table">
+            <caption class="fa-muted">@Series.BestLabel</caption>
+            <thead><tr><th scope="col">Date</th><th scope="col">@Series.UnitLabel</th><th scope="col">PR</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Series.Points.Count; i++)
+                {
+                    <tr>
+                        <td>@DateText(Series.Points[i].Date)</td>
+                        <td>@Value(Series.Points[i].Value)</td>
+                        <td>@(Series.Points[i].IsPr ? "PR" : "")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <svg class="fa-chart" viewBox="0 0 358 220" role="group" aria-label="@($"{Series.Name} chart. {Series.BestLabel}")" preserveAspectRatio="xMidYMid meet">
+            @foreach (var band in Bands())
+            {
+                <rect class="fa-chart__band fa-chart__band--@(band.Index % 2)" x="@N(band.X)" y="@N(Top)" width="@N(band.Width)" height="@N(PlotBottom - Top)">
+                    <title>@band.Focus</title>
+                </rect>
+            }
+            @foreach (var g in GridValues())
+            {
+                <line class="fa-chart__grid" x1="@N(Left)" x2="@N(PlotRight)" y1="@N(Y(g))" y2="@N(Y(g))" />
+                <!text class="fa-chart__axis" x="@N(Left - 6)" y="@N(Y(g) + 4)" text-anchor="end">@Value(g)</!text>
+            }
+            <!text class="fa-chart__axis" x="@N(Left)" y="@N(Height - 18)" text-anchor="start">@DateText(Series.Points[0].Date)</!text>
+            <!text class="fa-chart__axis" x="@N(PlotRight)" y="@N(Height - 18)" text-anchor="end">@DateText(Series.Points[^1].Date)</!text>
+            <!text class="fa-chart__best" x="@N(Left)" y="18">@Series.BestLabel</!text>
+            @foreach (var segment in Segments())
+            {
+                <polyline class="fa-chart__line" points="@segment.Points" />
+            }
+            @for (var i = 0; i < Series.Points.Count; i++)
+            {
+                var index = i;
+                var point = Series.Points[i];
+                <g class="fa-chart__point @(point.IsPr ? "fa-chart__point--pr" : "")" role="button" tabindex="0" aria-label="@PointLabel(i)"
+                   @onclick="() => Select(index)" @onkeydown="e => OnKey(e, index)">
+                    <circle class="fa-chart__hit" cx="@N(X(i))" cy="@N(Y(point.Value))" r="14" />
+                    <circle class="fa-chart__dot" cx="@N(X(i))" cy="@N(Y(point.Value))" r="@(point.IsPr ? "6" : "4")" />
+                </g>
+            }
+        </svg>
+    }
+
+    <p class="fa-chart__tip fa-muted" role="status">
+        @if (!_table && _selected is { } s)
+        {
+            @PointLabel(s)
+        }
+    </p>
+</section>

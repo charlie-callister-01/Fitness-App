@@ -53,6 +53,12 @@ public sealed class UnitConverter
     public double DisplayDistance(double km) =>
         RoundDistance(_distanceUnit == DistanceUnit.Km ? km : km / KmPerMile);
 
+    /// <summary>A canonical weight (kg) in the display unit, not rounded (for chart values, which round only when written).</summary>
+    public double ChartWeight(double kg) => _weightUnit == WeightUnit.Kg ? kg : kg / KgPerLb;
+
+    /// <summary>A canonical distance (km) in the display unit, not rounded.</summary>
+    public double ChartDistance(double km) => _distanceUnit == DistanceUnit.Km ? km : km / KmPerMile;
+
     /// <summary>A weight typed in the display unit, as exact canonical kg.</summary>
     public double WeightFromDisplay(double value) =>
         _weightUnit == WeightUnit.Kg ? value : value * KgPerLb;

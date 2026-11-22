@@ -2,7 +2,7 @@
 
 Spec: `docs/specs/insight-b6-b8.md` (S-07, C-17). Stories 1-13, 15.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Blocked by:** None (can start immediately).
 
@@ -10,9 +10,9 @@ Spec: `docs/specs/insight-b6-b8.md` (S-07, C-17). Stories 1-13, 15.
 
 New pure Core views: the progress series for an Exercise (points, PR flag, Phase, best point, change since first entry), the Exercise group derived from log kind (Text and tick-only never charted), and the progress list split into chartable and needs-2. The LineChart takes a prepared series, not Workouts. Unqualified views mean the main Track and take plain Plan, Workouts, Breaks, Weigh-ins and Exercises inputs.
 
-- [ ] Core views have Core.Tests: groups from every log kind, 1RM, PR flags, gaps, Phase assignment, one-entry split, change since first entry, unit conversion
-- [ ] LineChart (C-17) is inline SVG to spec with tooltip and Table toggle; works in both Themes, both Modes, 360 px
-- [ ] Progress page has bUnit tests via `PageFixture`: empty state, populated, chip filtering, Table toggle, one-entry rows
-- [ ] Tabs exist (Benchmarks and Calendar are placeholders), pages thin, logic in `*.razor.cs`
-- [ ] 1RM formula recorded in `GLOSSARY.md`
-- [ ] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 01 Progress tab with Exercise charts`
+- [x] Core views have Core.Tests: groups from every log kind, 1RM, PR flags, gaps, Phase assignment, one-entry split, change since first entry, unit conversion
+- [x] LineChart (C-17) is inline SVG to spec with tooltip and Table toggle; works in both Themes, both Modes, 360 px
+- [x] Progress page has bUnit tests via `PageFixture`: empty state, populated, chip filtering, Table toggle, one-entry rows
+- [x] Tabs exist (Benchmarks and Calendar are placeholders), pages thin, logic in `*.razor.cs`
+- [x] 1RM formula recorded in `GLOSSARY.md`
+- [x] `dotnet build` 0 warnings, `dotnet test` green; commit `Insight: ticket 01 Progress tab with Exercise charts`

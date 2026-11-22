@@ -76,6 +76,10 @@ _Avoid_: Missed exercise (a Missed session is a different thing)
 A Set marked as a maximum attempt (e.g. a 1-rep or 3-rep max). When one exists for an Exercise it is the source of truth for that Exercise's best; otherwise the best is worked out from ordinary Sets.
 _Avoid_: Test set, 1RM entry
 
+**Estimated 1RM**:
+The one-rep max worked out from a Set by the Epley formula: weight x (1 + reps / 30). It ranks Load Sets and is what a strength chart plots, so sets of different weights and reps compare fairly. Never stored. A Max set is separate: it is a real attempt, not an estimate.
+_Avoid_: Calculated max
+
 **PR**:
 A Workout's best Set for an Exercise that strictly beats the previous best, by the rules for how that Exercise is measured.
 _Avoid_: Record, personal best
