@@ -4,6 +4,7 @@ using Core.Model;
 using Core.Rules.Badges;
 using Core.Rules.Units;
 using Core.Storage;
+using Core.Tests.Storage;
 using Core.Tests.Exchange;
 using Core.Tests.Rules.TestData;
 using static Core.Tests.Rules.TestData.Dates;
@@ -317,7 +318,7 @@ public class BadgeEditingRulesTests
     // ---- export round trip
 
     [Fact]
-    public void An_edited_Badge_survives_export_and_import()
+    public async Task An_edited_Badge_survives_export_and_import()
     {
         var edited = Valid(Draft(BadgeMetricChoice.PrCount, "Fifty PRs", "50"));
         var snapshot = ExchangeTestData.Snapshot() with { Badges = [edited] };
@@ -326,5 +327,13 @@ public class BadgeEditingRulesTests
         var document = ExchangeTestData.ReadBack(export.Text);
 
         Assert.Equal([edited], document.Badges);
+
+        // The import half: restoring that Backup into an empty app gives the same Badge back.
+        var app = await AppData.OpenAsync(new InMemoryDataStore());
+        var inspected = ImportInput.Inspect(export.Text);
+        Assert.True(inspected.IsAccepted);
+        var preview = ImportPreviewer.Preview(app, inspected.Inspected!, ImportKind.Restore, ImportDecisions.None, ExchangeTestData.Now);
+        Assert.IsType<ApplyOutcome.Applied>(await ImportApplier.ApplyAsync(app, preview, new RecordingBackupSink(), ExchangeTestData.Now));
+        Assert.Equal([edited], app.Snapshot.Badges);
     }
 }

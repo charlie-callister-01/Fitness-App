@@ -59,6 +59,6 @@ public sealed partial class Progress : IDisposable
     private void Rebuild()
     {
         var snapshot = Data.Snapshot;
-        _list = ProgressList.Build(snapshot.Exercises, new PageContext(Data, Clock).ActivePlan, [.. snapshot.Workouts.Where(w => _range.Range.Contains(w.Date))], new UnitConverter(snapshot.Settings));
+        _list = ProgressList.Build(snapshot.Exercises, new PageContext(Data, Clock).ActivePlan, snapshot.Workouts, new UnitConverter(snapshot.Settings), _range.Range);
     }
 }

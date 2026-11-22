@@ -1,3 +1,4 @@
+using Core.Exchange;
 using Core.Model;
 using Core.Rules.LogKinds;
 using Core.Rules.Performance;
@@ -18,13 +19,13 @@ public sealed record ProgressListView(IReadOnlyList<ProgressGroupView> Groups)
 
 public static class ProgressList
 {
-    public static ProgressListView Build(IEnumerable<Exercise> exercises, Plan? plan, IReadOnlyList<Workout> history, UnitConverter units)
+    public static ProgressListView Build(IEnumerable<Exercise> exercises, Plan? plan, IReadOnlyList<Workout> history, UnitConverter units, DateRange? range = null)
     {
         var groups = exercises
             .Where(e => ExerciseGroups.Of(e.LogKind) is not null)
             .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(e => (Exercise: e, Group: ExerciseGroups.Of(e.LogKind)!.Value, Series: ProgressSeries.Build(e, plan, history, units)))
-            .Select(x => (x.Exercise, x.Group, x.Series, Single: x.Series is null && DaysLogged(x.Exercise, history) == 1))
+            .Select(e => (Exercise: e, Group: ExerciseGroups.Of(e.LogKind)!.Value, Series: ProgressSeries.Build(e, plan, history, units, range)))
+            .Select(x => (x.Exercise, x.Group, x.Series, Single: x.Series is null && DaysLogged(x.Exercise, history, range) == 1))
             .Where(x => x.Series is not null || x.Single)
             .GroupBy(x => x.Group)
             .OrderBy(g => g.Key)
@@ -37,12 +38,13 @@ public static class ProgressList
     }
 
     /// <summary>The days the Exercise was done with something that can be charted.</summary>
-    private static int DaysLogged(Exercise exercise, IReadOnlyList<Workout> history)
+    private static int DaysLogged(Exercise exercise, IReadOnlyList<Workout> history, DateRange? range)
     {
         var rules = LogKindRules.For(exercise.LogKind);
         return ExercisePerformance.Recent(exercise, history, int.MaxValue)
             .Where(r => r.Sets.Any(s => rules.ChartValue(s) is not null))
             .Select(r => r.Date)
+            .Where(d => range is null || range.Contains(d))
             .Distinct()
             .Count();
     }

@@ -1,3 +1,4 @@
+using Core.Exchange;
 using Core.Model;
 using Core.Rules.Insight;
 using Core.Rules.Units;
@@ -169,6 +170,59 @@ public class ProgressSeriesTests
         var series = ProgressSeries.Build(Ex(LogKind.Reps), null, h.Workouts, Kg)!;
 
         Assert.Equal("Best 8 · +3 since first entry", series.BestLabel);
+    }
+
+    // A chosen range shows part of the history but the records stay the records.
+
+    private static HistoryBuilder RangedHistory() => new HistoryBuilder()
+        .Done("w1", "2026-01-05", "ex", Set(reps: 8))
+        .Done("w2", "2026-01-12", "ex", Set(reps: 5))
+        .Done("w3", "2026-01-19", "ex", Set(reps: 6))
+        .Done("w4", "2026-01-26", "ex", Set(reps: 9));
+
+    [Fact]
+    public void A_range_never_makes_its_first_point_a_PR_it_was_not()
+    {
+        var range = new DateRange(new DateOnly(2026, 1, 12), new DateOnly(2026, 1, 31));
+
+        var series = ProgressSeries.Build(Ex(LogKind.Reps), Plan, RangedHistory().Workouts, Kg, range)!;
+
+        Assert.Equal(3, series.Points.Count);
+        Assert.False(series.Points[0].IsPr);
+        Assert.True(series.Points[2].IsPr);
+    }
+
+    [Fact]
+    public void A_range_takes_best_change_and_label_from_the_visible_points()
+    {
+        var range = new DateRange(new DateOnly(2026, 1, 12), new DateOnly(2026, 1, 31));
+
+        var series = ProgressSeries.Build(Ex(LogKind.Reps), Plan, RangedHistory().Workouts, Kg, range)!;
+
+        Assert.Equal(9, series.Best.Value);
+        Assert.Equal(4, series.Change);
+        Assert.Equal(2, series.FirstPlanWeek);
+        Assert.Equal("Best 9 · +4 since W2", series.BestLabel);
+    }
+
+    [Fact]
+    public void A_range_with_one_point_leaves_the_Exercise_as_needing_two()
+    {
+        var range = new DateRange(new DateOnly(2026, 1, 25), new DateOnly(2026, 1, 31));
+
+        Assert.Null(ProgressSeries.Build(Ex(LogKind.Reps), Plan, RangedHistory().Workouts, Kg, range));
+        var list = ProgressList.Build([Ex(LogKind.Reps, "ex")], Plan, RangedHistory().Workouts, Kg, range);
+        Assert.Single(list.Groups[0].NeedsTwo);
+    }
+
+    [Fact]
+    public void A_range_with_no_Plan_says_since_first_entry()
+    {
+        var range = new DateRange(new DateOnly(2026, 1, 12), new DateOnly(2026, 1, 31));
+
+        var series = ProgressSeries.Build(Ex(LogKind.Reps), null, RangedHistory().Workouts, Kg, range)!;
+
+        Assert.Equal("Best 9 · +4 since first entry", series.BestLabel);
     }
 
     // The progress list

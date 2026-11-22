@@ -1,4 +1,5 @@
 using System.Globalization;
+using Core.Exchange;
 using Core.Model;
 using Core.Rules.LogKinds;
 using Core.Rules.Performance;
@@ -57,31 +58,35 @@ public static class ProgressSeries
     /// <summary>Days without a point after which the line breaks rather than joins.</summary>
     public const int GapDays = 14;
 
-    /// <summary>The series, or null when the Exercise is never charted or was logged on fewer than two days.</summary>
-    public static ExerciseSeries? Build(Exercise exercise, Plan? plan, IEnumerable<Workout> history, UnitConverter units)
+    /// <summary>
+    /// The series, or null when the Exercise is never charted or has fewer than two visible points. PR flags and Phases come from the whole
+    /// history; <paramref name="range"/> (null means all time) only chooses which points are shown, and Best, change and the label describe those.
+    /// </summary>
+    public static ExerciseSeries? Build(Exercise exercise, Plan? plan, IEnumerable<Workout> history, UnitConverter units, DateRange? range = null)
     {
         if (ExerciseGroups.Of(exercise.LogKind) is not { } group) return null;
 
         var workouts = history.ToList();
         var raw = ExercisePerformance.ProgressPoints(exercise, workouts);
-        if (raw.Count < 2) return null;
+        var visible = range is null ? raw : [.. raw.Where(p => range.Contains(p.Date))];
+        if (visible.Count < 2) return null;
 
         var prDates = ExercisePerformance.Prs(exercise, workouts).Select(p => p.Date).ToHashSet();
-        var points = raw
+        var points = visible
             .Select((p, i) => new SeriesPoint(
                 p.Date,
                 Display(exercise.LogKind, p, units),
                 prDates.Contains(p.Date),
                 PhaseFocusOf(plan, p.Date),
-                i > 0 && p.Date.DayNumber - raw[i - 1].Date.DayNumber > GapDays))
+                i > 0 && p.Date.DayNumber - visible[i - 1].Date.DayNumber > GapDays))
             .ToList();
 
         var lowerIsBetter = LogKindRules.For(exercise.LogKind).LowerIsBetter;
         var best = points.Aggregate((a, b) => (lowerIsBetter ? b.Value < a.Value : b.Value > a.Value) ? b : a);
         var change = best.Value - points[0].Value;
         var firstWeek = plan is null ? null : WeekRules.PlanWeekNumber(plan, points[0].Date);
-        var unit = Unit(exercise.LogKind, raw[0].Set, units);
-        var label = Label(best.Value, change, firstWeek, DecimalPlaces(exercise.LogKind, raw[0].Set));
+        var unit = Unit(exercise.LogKind, visible[0].Set, units);
+        var label = Label(best.Value, change, firstWeek, DecimalPlaces(exercise.LogKind, visible[0].Set));
 
         return new ExerciseSeries(exercise.Id, exercise.Name, group, unit, points, best, change, firstWeek, label);
     }

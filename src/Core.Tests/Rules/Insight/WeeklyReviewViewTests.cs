@@ -84,6 +84,15 @@ public class WeeklyReviewViewTests
     }
 
     [Fact]
+    public void In_a_Break_week_one_short_of_the_target_is_On_a_Break_and_reaching_it_is_Target_hit()
+    {
+        var breaks = new[] { new Break("b", Start.AddDays(4), Start.AddDays(6), "Trip") };
+
+        Assert.Equal(WeeklyVerdict.OnABreak, Build(Start, Wed, Days(0, 1), breaks: breaks).Verdict);
+        Assert.Equal(WeeklyVerdict.TargetHit, Build(Start, Wed, Days(0, 1, 2), breaks: breaks).Verdict);
+    }
+
+    [Fact]
     public void Target_hit_wins_over_a_Break()
     {
         var view = Build(Start, Wed, Days(0, 1, 2), breaks: [new Break("b", Start.AddDays(4), Start.AddDays(6), "Trip")]);
