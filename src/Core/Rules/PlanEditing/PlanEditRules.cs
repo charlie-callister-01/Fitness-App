@@ -74,7 +74,7 @@ public static class PlanEditRules
 
     /// <summary>
     /// Why the Plan's Phases cannot be saved, or null when they can: a Phase must end no earlier than it starts and start at week 1 or
-    /// later; two Phases may not share a week (the message names both); and Phases must start at week 1 and leave no gap.
+    /// later; each Phase goal needs an Exercise, a weight of 0 or more and at least 1 rep; two Phases may not share a week (the message names both); and Phases must start at week 1 and leave no gap.
     /// </summary>
     public static string? ValidatePhases(IReadOnlyList<Phase> phases)
     {
@@ -88,6 +88,11 @@ public static class PlanEditRules
             if (phase.EndWeek < phase.StartWeek)
             {
                 return $"{Name(phase)} ends (week {phase.EndWeek}) before it starts (week {phase.StartWeek}).";
+            }
+
+            if (ValidateGoals(phase) is { } goalReason)
+            {
+                return goalReason;
             }
         }
 
@@ -117,6 +122,24 @@ public static class PlanEditRules
         ValidatePhases(phases) is { } reason
             ? Invalid<Plan>(reason)
             : new PlanEditResult<Plan>.Valid(plan with { Phases = [.. phases.OrderBy(p => p.StartWeek)] });
+
+    private static string? ValidateGoals(Phase phase)
+    {
+        foreach (var goal in phase.Goals)
+        {
+            if (string.IsNullOrWhiteSpace(goal.ExerciseId))
+            {
+                return $"A Phase goal in {Name(phase)} needs an Exercise.";
+            }
+
+            if (goal.WeightKg < 0 || goal.Reps < 1)
+            {
+                return $"A Phase goal in {Name(phase)} needs a weight of 0 or more and at least 1 rep.";
+            }
+        }
+
+        return null;
+    }
 
     private static string Name(Phase phase) => string.IsNullOrWhiteSpace(phase.Focus) ? "A Phase" : $"\"{phase.Focus}\"";
 

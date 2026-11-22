@@ -1,0 +1,64 @@
+@page "/plans/{PlanId}"
+@layout PushedPageLayout
+@* The Plan editor (design S-05, C-20): Settings, Phases and Sessions tabs over one draft (PlanEditState) that is saved together. Each
+   tab is its own component and edits the shared state; this page owns the tab choice, Save and leaving with unsaved changes. *@
+<div class="fa-root fa-planeditor">
+    @if (_state is null)
+    {
+        <h1 class="fa-title fa-title--l">Plan</h1>
+        <p class="fa-muted">That Plan isn't here any more.</p>
+        <Button Variant="ButtonVariant.Primary" Href="plans">Back to Plans</Button>
+    }
+    else
+    {
+        <h1 class="fa-title fa-title--l">@_state.Saved.Name</h1>
+
+        <p class="fa-planeditor__banner fa-well">Edits apply going forward. Past Workouts are unchanged.</p>
+
+        <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+
+        <div class="fa-planeditor__tabs" role="group" aria-label="Plan sections">
+            @foreach (var tab in Tabs)
+            {
+                var current = tab;
+                <Button Variant="ButtonVariant.Secondary" Pressed="_tab == current" OnClick="() => ShowTab(current)">@current</Button>
+            }
+        </div>
+
+        @switch (_tab)
+        {
+            case "Settings":
+                <PlanSettingsTab State="_state" Disabled="Disabled" OnEdited="OnEdited" />
+                break;
+            case "Phases":
+                <PlanPhasesTab State="_state" Disabled="Disabled" OnEdited="OnEdited" />
+                break;
+            default:
+                <PlanSessionsTab State="_state" Disabled="Disabled" OnEdited="OnEdited" />
+                break;
+        }
+
+        <div class="fa-planeditor__save">
+            @if (_state.ProblemTab is { } problemTab)
+            {
+                <p class="fa-muted" role="status">Fix the problem on the @problemTab tab to save.</p>
+            }
+            else if (_justSaved)
+            {
+                <p class="fa-muted" role="status">Saved.</p>
+            }
+
+            <Button Variant="ButtonVariant.Primary" Disabled="@(Disabled || !_state.IsDirty || !_state.IsValid)" OnClick="SaveAsync">Save</Button>
+        </div>
+
+        <FormSheet Open="@(_leaveTarget is not null)" Title="Discard changes?" CancelLabel="" OnClose="KeepEditing">
+            <ChildContent>
+                <p>You have changes that are not saved.</p>
+            </ChildContent>
+            <Actions>
+                <Button Variant="ButtonVariant.Primary" OnClick="KeepEditing">Keep editing</Button>
+                <Button Variant="ButtonVariant.Secondary" OnClick="Discard">Discard</Button>
+            </Actions>
+        </FormSheet>
+    }
+</div>

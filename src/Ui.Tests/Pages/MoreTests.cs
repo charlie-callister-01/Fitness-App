@@ -39,7 +39,6 @@ public sealed class MoreTests : BunitContext
     }
 
     [Theory]
-    [InlineData("Plans", "plans", typeof(Plans))]
     [InlineData("Exercise library", "exercises", typeof(Exercises))]
     [InlineData("Weight", "weight", typeof(Weight))]
     [InlineData("Weekly review", "weekly-review", typeof(WeeklyReview))]
@@ -58,6 +57,16 @@ public sealed class MoreTests : BunitContext
         var placeholder = Render(b => { b.OpenComponent(0, page); b.CloseComponent(); });
         Assert.NotEmpty(placeholder.Find("h1").TextContent);
         Assert.NotNull(placeholder.Find(".empty"));
+    }
+
+    // Plans is a real page now (see PlansTests), so it is no longer in the placeholder list above.
+    [Fact]
+    public async Task More_LinksToPlans_WhichHasItsOwnRoute()
+    {
+        var cut = await RenderMoreAsync();
+
+        Assert.Equal("plans", cut.FindAll("nav a").Single(a => a.TextContent.Trim() == "Plans").GetAttribute("href"));
+        Assert.Contains(Attribute.GetCustomAttributes(typeof(Plans), typeof(RouteAttribute)), a => ((RouteAttribute)a).Template == "/plans");
     }
 
     [Fact]

@@ -8,9 +8,16 @@
 
 **Blocked by:** 02, 04.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] bUnit tests: Plans list states (one Plan, several, none), Make active leaves exactly one active Plan, copy and from scratch create inactive Plans with new ids, settings edits persist, Phase overlap refused with both names, invalid values disable Save, discard prompt, read-only disables everything with the reason, failure keeps edits.
-- [ ] Home reflects an edited weekly target after Save (test).
-- [ ] Sessions tab renders as a clearly labelled placeholder until ticket 08.
-- [ ] Tokens only; `WaitForAssertion` after async clicks; `dotnet build` has 0 warnings.
+- [x] bUnit tests: Plans list states (one Plan, several, none), Make active leaves exactly one active Plan, copy and from scratch create inactive Plans with new ids, settings edits persist, Phase overlap refused with both names, invalid values disable Save, discard prompt, read-only disables everything with the reason, failure keeps edits.
+- [x] Home reflects an edited weekly target after Save (test).
+- [x] Sessions tab renders as a clearly labelled placeholder until ticket 08.
+- [x] Tokens only; `WaitForAssertion` after async clicks; `dotnet build` has 0 warnings.
+
+## Notes from implementation
+- Plan editor is `/plans/{PlanId}` on `PushedPageLayout`. For ticket 08: the shared edit state is `PlanEditState` (`Draft` Plan, `Saved` Plan, `Form` for the typed Settings, `Change(Func<Plan, Plan>)`, `IsDirty`, `Compose()`); the tab components are `PlanSettingsTab`, `PlanPhasesTab` and `PlanSessionsTab` (the placeholder; replace its content, keep its three parameters `State`, `Disabled`, `OnEdited`). `PlanEditState.IsDirty` already compares `Draft.Sessions` with `Saved.Sessions`, so session edits made through `State.Change(...)` enable Save and the discard prompt with no further work. `Compose()` carries the draft Sessions through; add session validation there (and a problem entry beside `SettingsProblem` and `PhasesProblem`, plus `ProblemTab`) if needed.
+- Added Core: `PlanProgress` (`TotalWeeks`, `ActiveLabel`) and Phase goal checks in `PlanEditRules.ValidatePhases` (Exercise present, weight 0 or more, reps at least 1). Total weeks m = last week of the last Phase; with no Phases, weeks from the start to the goal date; otherwise "Active · week n" with no "of m".
+- Phases are edited by week number (first week, last week) with the covered dates shown beside them, not date pickers: the rule and storage are in weeks. Phases keep list order while edited and are sorted by week on Save.
+- New Plan sheet: one name field, a "Copy from" select (defaults to the active Plan) and the buttons From scratch and Copy this Plan. A new Plan opens in its editor.
+- `MoreTests` no longer renders the Plans page as a placeholder (it needs the clock and data); it checks the link and route instead.

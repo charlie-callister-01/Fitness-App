@@ -1,0 +1,18 @@
+@* The Plan editor's Sessions tab. A placeholder until the Sessions editor replaces this component's content (same parameters as the other tabs). *@
+<div class="fa-well">
+    <p class="fa-title fa-title--m">Sessions: coming soon</p>
+    <p class="fa-muted">Editing a Plan's Sessions and their Exercises is not built yet. Settings and Phases work now.</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PlanEditState State { get; set; } = default!;
+
+    /// <summary>The whole editor cannot be changed (read-only window or a save running).</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Something in the tab changed, so the page can re-check Save.</summary>
+    [Parameter]
+    public EventCallback OnEdited { get; set; }
+}
