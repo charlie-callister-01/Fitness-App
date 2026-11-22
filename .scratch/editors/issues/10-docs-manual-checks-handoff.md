@@ -8,8 +8,8 @@
 
 **Blocked by:** 01 to 09.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Manual checks section added with a tickbox per check.
-- [ ] Build plan and README status updated; the next-group HANDOFF written.
-- [ ] Final `dotnet build` (0 warnings) and `dotnet test` counts recorded in the handoff.
+- [x] Manual checks section added with a tickbox per check.
+- [x] Build plan and README status updated; the next-group HANDOFF written.
+- [x] Final `dotnet build` (0 warnings) and `dotnet test` counts recorded in the handoff.

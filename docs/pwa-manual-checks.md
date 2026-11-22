@@ -216,3 +216,26 @@ bUnit covers what each Home state shows, the visibility rules, Start, Continue, 
 9. Read-only: open the app in a second window; the second window shows Home read-only with Start and Log weight Save disabled and a plain reason.
 10. Offline: with airplane mode on, Home opens and every action above except the browser's own pickers works.
 11. Desktop (900 px and wider): the two-column layout is not expected to appear yet because the shell caps the column at 560 px; note what you see.
+
+## Editors manual checks (B4 + B5)
+
+bUnit covers what each Editors page shows and stores over the in-memory store. It cannot check CSS, the phone keyboard, native date inputs, focus rings, the offline browser state or the desktop layout. Visual targets are `docs/design/assets/mockups/S-03-*`, `S-04-*`, `S-05-*`, `S-06-*` and `S-12-offline-dark.png`.
+
+- [ ] 1. Guide read view: sections in the design's order (What it works, Why it's in your plan, Setup, How to do it, Cues, Common mistakes, Easier / harder, Watch-outs), header shows the Session, sets by reps and Best, last three results with PRs marked. Check Keep and Clean, both Modes, 360 px.
+- [ ] 2. Watch a demo online: the link opens in a new tab and you can come back to the app.
+- [ ] 3. Watch a demo offline (airplane mode): the offline message appears and says the rest of the app still works; nothing else breaks. Also try with pop-ups blocked and note what you see (a blocked pop-up is not detected).
+- [ ] 4. Guide edit on the phone: each section is a labelled text area that is easy to type in with the phone keyboard; Save keeps the text; an invalid video link is refused with a plain message and nothing is lost.
+- [ ] 5. Discard changes: with unsaved edits, tap Cancel, the back arrow and the browser Back; each asks "Discard changes?" with Keep editing and Discard. Refresh and closing the tab are not guarded (known).
+- [ ] 6. Personal notes: Edit notes saves on its own and does not touch the sections.
+- [ ] 7. From the log, View Guide, Open full Guide, then Back: you land on the same Exercise and Set with any typed text still there.
+- [ ] 8. Exercise library: groups by Session then "Not in a Session", search appears only above 20 Exercises, tag chips filter, rows show log kind, tags and Guide status. Fits at 360 px and looks right on desktop.
+- [ ] 9. New Exercise: the form is usable with the phone keyboard; an empty or duplicate name is refused with a plain message; "Write a Guide now" opens the Guide editor after Add.
+- [ ] 10. Picker: in the log's Swap and Add and in a Custom workout, "Add a new Exercise" opens the form and returns with the new Exercise chosen; a no-match search offers "Add '<text>' as a new Exercise".
+- [ ] 11. Plans list: the active Plan is outlined "Active · week n of m"; Make active on another Plan leaves exactly one active Plan and Home follows; From scratch and Copy this Plan create inactive Plans.
+- [ ] 12. Plan editor: Settings, Phases and Sessions tabs fit at 360 px and on desktop; an overlapping Phase names both Phases; invalid Sets or Reps disable Save with a message; Move up, Move down and Remove work with the keyboard and by tap; the banner says edits apply going forward.
+- [ ] 13. Plan editor discard: leaving with unsaved changes asks "Discard changes?"; after Save, Home and the Week view show the new Plan (weekly target, Session days).
+- [ ] 14. Week view: this week's Sessions on their days with Done, Missed and Today chips. Move "This week only" leaves next week alone; "Make this the default day" changes it for every week.
+- [ ] 15. Add a Break: date inputs, an overlapping Break and an end before the start are refused; Home then shows the Break and the Streak is protected.
+- [ ] 16. Suggested week: with a Break over a Session day, the draft shows changed rows highlighted and one summary line; Undo on a row, Cancel changes nothing, Apply stores it once. Nothing becomes Missed before its day has passed.
+- [ ] 17. Read-only: open a second window; Guide, library, Plans, Plan editor and Week show the reason and every save control is disabled.
+- [ ] 18. Offline: with airplane mode on, the library, Guide (apart from the video), Plan editor and Week view open and save.
