@@ -58,12 +58,49 @@ public static class SessionRowRules
     public static Plan WithRows(Plan plan, string sessionId, IReadOnlyList<SessionExercise> rows) =>
         ReplaceSession(plan, sessionId, s => s with { Exercises = rows });
 
-    /// <summary>The Plan with the Session's name, default day and type changed. A blank name is refused.</summary>
+    /// <summary>The Plan with the Session's name, default day and type changed. A blank name, a day change on a daily Session, or daily on a weekly Track is refused.</summary>
     public static PlanEditResult<Plan> EditSession(Plan plan, string sessionId, string? name, DefaultDay day, SessionType type)
     {
+        if (plan.Sessions.FirstOrDefault(s => s.Id == sessionId) is not { } existing)
+        {
+            return Invalid("That Session is no longer in the Plan.");
+        }
+
+        return EditSession(plan, sessionId, name, day, type, type == SessionType.Test ? existing.BenchmarkIntervalWeeks : null);
+    }
+
+    /// <summary>
+    /// The Plan with the Session's name, default day, type and benchmark interval changed. A blank name, a day change on a daily Session,
+    /// daily on a weekly Track, or a benchmark interval off the main Track (or on a non-Test Session) is refused.
+    /// </summary>
+    public static PlanEditResult<Plan> EditSession(
+        Plan plan, string sessionId, string? name, DefaultDay day, SessionType type, int? benchmarkIntervalWeeks)
+    {
+        if (plan.Sessions.FirstOrDefault(s => s.Id == sessionId) is not { } existing)
+        {
+            return Invalid("That Session is no longer in the Plan.");
+        }
+
         if (string.IsNullOrWhiteSpace(name))
         {
-            return new PlanEditResult<Plan>.Invalid("Give the Session a name.");
+            return Invalid("Give the Session a name.");
+        }
+
+        var track = TrackRules.TrackOf(plan, existing);
+        var isDaily = track?.Rhythm is TrackRhythm.Daily || existing.DefaultDay == DefaultDay.Daily;
+        if (isDaily && day != DefaultDay.Daily)
+        {
+            return Invalid("A daily Session is on every day and its day cannot be changed.");
+        }
+
+        if (!isDaily && day == DefaultDay.Daily)
+        {
+            return Invalid("A weekly Track Session must be on a day of the week, not daily.");
+        }
+
+        if (ValidateBenchmark(plan, track, type, benchmarkIntervalWeeks) is { } benchmarkError)
+        {
+            return Invalid(benchmarkError);
         }
 
         return new PlanEditResult<Plan>.Valid(ReplaceSession(plan, sessionId, s => s with
@@ -71,21 +108,77 @@ public static class SessionRowRules
             Name = name.Trim(),
             DefaultDay = day,
             Type = type,
-            BenchmarkIntervalWeeks = type == SessionType.Test ? s.BenchmarkIntervalWeeks : null,
+            BenchmarkIntervalWeeks = type == SessionType.Test ? benchmarkIntervalWeeks : null,
         }));
     }
 
-    /// <summary>The Plan with a new, empty Session added at the end on the main Track. A blank name is refused.</summary>
-    public static PlanEditResult<Plan> AddSession(Plan plan, string? name, DefaultDay day, SessionType type, IIdGenerator ids)
+    /// <summary>
+    /// The Plan with a new, empty Session added at the end on <paramref name="trackId"/>. A daily Track always gets
+    /// <see cref="DefaultDay.Daily"/>; <see cref="DefaultDay.Daily"/> on a weekly Track, a blank name, and a benchmark interval off the
+    /// main Track are refused.
+    /// </summary>
+    public static PlanEditResult<Plan> AddSession(
+        Plan plan, string trackId, string? name, DefaultDay day, SessionType type, IIdGenerator ids, int? benchmarkIntervalWeeks = null)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (plan.Tracks.FirstOrDefault(t => t.Id == trackId) is not { } track)
         {
-            return new PlanEditResult<Plan>.Invalid("Give the Session a name.");
+            return Invalid("That Track is no longer in the Plan.");
         }
 
-        var session = new Session(ids.NewId(), name.Trim(), TrackRules.Main(plan).Id, day, type, null, []);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Invalid("Give the Session a name.");
+        }
+
+        DefaultDay resolvedDay;
+        if (track.Rhythm is TrackRhythm.Daily)
+        {
+            resolvedDay = DefaultDay.Daily;
+        }
+        else if (day == DefaultDay.Daily)
+        {
+            return Invalid("A weekly Track Session must be on a day of the week, not daily.");
+        }
+        else
+        {
+            resolvedDay = day;
+        }
+
+        if (ValidateBenchmark(plan, track, type, benchmarkIntervalWeeks) is { } benchmarkError)
+        {
+            return Invalid(benchmarkError);
+        }
+
+        var session = new Session(ids.NewId(), name.Trim(), track.Id, resolvedDay, type, type == SessionType.Test ? benchmarkIntervalWeeks : null, []);
         return new PlanEditResult<Plan>.Valid(plan with { Sessions = [.. plan.Sessions, session] });
     }
+
+    private static string? ValidateBenchmark(Plan plan, Track? track, SessionType type, int? benchmarkIntervalWeeks)
+    {
+        if (benchmarkIntervalWeeks is not { } interval)
+        {
+            return null;
+        }
+
+        if (plan.Tracks.Count == 0 || track?.Id != TrackRules.Main(plan).Id)
+        {
+            return "Only a Session on the main Track can have a benchmark interval.";
+        }
+
+        if (type != SessionType.Test)
+        {
+            return "Only a Test Session can have a benchmark interval.";
+        }
+
+        if (interval < 1)
+        {
+            return "The benchmark interval must be at least 1 week.";
+        }
+
+        return null;
+    }
+
+    private static PlanEditResult<Plan> Invalid(string message) => new PlanEditResult<Plan>.Invalid(message);
 
     private static IReadOnlyList<SessionExercise> Swap(IReadOnlyList<SessionExercise> rows, int a, int b)
     {

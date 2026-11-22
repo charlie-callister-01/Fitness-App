@@ -105,8 +105,9 @@ public sealed class PlanEditState
     private PlanEditSnapshot Read()
     {
         var settings = Form.Read(Draft);
-        var mainPhases = TrackRules.Main(Draft).Phases;
-        var phasesProblem = PlanPhaseRules.ValidatePhases(mainPhases);
+        var mainTrack = TrackRules.Main(Draft);
+        var mainPhases = mainTrack.Phases;
+        var phasesProblem = PlanPhaseRules.ValidatePhases(Draft, mainTrack.Id, mainPhases);
         var sessionsProblem = Draft.Sessions
             .Select(s => s.Exercises.Select(r => RowProblem(s.Id, r)).FirstOrDefault(p => p is not null) is { } reason ? $"{s.Name}: {reason}" : null)
             .FirstOrDefault(p => p is not null);
@@ -116,11 +117,12 @@ public sealed class PlanEditState
             return new PlanEditSnapshot(settingsProblem, phasesProblem, sessionsProblem, null, Draft);
         }
 
-        var preview = Draft with { StartDate = read.StartDate };
+        var preview = Draft with { StartDate = read.Plan.StartDate };
         Plan? composed = null;
         if (sessionsProblem is null
-            && PlanSettingsRules.WithSettings(Draft, read).TryGet(out var withSettings, out _)
-            && PlanPhaseRules.WithPhases(withSettings, mainPhases).TryGet(out var withPhases, out _))
+            && PlanSettingsRules.WithSettings(Draft, read.Plan).TryGet(out var withPlanSettings, out _)
+            && PlanSettingsRules.WithTrackSettings(TrackRules.Main(withPlanSettings), read.Track).TryGet(out var updatedMain, out _)
+            && PlanPhaseRules.WithPhases(withPlanSettings with { Tracks = [updatedMain, .. withPlanSettings.Tracks.Skip(1)] }, mainTrack.Id, mainPhases).TryGet(out var withPhases, out _))
         {
             composed = withPhases;
         }

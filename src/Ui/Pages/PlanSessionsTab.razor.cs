@@ -2,6 +2,7 @@ using Core.Ids;
 using Core.Model;
 using Core.Rules.Library;
 using Core.Rules.PlanEditing;
+using Core.Rules.Tracks;
 using Core.Storage;
 using Microsoft.AspNetCore.Components;
 
@@ -164,7 +165,7 @@ public sealed partial class PlanSessionsTab
     {
         var result = _sheet.EditingSessionId is { } id
             ? SessionRowRules.EditSession(State.Draft, id, _sheet.Name, _sheet.Day, _sheet.Type)
-            : SessionRowRules.AddSession(State.Draft, _sheet.Name, _sheet.Day, _sheet.Type, Ids);
+            : SessionRowRules.AddSession(State.Draft, TrackRules.Main(State.Draft).Id, _sheet.Name, _sheet.Day, _sheet.Type, Ids);
         if (!result.TryGet(out var changed, out var reason))
         {
             _sheet.Message = reason;
