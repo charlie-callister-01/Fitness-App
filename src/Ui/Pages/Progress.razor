@@ -21,12 +21,19 @@
     {
         <CalendarTab />
     }
-    else if (List.IsEmpty)
+    else if (!HasHistory)
     {
         <EmptyState Kind="EmptyStateKind.NoHistory" Title="No history yet" Message="Log a Workout and your Exercises will chart here once they have two entries." />
     }
     else
     {
+        <DateRangePicker Value="_range" Today="Today" PlanStart="PlanStart" OnChanged="OnRangeChanged" />
+
+        @if (List.IsEmpty)
+        {
+            <p class="fa-muted">Nothing logged in this range.</p>
+        }
+
         <div class="fa-chips fa-progress__chips" role="group" aria-label="Filter by group">
             <Button Variant="ButtonVariant.Secondary" Pressed="_group is null" OnClick="() => _group = null">All</Button>
             @foreach (var group in GroupChips)
@@ -36,7 +43,7 @@
             }
         </div>
 
-        @if (Shown.Count == 0)
+        @if (Shown.Count == 0 && _group is not null)
         {
             <p class="fa-muted">Nothing logged in @ExerciseGroups.Label(_group!.Value) yet.</p>
         }
