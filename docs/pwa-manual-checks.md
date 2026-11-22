@@ -265,5 +265,5 @@ bUnit and Core tests cover what each Insight screen shows and stores. They canno
 - Load Badge targets are stored as estimated 1RM (Epley), not as a weight and reps. Confirmed.
 - A benchmark's target comes from the first Badge that names the Exercise. Confirmed.
 - A past week's review says Behind, not On track, when the target was not reached. Confirmed.
-- Badge art is derived from the Badge's metric and target for now. Choosing art is shelved until after the A4.5 merge, then add an optional art field to the format in one go (see `.scratch/insight/FOLLOWUPS.md`).
-- Nudge copy review (C-08): the repeated-pain Nudge ("Consider an easier variation") still has Dismiss only. The owner wants it to get an action that shows easier variations; that is a follow-up ticket (`.scratch/insight/issues/11-pain-nudge-easier-variations-action.md`).
+- Badge art is derived from the Badge's metric and target for now. Choosing art is shelved until after the A4.5 merge.
+- Nudge copy review (C-08): the repeated-pain Nudge ("Consider an easier variation") still has Dismiss only. The owner wants it to get an action that shows easier variations; that is a follow-up, not part of this stage.
