@@ -1,6 +1,33 @@
 @page "/trophies"
-
-<div class="fa-root">
+@* Trophies (design S-13): three tabs. Badges is the BadgeTile grid and detail; Bests is a placeholder until its own ticket; Calendar reuses the
+   Progress calendar. Each tab is its own component. *@
+<div class="fa-root fa-trophies">
     <h1 class="fa-title fa-title--l">Trophies</h1>
-    <EmptyState Kind="EmptyStateKind.NoHistory" Title="Your Badges will live here" Message="Badges and Bests arrive in a later stage." />
+
+    <div class="fa-chips fa-trophies__tabs" role="group" aria-label="Trophies sections">
+        @foreach (var tab in Tabs)
+        {
+            var value = tab;
+            <Button Variant="ButtonVariant.Secondary" Pressed="_tab == value" OnClick="() => _tab = value">@value</Button>
+        }
+    </div>
+
+    @if (_tab == "Bests")
+    {
+        <BestsTab />
+    }
+    else if (_tab == "Calendar")
+    {
+        <CalendarTab />
+    }
+    else
+    {
+        <BadgesTab />
+    }
 </div>
+
+@code {
+    private static readonly string[] Tabs = ["Badges", "Bests", "Calendar"];
+
+    private string _tab = "Badges";
+}

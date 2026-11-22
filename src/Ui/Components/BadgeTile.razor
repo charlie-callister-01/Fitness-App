@@ -1,0 +1,51 @@
+@using Core.Rules.Insight
+@* C-10 BadgeTile: art, "x / y" progress and a truncated name. Unlocked, in progress and locked differ by outline, art, a marker glyph and
+   the accessible label, so colour is never the only signal. The full name is in the aria-label. *@
+<button type="button" class="fa-tile fa-badgetile fa-tile--@StateCss" aria-label="@Label" @onclick="() => OnOpen.InvokeAsync(Badge.Id)">
+    <span class="fa-tile__top">
+        <img class="@ArtCss" src="@ArtPath" alt="" width="30" height="35" />
+        <span class="fa-tile__v">@Badge.ProgressText</span>
+    </span>
+    <span class="fa-tile__n">
+        <span class="fa-badgetile__mark" aria-hidden="true">@Mark</span> @Badge.Name
+    </span>
+</button>
+
+@code {
+    [Parameter, EditorRequired]
+    public TrophyBadge Badge { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<string> OnOpen { get; set; }
+
+    private bool UseLockedArt => Badge.Standing is BadgeStanding.Locked or BadgeStanding.NotMeasurable && BadgeArt.HasLockedVariant(Badge.ArtStem);
+
+    private string StateCss => Badge.Standing switch
+    {
+        BadgeStanding.Unlocked => "unlocked",
+        BadgeStanding.InProgress => "progress",
+        _ => "locked",
+    };
+
+    // A locked Badge uses the greyed "-locked" art, so it skips the opacity the tile would apply on top; the frame has no locked art.
+    private string ArtCss => UseLockedArt ? "fa-badgetile__art" : "fa-tile__art fa-badgetile__art";
+
+    private string ArtPath => $"_content/Ui/badges/{Badge.ArtStem}{(UseLockedArt ? "-locked" : "")}.svg";
+
+    private string Mark => Badge.Standing switch
+    {
+        BadgeStanding.Unlocked => "✓",
+        BadgeStanding.InProgress => "◐",
+        _ => "○",
+    };
+
+    private string StatusWord => Badge.Standing switch
+    {
+        BadgeStanding.Unlocked => "unlocked",
+        BadgeStanding.InProgress => "in progress",
+        BadgeStanding.NotMeasurable => "not measurable",
+        _ => "locked",
+    };
+
+    private string Label => $"{Badge.Name}, {StatusWord}, {Badge.ProgressText}";
+}

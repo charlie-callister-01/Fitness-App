@@ -106,7 +106,8 @@ public static class WeekRules
         return (WeekCalendar.MondayOf(date).DayNumber - WeekCalendar.MondayOf(plan.StartDate).DayNumber) / 7 + 1;
     }
 
-    private static bool IsCounted(Plan plan, Workout w)
+    /// <summary>Whether a Workout counts toward the weekly target, Streak and Session-count Badges.</summary>
+    public static bool IsCounted(Plan plan, Workout w)
     {
         if (!w.Entries.Any(e => e.Status is EntryStatus.Done or EntryStatus.Swapped)) return false;
         if (w.SessionId is null) return plan.StreakCountsCustomWorkouts;
