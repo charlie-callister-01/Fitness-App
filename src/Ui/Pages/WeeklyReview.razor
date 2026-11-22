@@ -1,7 +1,7 @@
 @page "/weekly-review"
 @using Core.Rules.Insight
-@* Weekly review (design S-09, F-07): a verdict card, rows for Missed sessions, PRs, weight and Pain checks, and a week selector. Everything shown
-   comes from the Core WeeklyReviewView. The Export for the LLM button waits for the Export screen (B9), so a plain note stands in for it. *@
+@* Weekly review (design S-09, F-06, F-07): a verdict card, rows for Missed sessions, PRs, weight and Pain checks, a week selector,
+   and an Export for the LLM link to /backup?preset=llm. Everything shown comes from the Core WeeklyReviewView. *@
 <div class="fa-root fa-review">
     <h1 class="fa-title fa-title--l">Weekly review</h1>
 
@@ -92,6 +92,8 @@
 
         </div>
 
-        <p class="fa-muted fa-review__exportnote">Export for the LLM arrives with Export and Import.</p>
+        <div class="fa-review__export">
+            <Button Variant="ButtonVariant.Secondary" Href="backup?preset=llm" Glyph="IconName.Export">Export for the LLM</Button>
+        </div>
     }
 </div>
