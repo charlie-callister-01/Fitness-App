@@ -4,7 +4,8 @@
     gap: var(--space-3);
 }
 
-.fa-planeditor h1 {
+.fa-planeditor h1,
+.fa-planeditor__active {
     margin: 0;
 }
 

@@ -1,5 +1,6 @@
 @page "/plans/{PlanId}"
 @using Core.Model
+@using Core.Rules.PlanEditing
 @layout PushedPageLayout
 @* The Plan editor (design S-05, C-20): Track selector, Settings, Phases and Sessions tabs over one draft (PlanEditState) that is saved
    together. Each tab is its own component and edits the shared state; this page owns the Track selector, tab choice, Save and leaving
@@ -14,6 +15,10 @@
     else
     {
         <h1 class="fa-title fa-title--l">@_state.Saved.Name</h1>
+        @if (_state.Saved.IsActive)
+        {
+            <p class="fa-label fa-planeditor__active">@PlanProgress.ActiveLabel(_state.Saved, Page.Today)</p>
+        }
 
         <p class="fa-planeditor__banner fa-well">Edits apply going forward. Past Workouts are unchanged.</p>
 

@@ -1310,4 +1310,31 @@ public sealed class PlanEditorTests : BunitContext
         Assert.True(Button(readOnlyCut, "Add Session").HasAttribute("disabled"));
         Assert.True(Button(readOnlyCut, "Edit Session").HasAttribute("disabled"));
     }
+
+    [Fact]
+    public async Task The_editor_header_shows_the_active_week_headline_from_the_main_Tracks_Phases_and_hides_it_for_an_inactive_Plan()
+    {
+        var activeWithPhases = MultiTrackPlan();
+        var inactive = MultiTrackPlan() with { Id = "inactive", IsActive = false };
+        var data = await OpenWithAsync(activeWithPhases);
+        await data.CommitAsync(Change.Put(inactive));
+
+        var cutWithPhases = RenderEditor(data, "plan");
+        Assert.Equal("Active · week 1 of 4", cutWithPhases.Find(".fa-planeditor__active").TextContent.Trim());
+
+        var cutInactive = Render<PlanEditor>(p => p.Add(x => x.PlanId, "inactive"));
+        Assert.Empty(cutInactive.FindAll(".fa-planeditor__active"));
+
+        var activeWithoutPhases = MultiTrackPlan() with
+        {
+            Tracks =
+            [
+                new Track(MainTrack, "Gym", new TrackRhythm.Weekly(3, 2, true), []),
+                new Track("cardio", "Cardio", new TrackRhythm.Weekly(2, 1, false), [Ph("c1", "Engine", 1, 6)]),
+            ],
+        };
+        await data.CommitAsync(Change.Put(activeWithoutPhases));
+        var cutWithoutPhases = Render<PlanEditor>(p => p.Add(x => x.PlanId, "plan"));
+        Assert.Equal("Active · week 1", cutWithoutPhases.Find(".fa-planeditor__active").TextContent.Trim());
+    }
 }

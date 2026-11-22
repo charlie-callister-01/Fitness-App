@@ -56,6 +56,44 @@ public sealed partial class Home : IDisposable
             ? $"Last: {LatestWeightText} {Converter.WeightLabel} on {latest.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)}"
             : "";
 
+    private static string DailyStreakText(int days) => $"{days} {(days == 1 ? "day" : "days")}";
+
+    private static string ExtraLineSummary(ExtraWeekLine line)
+    {
+        var parts = new List<string>
+        {
+            $"{line.TrackName}: {line.Done} of {line.Sessions.Count}",
+            $"target {line.Target}",
+            $"Streak {line.Streak} {(line.Streak == 1 ? "week" : "weeks")}",
+        };
+        if (line.MissedSessionIds.Count > 0)
+        {
+            var missedNames = line.Sessions
+                .Where(s => line.MissedSessionIds.Contains(s.Session.Id))
+                .Select(s => HomeWeekRules.SessionCode(s.Session));
+            parts.Add($"Missed: {string.Join(", ", missedNames)}");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string ExtraStateWords(TileState state) => state switch
+    {
+        TileState.Done => "done",
+        TileState.Missed => "missed",
+        TileState.Partial => "partial",
+        TileState.BreakDay => "Break day",
+        TileState.Upcoming => "upcoming",
+        _ => "rest day",
+    };
+
+    private static string ExtraSessionLabel(string trackName, ExtraWeekSession item)
+    {
+        var day = item.Date.DayOfWeek.ToString();
+        var lead = item.IsToday ? $"Today, {day}" : day;
+        return $"{trackName}: {item.Session.Name}, {lead}, {ExtraStateWords(item.State)}";
+    }
+
     protected override async Task OnInitializedAsync()
     {
         Page = new PageContext(Data, Clock);

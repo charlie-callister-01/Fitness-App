@@ -181,4 +181,42 @@ public sealed class PlansTests : BunitContext
         Assert.True(cut.Find("button[aria-label='Make Winter block active']").HasAttribute("disabled"));
         Assert.True(cut.FindAll("button").Single(b => b.TextContent.Trim() == "New Plan").HasAttribute("disabled"));
     }
+
+    [Fact]
+    public async Task Main_Track_Phases_drive_the_active_week_headline_and_a_Plan_with_more_than_one_Track_shows_its_Track_count()
+    {
+        var twoTracks = Plan() with
+        {
+            Tracks =
+            [
+                new Track(MainTrack, "Gym", new TrackRhythm.Weekly(3, 2, false), [Ph("p1", "Foundation", 1, 8)]),
+                new Track("mobility", "Mobility", new TrackRhythm.Daily(75), [Ph("m1", "Habit", 1, 4)]),
+            ],
+        };
+        var cut = RenderPlans(await OpenWithAsync(twoTracks, Other()));
+
+        var cards = cut.FindAll(".fa-plans__plan");
+        Assert.Contains("Active · week 1 of 8", cards[0].TextContent);
+        Assert.Contains("2 Tracks · 1 Session · 1 Phase · 8 weeks", cards[0].TextContent);
+        Assert.DoesNotContain("Tracks", cards[1].TextContent);
+        Assert.Contains("1 Session · 1 Phase · 6 weeks", cards[1].TextContent);
+    }
+
+    [Fact]
+    public async Task An_active_Plan_whose_main_Track_has_no_Phases_shows_Active_week_n_even_when_another_Track_has_Phases()
+    {
+        var plan = Plan() with
+        {
+            Tracks =
+            [
+                new Track(MainTrack, "Gym", new TrackRhythm.Weekly(3, 2, false), []),
+                new Track("mobility", "Mobility", new TrackRhythm.Daily(75), [Ph("m1", "Habit", 1, 4)]),
+            ],
+        };
+        var cut = RenderPlans(await OpenWithAsync(plan));
+
+        var card = Assert.Single(cut.FindAll(".fa-plans__plan"));
+        Assert.Equal("Active · week 1", card.QuerySelector(".fa-plans__active")?.TextContent.Trim());
+        Assert.Contains("2 Tracks · 1 Session · 0 Phases", card.TextContent);
+    }
 }
