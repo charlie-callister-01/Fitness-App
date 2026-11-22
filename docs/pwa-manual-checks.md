@@ -200,3 +200,19 @@ Logged afterwards:
 Offline:
 
 31. Install the PWA, turn on airplane mode, open the log, then open the Exercise menu, the Workout menu, the Guide, the skip sheet, a picker and the date sheet: all open and close with focus working (this relies on `Sheet.razor.js`, which the publish manifest was confirmed to include). Do a Skip, a Swap and a Logged afterwards while offline and reload: all are kept.
+
+## B3: Home
+
+bUnit covers what each Home state shows, the visibility rules, Start, Continue, the sheets, Nudge actions and dismissals, and Log weight over the real store. It cannot check CSS, the phone keyboard, the native date picker, focus rings, safe areas or the desktop layout. Visual targets are `docs/design/assets/mockups/S-01-home-*.png` and `S-08-weight-log-dark.png`.
+
+1. Phone layout, all four looks: Today card, alternatives, week strip, line, orbs, Nudges, Recent PRs and Weight stack in that order and fit at 360 px with nothing scrolling sideways. The Keep tapestry band shows on the Today card; Clean hides it.
+2. Tap targets: Start, Continue, each strip tile, each orb, Dismiss and the Log weight button are at least 44 px and easy to hit one-handed.
+3. Today card states on a real Plan: a Start day, a rest day (check "Next is X on Day" and the "next week" wording), done today (duration, Sets, PRs), a Break, and a finished Plan.
+4. Do a different Session: opens as a sheet, rows are easy to tap, picking one starts it and opens the log; the Missed Session is still shown as Missed on Home afterwards.
+5. Log a past Workout: the native date picker opens, starts on yesterday and will not go past today; picking a Session or Custom opens a Logged afterwards Workout for that day.
+6. Make up: a Missed session's Nudge opens the draft pre-filled; remove one Exercise, add another, Start; the Workout opens and the Session stays Missed.
+7. Log weight: the sheet opens with the last value in your display unit, the numeric keypad appears, saving shows the new value in the Weight panel. Try lb if you use it. Two Weigh-ins on one day are both kept.
+8. Nudges: Dismiss hides one and the next fills in; reload the app and it stays hidden; next Monday it returns. With no Backup, the Back up action opens the Backup page.
+9. Read-only: open the app in a second window; the second window shows Home read-only with Start and Log weight Save disabled and a plain reason.
+10. Offline: with airplane mode on, Home opens and every action above except the browser's own pickers works.
+11. Desktop (900 px and wider): the two-column layout is not expected to appear yet because the shell caps the column at 560 px; note what you see.

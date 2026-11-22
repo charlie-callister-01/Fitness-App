@@ -33,3 +33,8 @@ a.fa-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
         scroll-behavior: auto !important;
     }
 }
+
+/* Home's two-column layout needs room: from 900 px its column widens (the other pages keep the 560 px cap). */
+@media (min-width: 900px) {
+    .column:has(.fa-home) { max-width: var(--column-wide); }
+}

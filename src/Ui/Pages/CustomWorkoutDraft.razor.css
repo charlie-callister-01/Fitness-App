@@ -1,0 +1,29 @@
+.fa-draft {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
+.fa-draft h1,
+.fa-draft p {
+    margin: 0;
+}
+
+.fa-draft__rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-draft__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--tap-min);
+}

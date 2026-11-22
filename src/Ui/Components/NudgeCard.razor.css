@@ -1,0 +1,8 @@
+.fa-nudge {
+    flex-wrap: wrap;
+}
+
+.fa-nudge__dismiss:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}

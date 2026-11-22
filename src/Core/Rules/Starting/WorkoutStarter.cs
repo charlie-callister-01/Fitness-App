@@ -52,4 +52,25 @@ public sealed class WorkoutStarter(AppData data, IIdGenerator ids, IClock clock)
         var workout = WorkoutStart.CreatePastDated(plan, session, date, ids);
         return StartOutcome.Saved(workout, await data.CommitAsync(Change.Put(workout)));
     }
+
+    /// <summary>
+    /// Creates and saves an in-progress Custom workout from <paramref name="rows"/>.
+    /// If a Workout is already in progress, continues that one without saving.
+    /// If <paramref name="rows"/> is empty, saves nothing (null Workout, null Commit).
+    /// </summary>
+    public async Task<StartOutcome> StartCustomAsync(Plan plan, IReadOnlyList<SessionExercise> rows, DateOnly today)
+    {
+        if (WorkoutStart.InProgress(data.Snapshot.Workouts) is { } existing)
+        {
+            return StartOutcome.Continued(existing);
+        }
+
+        if (rows.Count == 0)
+        {
+            return new StartOutcome(null, null);
+        }
+
+        var workout = CustomWorkoutStart.Create(plan, rows, today, ids, clock);
+        return StartOutcome.Saved(workout, await data.CommitAsync(Change.Put(workout)));
+    }
 }

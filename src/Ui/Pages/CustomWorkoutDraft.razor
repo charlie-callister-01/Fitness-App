@@ -1,0 +1,46 @@
+@page "/custom"
+@page "/custom/makeup/{SessionId}"
+@* Build a Custom workout (design F-02), or make up a Missed session. The draft lives in this page only and is lost on reload. *@
+<div class="fa-root fa-draft">
+    <Button Variant="ButtonVariant.Secondary" Href="./">Back</Button>
+
+    @if (UnknownSession)
+    {
+        <h1 class="fa-title fa-title--l">Make up a Session</h1>
+        <p class="fa-muted">That Session isn't in your active Plan.</p>
+        <Button Variant="ButtonVariant.Primary" Href="./">Back to Home</Button>
+    }
+    else
+    {
+        <h1 class="fa-title fa-title--l">@Title</h1>
+
+        @if (_draft.Count == 0)
+        {
+            <p class="fa-muted">No Exercises yet. Add some to start.</p>
+        }
+        else
+        {
+            <ul class="fa-draft__rows">
+                @foreach (var id in _draft)
+                {
+                    var exerciseId = id;
+                    <li class="fa-draft__row">
+                        <span>@NameOf(exerciseId)</span>
+                        <Button Variant="ButtonVariant.Secondary" AccessibleName="@($"Remove {NameOf(exerciseId)}")" OnClick="() => Remove(exerciseId)">Remove</Button>
+                    </li>
+                }
+            </ul>
+        }
+
+        <Button Variant="ButtonVariant.Secondary" OnClick="OpenPicker">Add Exercise</Button>
+
+        @if (ReadOnlyMessage is { } message)
+        {
+            <p class="fa-well" role="status">@message</p>
+        }
+
+        <Button Variant="ButtonVariant.Primary" Disabled="@(_draft.Count == 0 || _saving || !CanWrite)" OnClick="StartAsync">Start</Button>
+
+        <ExercisePicker Open="_pickerOpen" Title="Add Exercise" Choices="PickerChoices" OnPick="Add" OnClose="ClosePicker" />
+    }
+</div>

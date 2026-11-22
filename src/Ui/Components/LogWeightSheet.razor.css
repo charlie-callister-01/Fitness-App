@@ -1,0 +1,23 @@
+.fa-weightfield {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fa-weightfield__control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-primary);
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    font-size: x-large;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--radius-control);
+}
+
+.fa-weightfield__control:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}

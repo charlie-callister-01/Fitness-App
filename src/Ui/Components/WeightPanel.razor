@@ -1,0 +1,50 @@
+@using System.Globalization
+@using Core.Rules.Units
+@* The Weight panel on Home: the latest Weigh-in, this week's average and the change from last week. Raises OnLogWeight and saves nothing. *@
+<section class="fa-weightpanel" aria-label="Weight">
+    <h2 class="fa-title fa-title--m">Weight</h2>
+    @if (Panel.Latest is { } latest)
+    {
+        <p class="fa-weightpanel__latest">@Show(latest.WeightKg) · @latest.Date.ToString("ddd d MMM", CultureInfo.InvariantCulture)</p>
+        @if (Panel.WeekAverageKg is { } average)
+        {
+            <p class="fa-muted">This week avg @Show(average)</p>
+        }
+        @if (Panel.ChangeKg is { } change)
+        {
+            <p class="fa-muted fa-weightpanel__change">@ChangeText(change)</p>
+        }
+    }
+    else
+    {
+        <p class="fa-muted">No Weigh-ins yet.</p>
+        <Button Variant="ButtonVariant.Secondary" OnClick="() => OnLogWeight.InvokeAsync()">Log weight</Button>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public Core.Rules.Home.WeightPanel Panel { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public UnitConverter Converter { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnLogWeight { get; set; }
+
+    private string Show(double kg) => $"{Value(kg)} {Converter.WeightLabel}";
+
+    private string Value(double kg) => Converter.DisplayWeight(kg).ToString("0.0", CultureInfo.InvariantCulture);
+
+    private string ChangeText(double changeKg)
+    {
+        var shown = Converter.DisplayWeight(Math.Abs(changeKg));
+        if (shown == 0)
+        {
+            return "no change";
+        }
+
+        var sign = changeKg > 0 ? "+" : "-";
+        return $"{sign}{shown.ToString("0.0", CultureInfo.InvariantCulture)} {Converter.WeightLabel}";
+    }
+}

@@ -1,0 +1,63 @@
+@using Core.Model
+@using Core.Rules.Home
+@* The Do a different Session sheet (design F-03): this week's undone Sessions as tap rows. It raises events only; Home starts the Workout. *@
+<Sheet Open="Open" Title="Do a different Session" OnClose="OnClose">
+    <ChildContent>
+        @if (!CanWrite && ReadOnlyMessage is { Length: > 0 })
+        {
+            <p class="fa-well" role="alert">@ReadOnlyMessage</p>
+        }
+
+        @if (Sessions.Count == 0)
+        {
+            <p>No Sessions left this week.</p>
+            <Button Variant="ButtonVariant.Primary" OnClick="OnBuildCustom">Build a Custom workout</Button>
+        }
+        else
+        {
+            <ul class="fa-sessionrows">
+                @foreach (var session in Sessions)
+                {
+                    var picked = session;
+                    <li>
+                        <button type="button" class="fa-sessionrow" disabled="@(Saving || !CanWrite)" @onclick="() => OnPick.InvokeAsync(picked)">
+                            <span class="fa-sessionrow__code">@HomeWeekRules.SessionCode(session)</span>
+                            <span class="fa-sessionrow__name">@session.Name</span>
+                            <span class="fa-sessionrow__meta">@session.Type · @session.DefaultDay.ToString()[..3]</span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </ChildContent>
+    <Actions>
+        <Button Variant="ButtonVariant.Secondary" Disabled="Saving" OnClick="OnClose">Cancel</Button>
+    </Actions>
+</Sheet>
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    /// <summary>This week's undone Sessions, already ordered.</summary>
+    [Parameter]
+    public IReadOnlyList<Session> Sessions { get; set; } = [];
+
+    [Parameter]
+    public bool Saving { get; set; }
+
+    [Parameter]
+    public bool CanWrite { get; set; } = true;
+
+    [Parameter]
+    public string? ReadOnlyMessage { get; set; }
+
+    [Parameter]
+    public EventCallback<Session> OnPick { get; set; }
+
+    [Parameter]
+    public EventCallback OnBuildCustom { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+}
