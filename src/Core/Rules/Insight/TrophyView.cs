@@ -114,6 +114,12 @@ public static class TrophyViewBuilder
 
         var exercise = h.Exercises.FirstOrDefault(e => e.Id == metric);
         if (exercise is null) return $"Metric \"{badge.Metric}\" is not measurable";
+        if (exercise.LogKind == LogKind.Load && t > 0)
+        {
+            var shown = units.DisplayWeight(t).ToString("0.##", CultureInfo.InvariantCulture);
+            return $"Estimated 1RM of {shown} {units.WeightLabel} on {exercise.Name}";
+        }
+
         return t < 0 ? $"Drop {abs} on {exercise.Name}" : $"Reach {abs} on {exercise.Name}";
     }
 

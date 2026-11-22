@@ -112,6 +112,7 @@ public sealed class BadgeEditorTests : BunitContext
         cut.Find(".fa-badgeeditor__exercise").Change(Squat);
         cut.Find(".fa-badgeeditor__target").Input("24");
         cut.Find(".fa-badgeeditor__reps").Input("8");
+        Assert.Contains("estimated 1RM of 30.4 kg", cut.Find(".fa-badgeeditor__onerm").TextContent);
         ClickInSheet(cut, "Save");
 
         cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Badges));

@@ -93,18 +93,41 @@ public class WeightViewTests
     }
 
     [Fact]
-    public void Goal_comes_from_the_first_bodyweight_Badge_with_a_positive_target()
+    public void Goal_comes_from_the_first_bodyweight_Badge()
     {
         var badges = new[]
         {
-            new Badge("1", "Drop", "bodyweight", -5),
             new Badge("2", "Other", "sessions", 10),
             new Badge("3", "Goal", "Bodyweight", 82),
             new Badge("4", "Later", "bodyweight", 80),
         };
 
         Assert.Equal(82, Build([W("a", Mon, 90)], badges).Goal);
-        Assert.Null(Build([W("a", Mon, 90)], [badges[0], badges[1]]).Goal);
+        Assert.Null(Build([W("a", Mon, 90)], [badges[0]]).Goal);
+    }
+
+    [Fact]
+    public void A_drop_Badge_puts_the_goal_at_the_first_Weigh_in_minus_the_drop()
+    {
+        var badges = new[] { new Badge("1", "Drop", "bodyweight", -5), new Badge("2", "Goal", "bodyweight", 82) };
+
+        var view = Build([W("b", Mon.AddDays(7), 88), W("a", Mon, 90)], badges);
+
+        Assert.Equal(85, view.Goal);
+    }
+
+    [Fact]
+    public void A_drop_Badge_with_no_Weigh_ins_draws_no_goal()
+    {
+        Assert.Null(Build([], [new Badge("1", "Drop", "bodyweight", -5)]).Goal);
+    }
+
+    [Fact]
+    public void A_drop_goal_follows_the_display_unit()
+    {
+        var view = Build([W("a", Mon, 90.72)], [new Badge("1", "Drop", "bodyweight", -4.536)], Lb);
+
+        Assert.Equal(190, view.Goal!.Value, 1);
     }
 
     [Fact]

@@ -89,6 +89,28 @@ public class TrophyViewTests
     }
 
     [Fact]
+    public void A_Load_Exercise_Badge_says_its_target_is_an_estimated_1RM_in_the_owners_units()
+    {
+        var badge = new Badge("s", "Squat 100", "squat", 100);
+
+        Assert.Equal("Estimated 1RM of 100 kg on Squat", Build([badge]).Badges.Single().Needs);
+
+        var lb = TrophyViewBuilder.Build(Plan(), [Squat], [new Badge("s", "Squat", "squat", 45.359237)], [], [], [], D(2026, 2, 1),
+            new UnitConverter(WeightUnit.Lb, DistanceUnit.Mi, 2));
+        Assert.Equal("Estimated 1RM of 100 lb on Squat", lb.Badges.Single().Needs);
+    }
+
+    [Fact]
+    public void A_non_Load_Exercise_Badge_keeps_the_plain_wording()
+    {
+        var plank = new Exercise("plank", "Plank", LogKind.Seconds, null, false);
+
+        var view = TrophyViewBuilder.Build(Plan(), [plank], [new Badge("p", "Plank", "plank", 120)], [], [], [], D(2026, 2, 1), Kg);
+
+        Assert.Equal("Reach 120 on Plank", view.Badges.Single().Needs);
+    }
+
+    [Fact]
     public void A_metric_that_cannot_be_measured_says_so_and_sorts_last()
     {
         var view = Build([new Badge("odd", "Odd", "nonsense", 3), Sessions("a", "A", 50)], [Day(0)]);

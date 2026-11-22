@@ -55,7 +55,12 @@ public static class WeightViewBuilder
             .ToList();
 
         double? change = ordered.Count >= 2 ? units.DisplayWeight(ordered[^1].WeightKg) - units.DisplayWeight(ordered[0].WeightKg) : null;
-        var goal = badges.FirstOrDefault(b => b.Metric.Trim().Equals("bodyweight", StringComparison.OrdinalIgnoreCase) && b.Target > 0);
+        var goalBadge = badges.FirstOrDefault(b => b.Metric.Trim().Equals("bodyweight", StringComparison.OrdinalIgnoreCase));
+        // A positive target is the goal weight; a drop is the first Weigh-in minus the drop, and nothing is drawn before a first Weigh-in.
+        double? goalKg = goalBadge is null ? null
+            : goalBadge.Target > 0 ? goalBadge.Target
+            : ordered.Count > 0 ? ordered[0].WeightKg + goalBadge.Target
+            : null;
 
         return new WeightView(
             points,
@@ -63,7 +68,7 @@ public static class WeightViewBuilder
             panel.Latest?.Date,
             change,
             panel.WeekAverageKg is { } avg ? units.DisplayWeight(avg) : null,
-            goal is null ? null : units.DisplayWeight(goal.Target),
+            goalKg is { } g ? units.DisplayWeight(g) : null,
             weeks,
             units.WeightLabel);
     }

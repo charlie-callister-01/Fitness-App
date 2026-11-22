@@ -127,7 +127,34 @@ public static class BadgeEditingRules
     /// <summary>The Badge <paramref name="id"/> changed to the draft, keeping its ID. Refused when it is gone or the draft is not valid.</summary>
     public static PlanEditResult<Badge> Replace(
         IReadOnlyList<Badge> badges, string id, BadgeDraft draft, IReadOnlyList<Exercise> exercises, UnitConverter units) =>
-        badges.Any(b => b.Id == id) ? Validate(draft, id, exercises, units) : Refuse(Gone);
+        badges.FirstOrDefault(b => b.Id == id) is not { } existing ? Refuse(Gone) : Validate(draft, id, exercises, units) switch
+        {
+            // Opening a Load Badge shows its estimated 1RM as one rep, rounded for the eye. Saving that draft untouched must not move the target.
+            PlanEditResult<Badge>.Valid { Value: var saved } when SameAsOpened(draft, existing, exercises, units) =>
+                new PlanEditResult<Badge>.Valid(saved with { Target = existing.Target }),
+            var result => result,
+        };
+
+    private static bool SameAsOpened(BadgeDraft draft, Badge existing, IReadOnlyList<Exercise> exercises, UnitConverter units) =>
+        draft with { Name = "" } == DraftFor(existing, exercises, units) with { Name = "" };
+
+    /// <summary>
+    /// For a Load Exercise, the plain line that its target is stored as an estimated 1RM, with the weight and reps typed; otherwise null
+    /// (also null while the draft is incomplete).
+    /// </summary>
+    public static string? OneRepMaxLine(BadgeDraft draft, IReadOnlyList<Exercise> exercises, UnitConverter units)
+    {
+        if (draft.Metric != BadgeMetricChoice.ExerciseBest
+            || exercises.FirstOrDefault(e => e.Id == draft.ExerciseId) is not { } exercise
+            || !UsesWeightAndReps(exercise)
+            || !Validate(draft with { Name = "draft" }, "draft", exercises, units).TryGet(out var badge, out _))
+        {
+            return null;
+        }
+
+        var shown = $"{Text(units.ChartWeight(badge.Target), 1)} {units.WeightLabel}";
+        return $"This target is stored as an estimated 1RM of {shown} ({Text(ParseNumber(draft.Target), 1)} {units.WeightLabel} for {draft.Reps.Trim()} reps).";
+    }
 
     /// <summary>The Badge to delete, or the plain reason it cannot be (it is no longer there).</summary>
     public static PlanEditResult<Badge> Delete(IReadOnlyList<Badge> badges, string id) =>
@@ -159,7 +186,7 @@ public static class BadgeEditingRules
 
         return UsesWeightAndReps(exercise)
             ? new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, exercise.Id,
-                Text(units.ChartWeight(badge.Target / (1 + 1 / 30.0)), 3), "1", false)
+                Text(units.ChartWeight(SetRanking.WeightForOneRepMax(badge.Target, 1)), 3), "1", false)
             : new BadgeDraft(badge.Name, BadgeMetricChoice.ExerciseBest, exercise.Id, Text(Math.Abs(badge.Target)), "", false);
 
         BadgeDraft Simple(BadgeMetricChoice choice) => new(badge.Name, choice, null, Text(Math.Abs(badge.Target)), "", false);

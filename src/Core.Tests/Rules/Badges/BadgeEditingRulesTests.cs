@@ -237,6 +237,51 @@ public class BadgeEditingRulesTests
         Assert.Equal(stored.Target, saved.Target, 2);
     }
 
+    [Theory]
+    [InlineData(24 * (1 + 8 / 30.0), false)]
+    [InlineData(1 + 7 / 30.0, false)]
+    [InlineData(137.123456789, true)]
+    public void Replacing_a_Badge_with_its_own_unchanged_draft_keeps_the_target_exactly(double target, bool inLb)
+    {
+        var units = inLb ? Lb : Kg;
+        var stored = new Badge("b", "Squat", "squat", target);
+        var draft = BadgeEditingRules.DraftFor(stored, Library, units);
+
+        Assert.True(BadgeEditingRules.Replace([stored], "b", draft with { Name = "Renamed" }, Library, units).TryGet(out var saved, out _));
+
+        Assert.Equal(target, saved.Target);
+        Assert.Equal("Renamed", saved.Name);
+    }
+
+    [Fact]
+    public void Changing_the_reps_of_an_opened_Load_Badge_changes_the_target()
+    {
+        var stored = new Badge("b", "Squat", "squat", 24 * (1 + 8 / 30.0));
+        var draft = BadgeEditingRules.DraftFor(stored, Library, Kg) with { Reps = "5" };
+
+        Assert.True(BadgeEditingRules.Replace([stored], "b", draft, Library, Kg).TryGet(out var saved, out _));
+
+        Assert.NotEqual(stored.Target, saved.Target);
+    }
+
+    [Fact]
+    public void The_estimated_1RM_line_says_the_target_is_an_estimated_1RM_with_its_one_rep_weight()
+    {
+        var draft = Draft(BadgeMetricChoice.ExerciseBest, "Squat", "24", "squat", "8");
+
+        var line = BadgeEditingRules.OneRepMaxLine(draft, Library, Kg);
+
+        Assert.Equal("This target is stored as an estimated 1RM of 30.4 kg (24 kg for 8 reps).", line);
+    }
+
+    [Fact]
+    public void The_estimated_1RM_line_is_only_for_a_Load_Exercise_with_a_complete_draft()
+    {
+        Assert.Null(BadgeEditingRules.OneRepMaxLine(Draft(BadgeMetricChoice.ExerciseBest, "Plank", "60", "plank"), Library, Kg));
+        Assert.Null(BadgeEditingRules.OneRepMaxLine(Draft(BadgeMetricChoice.Workouts), Library, Kg));
+        Assert.Null(BadgeEditingRules.OneRepMaxLine(Draft(BadgeMetricChoice.ExerciseBest, "Squat", "", "squat", "8"), Library, Kg));
+    }
+
     [Fact]
     public void A_stored_Badge_with_an_unknown_metric_opens_with_no_Exercise_chosen()
     {
