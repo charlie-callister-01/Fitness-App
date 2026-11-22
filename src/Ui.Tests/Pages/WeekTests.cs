@@ -1,6 +1,7 @@
 using Bunit;
 using Core.Model;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Storage;
 using Core.Tests.Storage;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,7 +100,7 @@ public sealed class WeekTests : BunitContext
         Assert.Equal(("upper", Today.AddDays(4)), (move.SessionId, move.Date));
         var plan = data.Snapshot.Plans.Single();
         Assert.Equal(DefaultDay.Wednesday, plan.Sessions.Single(s => s.Id == "upper").DefaultDay);
-        var nextWeek = WeekScheduleRules.Layout(plan, Schedules(data), [], Today.AddDays(7));
+        var nextWeek = WeekScheduleRules.Layout(plan, TrackRules.Main(plan), Schedules(data), [], Today.AddDays(7));
         Assert.Equal(Wednesday.AddDays(7), nextWeek.Sessions.Single(s => s.SessionId == "upper").Date);
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[role='dialog']")));
         Assert.Contains("Moved this week", cut.Markup);
@@ -118,7 +119,8 @@ public sealed class WeekTests : BunitContext
 
         cut.WaitForAssertion(() => Assert.Equal(DefaultDay.Friday, data.Snapshot.Plans.Single().Sessions.Single(s => s.Id == "upper").DefaultDay));
         Assert.Empty(Schedules(data));
-        var nextWeek = WeekScheduleRules.Layout(data.Snapshot.Plans.Single(), [], [], Today.AddDays(7));
+        var savedPlan = data.Snapshot.Plans.Single();
+        var nextWeek = WeekScheduleRules.Layout(savedPlan, TrackRules.Main(savedPlan), [], [], Today.AddDays(7));
         Assert.Equal(Today.AddDays(11), nextWeek.Sessions.Single(s => s.SessionId == "upper").Date);
         cut.WaitForAssertion(() => Assert.Contains("Fri 20 Nov", cut.Find("li[data-session='upper']").TextContent));
     }

@@ -1,5 +1,6 @@
 using Bunit;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Model;
 using Core.Storage;
 using Core.Tests.Storage;
@@ -174,12 +175,12 @@ public sealed class CustomWorkoutDraftTests : BunitContext
         var cut = await RenderDraftAsync(data, "lower", now: Now.AddDays(2));
         var wednesday = Today.AddDays(2);
         var plan = data.Snapshot.Plans[0];
-        Assert.Single(WeekScheduleRules.MissedInWeek(plan, [], [], data.Snapshot.Workouts, wednesday, wednesday));
+        Assert.Single(WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), [], [], data.Snapshot.Workouts, wednesday, wednesday));
 
         StartButton(cut).Click();
         cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Workouts));
 
-        var missed = WeekScheduleRules.MissedInWeek(plan, [], [], data.Snapshot.Workouts, wednesday, wednesday);
+        var missed = WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), [], [], data.Snapshot.Workouts, wednesday, wednesday);
         Assert.Equal("lower", Assert.Single(missed).SessionId);
     }
 

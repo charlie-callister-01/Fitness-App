@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Rearrangement;
+using Core.Rules.Tracks;
 using Core.Tests.Rules.TestData;
 using static Core.Tests.Rules.TestData.Dates;
 using static Core.Tests.Rules.TestData.HistoryBuilder;
@@ -33,8 +34,8 @@ public class WeekRearrangementTests
 
     private static RearrangementResult Suggest(
         Plan plan, DateOnly today, IReadOnlyList<Break>? breaks = null, IReadOnlyList<Workout>? workouts = null,
-        IReadOnlyList<WeekSchedule>? schedules = null) =>
-        WeekRearrangement.Suggest(plan, Library, schedules ?? [], breaks ?? [], workouts ?? [], today);
+        IReadOnlyList<WeekSchedule>? schedules = null, Track? track = null) =>
+        WeekRearrangement.Suggest(plan, track ?? TrackRules.Main(plan), Library, schedules ?? [], breaks ?? [], workouts ?? [], today);
 
     private static Dictionary<string, DateOnly> Placed(RearrangementResult r) =>
         Assert.IsType<RearrangementResult.Proposal>(r).Placements.ToDictionary(p => p.SessionId, p => p.Date);
@@ -146,5 +147,32 @@ public class WeekRearrangementTests
         var b = Suggest(Standard, Mon.AddDays(3), schedules: schedules);
         Assert.Empty(schedules);
         Assert.Equal(Placed(a), Placed(b));
+    }
+
+    [Fact]
+    public void Rearrangement_runs_per_weekly_Track_and_never_touches_a_daily_Track()
+    {
+        var gym = new Track("gym", "Gym", new TrackRhythm.Weekly(2, 1, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(1, 1, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(), []);
+        var plan = PlanFixture.Make(start: Start, tracks: [gym, cardio, mobility], sessions:
+        [
+            PlanFixture.Session("legsA", DayOfWeek.Monday, exercises: [PlanFixture.Row("squat", reps: 5)], trackId: "gym"),
+            PlanFixture.Session("push", DayOfWeek.Wednesday, exercises: [PlanFixture.Row("bench", reps: 5)], trackId: "gym"),
+            PlanFixture.Session("run", DayOfWeek.Monday, SessionType.Cardio, exercises: [PlanFixture.Row("jog", reps: null)], trackId: "cardio"),
+            PlanFixture.Session("stretch", DefaultDay.Daily, SessionType.Mobility, exercises: [PlanFixture.Row("jog", reps: null)], trackId: "mob"),
+        ]);
+
+        // Tuesday: legsA (Mon) and run (Mon) are missed. Each weekly Track proposes only its own Sessions.
+        var gymPlaced = Placed(Suggest(plan, Mon.AddDays(1), track: gym));
+        Assert.Equal(["legsA", "push"], gymPlaced.Keys.OrderBy(x => x));
+        Assert.Equal(Mon.AddDays(1), gymPlaced["legsA"]);
+        Assert.Equal(Mon.AddDays(2), gymPlaced["push"]);
+
+        var cardioPlaced = Placed(Suggest(plan, Mon.AddDays(1), track: cardio));
+        Assert.Equal(["run"], cardioPlaced.Keys);
+        Assert.Equal(Mon.AddDays(1), cardioPlaced["run"]);
+
+        Assert.IsType<RearrangementResult.NothingToRearrange>(Suggest(plan, Mon.AddDays(1), track: mobility));
     }
 }

@@ -119,4 +119,20 @@ public class LibraryViewBuilderTests
 
         Assert.Equal("Not in a Session", Assert.Single(LibraryViewBuilder.Build(plan, Library, [], null, null).Groups).Heading);
     }
+
+    [Fact]
+    public void Session_group_headings_name_the_Track_when_the_Plan_has_more_than_one()
+    {
+        var main = new Track("main", "Main", new TrackRhythm.Weekly(2, 1, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(), []);
+        var plan = PlanFixture.Make(tracks: [main, mobility], sessions:
+        [
+            PlanFixture.Session("lower", DayOfWeek.Monday, name: "Lower", exercises: [PlanFixture.Row("squat")], trackId: "main"),
+            PlanFixture.Session("stretch", DefaultDay.Daily, SessionType.Mobility, name: "Morning", exercises: [PlanFixture.Row("lunge")], trackId: "mob"),
+        ]);
+
+        var view = LibraryViewBuilder.Build(plan, Library, [], null, null);
+
+        Assert.Equal(["Main · Lower", "Mobility · Morning", "Not in a Session"], view.Groups.Select(g => g.Heading));
+    }
 }

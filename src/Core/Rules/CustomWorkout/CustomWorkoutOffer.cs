@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.Phases;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 
 namespace Core.Rules.CustomWorkout;
 
@@ -16,16 +17,17 @@ public static class CustomWorkoutOffer
         Plan plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks,
         IReadOnlyList<Workout> workouts, IReadOnlyList<Exercise> library, DateOnly today)
     {
-        var missedIds = WeekScheduleRules.MissedInWeek(plan, schedules, breaks, workouts, today, today)
+        var main = TrackRules.Main(plan);
+        var missedIds = WeekScheduleRules.MissedInWeek(plan, main, schedules, breaks, workouts, today, today)
             .Select(m => m.SessionId).ToHashSet();
-        var phase = PhaseRules.CurrentPhase(plan, today);
+        var phase = PhaseRules.CurrentPhase(plan, TrackRules.Main(plan), today);
 
         var byId = new Dictionary<string, Exercise>();
         foreach (var exercise in library) byId.TryAdd(exercise.Id, exercise);
 
         var offeredIds = new HashSet<string>();
         var first = new List<Exercise>();
-        var plannedRows = plan.Sessions
+        var plannedRows = TrackRules.SessionsOf(plan, main)
             .Where(s => missedIds.Contains(s.Id))
             .SelectMany(s => PhaseRules.ExerciseRows(plan, phase, s.Id));
         foreach (var row in plannedRows)

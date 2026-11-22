@@ -2,6 +2,7 @@ using Core.Model;
 using Core.Rules.Phases;
 using Core.Rules.Schedule;
 using Core.Rules.Starting;
+using Core.Rules.Tracks;
 using Core.Storage;
 using Core.Tests.Ids;
 using Core.Tests.Rules.TestData;
@@ -151,6 +152,24 @@ public class CustomWorkoutStartTests
         Assert.Equal(5, row.Reps);
     }
 
+    [Fact]
+    public void RowsForExercises_uses_the_matching_Sessions_own_Track_Phase_override()
+    {
+        var main = new Track("main", "Main", new TrackRhythm.Weekly(2, 1, false), []);
+        var extra = new Track("extra", "Extra", new TrackRhythm.Weekly(1, 1, false),
+            [new Phase("e1", "Focus", 1, 4, [], [new SessionOverride("s2", [Row("pullup", 5, 3, cue: "Weighted")])])]);
+        var plan = PlanFixture.Make(start: Mon, tracks: [main, extra], sessions:
+        [
+            PlanFixture.Session("s1", DayOfWeek.Monday, exercises: [Row("squat", 3, 5)], trackId: "main"),
+            PlanFixture.Session("s2", DayOfWeek.Wednesday, exercises: [Row("pullup", 3, 8)], trackId: "extra"),
+        ]);
+
+        var rows = CustomWorkoutStart.RowsForExercises(plan, ["pullup"], Mon);
+
+        var row = Assert.Single(rows);
+        Assert.Equal((5, 3, "Weighted"), (row.Sets, row.Reps, row.Cue));
+    }
+
     // ---- RowsForMakeUp
 
     [Fact]
@@ -249,7 +268,7 @@ public class CustomWorkoutStartTests
         var makeUpRows = CustomWorkoutStart.RowsForMakeUp(plan, session, wednesday);
         var customWorkout = CustomWorkoutStart.Create(plan, makeUpRows, wednesday, new SequentialIdGenerator("w"), Clock);
 
-        var missed = WeekScheduleRules.MissedInWeek(plan, [], [], [customWorkout], Mon, wednesday);
+        var missed = WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), [], [], [customWorkout], Mon, wednesday);
 
         var missedSession = Assert.Single(missed);
         Assert.Equal("lower", missedSession.SessionId);

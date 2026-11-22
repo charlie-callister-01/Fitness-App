@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.Schedule;
 using Core.Rules.PlanEditing;
+using Core.Rules.Tracks;
 using Core.Tests.Ids;
 using Core.Tests.Rules.TestData;
 using static Core.Tests.Rules.TestData.Dates;
@@ -37,10 +38,10 @@ public class WeekEditRulesTests
     {
         var schedule = Valid(WeekEditRules.MoveThisWeek(Standard, [], "push", Mon, Mon.AddDays(4)));
 
-        var layout = WeekScheduleRules.Layout(Standard, [schedule], [], Mon);
+        var layout = WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [], Mon);
         Assert.Equal(Mon, schedule.WeekStart);
         Assert.Equal(Mon.AddDays(4), layout.Sessions.Single(s => s.SessionId == "push").Date);
-        Assert.Equal(Mon.AddDays(8), WeekScheduleRules.Layout(Standard, [schedule], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
+        Assert.Equal(Mon.AddDays(8), WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class WeekEditRulesTests
     {
         var schedule = Valid(WeekEditRules.MoveThisWeek(Standard, [], "push", Mon, Mon));
 
-        var layout = WeekScheduleRules.Layout(Standard, [schedule], [], Mon);
+        var layout = WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [], Mon);
         Assert.Equal(2, layout.Sessions.Count(s => s.Date == Mon));
     }
 
@@ -89,7 +90,7 @@ public class WeekEditRulesTests
         var plan = Valid(WeekEditRules.MakeDefaultDay(Standard, "push", DefaultDay.Friday));
 
         Assert.Equal(DefaultDay.Friday, plan.Sessions.Single(s => s.Id == "push").DefaultDay);
-        Assert.Equal(Mon.AddDays(11), WeekScheduleRules.Layout(plan, [], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
+        Assert.Equal(Mon.AddDays(11), WeekScheduleRules.Layout(plan, TrackRules.Main(plan), [], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
         Assert.Contains("no longer", Reason(WeekEditRules.MakeDefaultDay(Standard, "gone", DefaultDay.Friday)));
     }
 
@@ -181,7 +182,7 @@ public class WeekEditRulesTests
 
         var schedule = draft.Apply(Standard, []);
 
-        var layout = WeekScheduleRules.Layout(Standard, [schedule], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], Mon);
+        var layout = WeekScheduleRules.Layout(Standard, TrackRules.Main(Standard), [schedule], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], Mon);
         foreach (var row in draft.Rows)
         {
             Assert.Equal(row.FinalDate, layout.Sessions.Single(s => s.SessionId == row.SessionId).Date);
@@ -238,7 +239,7 @@ public class WeekEditRulesTests
     {
         var draft = Draft();
 
-        var missed = WeekScheduleRules.MissedInWeek(Standard, [draft.Apply(Standard, [])], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], [Logged(Mon, "legsA")], Mon, Mon.AddDays(1));
+        var missed = WeekScheduleRules.MissedInWeek(Standard, TrackRules.Main(Standard), [draft.Apply(Standard, [])], [BreakOf(Mon.AddDays(2), Mon.AddDays(3))], [Logged(Mon, "legsA")], Mon, Mon.AddDays(1));
 
         Assert.Empty(missed);
     }

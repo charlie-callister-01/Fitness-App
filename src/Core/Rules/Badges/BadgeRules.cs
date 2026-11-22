@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.LogKinds;
 using Core.Rules.Performance;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Badges;
@@ -73,11 +74,12 @@ public static class BadgeRules
 
     private static Measured? Measure(string metric, BadgeHistory h, DateOnly today)
     {
+        var main = TrackRules.Main(h.Plan);
         switch (metric.ToLowerInvariant())
         {
-            case "sessions": return new Measured(WeekRules.CountedWorkoutsByWeek(h.Plan, h.Workouts).Values.Sum());
+            case "sessions": return new Measured(WeekRules.CountedWorkoutsByWeek(h.Plan, main, h.Workouts).Values.Sum());
             case "streak" or "bestweek" or "best week":
-                var streak = WeekRules.Streak(h.Plan, h.Workouts, h.Breaks, today);
+                var streak = WeekRules.Streak(h.Plan, main, h.Workouts, h.Breaks, today);
                 return new Measured(metric.ToLowerInvariant() == "streak" ? streak.BestRun : streak.BestWeekCount);
             case "prs": return new Measured(h.Exercises.Sum(e => ExercisePerformance.Prs(e, h.Workouts).Count));
             case "bodyweight": return Weights(h);

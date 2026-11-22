@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 using Core.Tests.Rules.TestData;
 using static Core.Tests.Rules.TestData.Dates;
@@ -26,12 +27,15 @@ public class WeekScheduleRulesTests
 
     private static List<string> Ids(WeekLayout l) => l.Sessions.Select(s => s.SessionId).ToList();
 
+    private static WeekLayout MainLayout(Plan plan, IReadOnlyList<WeekSchedule> schedules, IReadOnlyList<Break> breaks, DateOnly weekDate) =>
+        WeekScheduleRules.Layout(plan, TrackRules.Main(plan), schedules, breaks, weekDate);
+
     // ---- layout
 
     [Fact]
     public void Sessions_sit_on_their_default_days_in_date_order()
     {
-        var l = WeekScheduleRules.Layout(Plan(), [], [], Mon.AddDays(2));
+        var l = MainLayout(Plan(), [], [], Mon.AddDays(2));
         Assert.Equal(Mon, l.Monday);
         Assert.Equal(["lower", "upper", "run"], Ids(l));
         Assert.Equal([Mon, Mon.AddDays(2), Mon.AddDays(4)], l.Sessions.Select(s => s.Date));
@@ -41,7 +45,7 @@ public class WeekScheduleRulesTests
     [Fact]
     public void A_move_for_that_week_overrides_the_default_day_and_is_flagged()
     {
-        var l = WeekScheduleRules.Layout(Plan(), [Move(Mon, "lower", Mon.AddDays(5))], [], Mon);
+        var l = MainLayout(Plan(), [Move(Mon, "lower", Mon.AddDays(5))], [], Mon);
         var lower = l.Sessions.Single(s => s.SessionId == "lower");
         Assert.Equal(Mon.AddDays(5), lower.Date);
         Assert.True(lower.IsMoved);
@@ -53,14 +57,14 @@ public class WeekScheduleRulesTests
     {
         var other = Move(Mon.AddDays(7), "lower", Mon.AddDays(8));
         var outside = Move(Mon, "upper", Mon.AddDays(8));
-        var l = WeekScheduleRules.Layout(Plan(), [other, outside], [], Mon);
+        var l = MainLayout(Plan(), [other, outside], [], Mon);
         Assert.Equal([Mon, Mon.AddDays(2), Mon.AddDays(4)], l.Sessions.Select(s => s.Date));
     }
 
     [Fact]
     public void Break_days_are_marked_unavailable_but_Sessions_stay_listed()
     {
-        var l = WeekScheduleRules.Layout(Plan(), [], [BreakOf(Mon.AddDays(1), Mon.AddDays(2))], Mon);
+        var l = MainLayout(Plan(), [], [BreakOf(Mon.AddDays(1), Mon.AddDays(2))], Mon);
         Assert.Equal([Mon.AddDays(1), Mon.AddDays(2)], l.BreakDays);
         Assert.Equal([false, true, false], l.Sessions.Select(s => s.IsBreakDay));
     }
@@ -68,18 +72,18 @@ public class WeekScheduleRulesTests
     [Fact]
     public void A_Session_moved_onto_a_Break_day_is_marked()
     {
-        var l = WeekScheduleRules.Layout(Plan(), [Move(Mon, "lower", Mon.AddDays(3))], [BreakOf(Mon.AddDays(3), Mon.AddDays(3))], Mon);
+        var l = MainLayout(Plan(), [Move(Mon, "lower", Mon.AddDays(3))], [BreakOf(Mon.AddDays(3), Mon.AddDays(3))], Mon);
         Assert.True(l.Sessions.Single(s => s.SessionId == "lower").IsBreakDay);
     }
 
     [Fact]
     public void Benchmark_Session_appears_only_in_its_interval_weeks()
     {
-        Assert.DoesNotContain("test", Ids(WeekScheduleRules.Layout(Plan(), [], [], Mon)));
-        var bench = WeekScheduleRules.Layout(Plan(), [], [], BenchMon);
+        Assert.DoesNotContain("test", Ids(MainLayout(Plan(), [], [], Mon)));
+        var bench = MainLayout(Plan(), [], [], BenchMon);
         Assert.Contains(bench.Sessions, s => s is { SessionId: "test" } && BenchmarkWeeks.IsBenchmark(s.Session));
-        Assert.Contains("test", Ids(WeekScheduleRules.Layout(Plan(), [], [], WeekCalendar.AddWeeks(BenchMon, 4))));
-        Assert.DoesNotContain("test", Ids(WeekScheduleRules.Layout(Plan(), [], [], WeekCalendar.AddWeeks(BenchMon, 2))));
+        Assert.Contains("test", Ids(MainLayout(Plan(), [], [], WeekCalendar.AddWeeks(BenchMon, 4))));
+        Assert.DoesNotContain("test", Ids(MainLayout(Plan(), [], [], WeekCalendar.AddWeeks(BenchMon, 2))));
     }
 
     [Fact]
@@ -107,14 +111,15 @@ public class WeekScheduleRulesTests
     [Fact]
     public void Missed_sessions_carry_the_session_name()
     {
-        var missed = WeekScheduleRules.MissedInWeek(Plan(), [], [], [], Mon, Mon.AddDays(1));
+        var plan = Plan();
+        var missed = WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), [], [], [], Mon, Mon.AddDays(1));
         Assert.Equal("Lower", Assert.Single(missed).SessionName);
     }
 
     [Fact]
     public void Weeks_before_the_Plan_start_are_empty()
     {
-        var l = WeekScheduleRules.Layout(Plan(Mon), [], [], Mon.AddDays(-7));
+        var l = MainLayout(Plan(Mon), [], [], Mon.AddDays(-7));
         Assert.Empty(l.Sessions);
     }
 
@@ -122,7 +127,7 @@ public class WeekScheduleRulesTests
 
     private static List<string> MissedIds(Plan plan, IReadOnlyList<Workout> w, DateOnly today,
         IReadOnlyList<WeekSchedule>? schedules = null, IReadOnlyList<Break>? breaks = null) =>
-        WeekScheduleRules.MissedInWeek(plan, schedules ?? [], breaks ?? [], w, Mon, today).Select(m => m.SessionId).ToList();
+        WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), schedules ?? [], breaks ?? [], w, Mon, today).Select(m => m.SessionId).ToList();
 
     [Fact]
     public void A_Session_is_missed_once_its_day_has_passed_with_no_Workout()
@@ -176,7 +181,7 @@ public class WeekScheduleRulesTests
     public void Benchmark_Session_is_missed_only_in_a_benchmark_week()
     {
         var plan = Plan();
-        var inBenchWeek = WeekScheduleRules.MissedInWeek(plan, [], [], [], BenchMon, BenchMon.AddDays(7));
+        var inBenchWeek = WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), [], [], [], BenchMon, BenchMon.AddDays(7));
         Assert.Contains(inBenchWeek, m => m.SessionId == "test");
         Assert.DoesNotContain("test", MissedIds(plan, [], Mon.AddDays(7)));
     }
@@ -187,7 +192,7 @@ public class WeekScheduleRulesTests
         // Plan starts Wednesday of the week: Lower (Mon) predates it.
         var plan = Plan(Mon.AddDays(2));
         Assert.Equal(["upper"], MissedIds(plan, [], Mon.AddDays(3)));
-        Assert.Empty(WeekScheduleRules.MissedInWeek(plan, [], [], [], Mon.AddDays(-7), Mon.AddDays(3)));
+        Assert.Empty(WeekScheduleRules.MissedInWeek(plan, TrackRules.Main(plan), [], [], [], Mon.AddDays(-7), Mon.AddDays(3)));
     }
 
     [Fact]
@@ -195,9 +200,65 @@ public class WeekScheduleRulesTests
     {
         var plan = Plan(Mon);
         var w = new[] { Logged(Mon, "lower"), Logged(Mon.AddDays(7), "upper") };
-        var missed = WeekScheduleRules.Missed(plan, [], [], w, Mon.AddDays(8));
+        var missed = WeekScheduleRules.Missed(plan, TrackRules.Main(plan), [], [], w, Mon.AddDays(8));
         Assert.Equal(
             [("upper", Mon.AddDays(2)), ("run", Mon.AddDays(4)), ("test", Mon.AddDays(5)), ("lower", Mon.AddDays(7))],
             missed.Select(m => (m.SessionId, m.Date)));
+    }
+
+    // ---- per-Track and daily exclusion
+
+    [Fact]
+    public void Layout_and_Missed_are_scoped_to_one_weekly_Track()
+    {
+        var gym = new Track("gym", "Gym", new TrackRhythm.Weekly(2, 1, false), []);
+        var cardio = new Track("cardio", "Cardio", new TrackRhythm.Weekly(1, 1, false), []);
+        var plan = PlanFixture.Make(start: Mon, tracks: [gym, cardio], sessions:
+        [
+            PlanFixture.Session("s-gym", DayOfWeek.Monday, trackId: "gym"),
+            PlanFixture.Session("s-run", DayOfWeek.Tuesday, SessionType.Cardio, trackId: "cardio"),
+        ]);
+
+        Assert.Equal(["s-gym"], Ids(WeekScheduleRules.Layout(plan, gym, [], [], Mon)));
+        Assert.Equal(["s-run"], Ids(WeekScheduleRules.Layout(plan, cardio, [], [], Mon)));
+
+        var wed = Mon.AddDays(2);
+        Assert.Equal(["s-gym"], WeekScheduleRules.MissedInWeek(plan, gym, [], [], [], Mon, wed).Select(m => m.SessionId));
+        Assert.Equal(["s-run"], WeekScheduleRules.MissedInWeek(plan, cardio, [], [], [], Mon, wed).Select(m => m.SessionId));
+        Assert.Equal(["s-gym"], WeekScheduleRules.Missed(plan, gym, [], [], [Logged(Mon.AddDays(1), "s-run")], wed).Select(m => m.SessionId));
+    }
+
+    [Fact]
+    public void A_daily_Session_is_never_placed_and_never_Missed()
+    {
+        var gym = new Track("gym", "Gym", new TrackRhythm.Weekly(2, 1, false), []);
+        var mobility = new Track("mob", "Mobility", new TrackRhythm.Daily(), []);
+        var dailySession = PlanFixture.Session("s-mob", DefaultDay.Daily, SessionType.Mobility, trackId: "mob");
+        var plan = PlanFixture.Make(start: Mon, tracks: [gym, mobility], sessions:
+        [
+            PlanFixture.Session("s-gym", DayOfWeek.Monday, trackId: "gym"),
+            dailySession,
+        ]);
+
+        Assert.Empty(WeekScheduleRules.Layout(plan, mobility, [], [], Mon).Sessions);
+        Assert.Null(WeekScheduleRules.PlaceSession(plan, [], [], dailySession, Mon));
+        Assert.Empty(WeekScheduleRules.MissedInWeek(plan, mobility, [], [], [], Mon, Mon.AddDays(6)));
+        Assert.Empty(WeekScheduleRules.Missed(plan, mobility, [], [], [], Mon.AddDays(6)));
+    }
+
+    [Fact]
+    public void A_benchmark_Session_off_the_main_Track_is_not_scheduled()
+    {
+        var gym = new Track("gym", "Gym", new TrackRhythm.Weekly(2, 1, false), []);
+        var other = new Track("other", "Other", new TrackRhythm.Weekly(1, 1, false), []);
+        var rogueBench = PlanFixture.Session("rogue", DayOfWeek.Saturday, SessionType.Test, benchmarkEveryWeeks: 4, trackId: "other");
+        var plan = PlanFixture.Make(start: Start, tracks: [gym, other], sessions:
+        [
+            PlanFixture.Session("s-gym", DayOfWeek.Monday, trackId: "gym"),
+            rogueBench,
+        ]);
+
+        Assert.False(BenchmarkWeeks.IsScheduledInWeek(plan, rogueBench, Start));
+        Assert.Empty(WeekScheduleRules.Layout(plan, other, [], [], Start).Sessions);
     }
 }

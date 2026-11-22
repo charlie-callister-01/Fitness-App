@@ -16,9 +16,10 @@ public static class HomeWeekRules
         var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null) return [];
 
+        var main = TrackRules.Main(plan);
         var monday = WeekCalendar.MondayOf(today);
-        var layout = WeekScheduleRules.Layout(plan, snapshot.WeekSchedules, snapshot.Breaks, today);
-        var missed = WeekScheduleRules.MissedInWeek(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, today, today);
+        var layout = WeekScheduleRules.Layout(plan, main, snapshot.WeekSchedules, snapshot.Breaks, today);
+        var missed = WeekScheduleRules.MissedInWeek(plan, main, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, today, today);
         var missedIds = missed.Select(m => m.SessionId).ToHashSet();
 
         var workoutsThisWeek = snapshot.Workouts
@@ -95,13 +96,14 @@ public static class HomeWeekRules
         var plan = ActivePlan.Of(snapshot.Plans);
         if (plan is null) return null;
 
+        var main = TrackRules.Main(plan);
         var monday = WeekCalendar.MondayOf(today);
-        var done = WeekRules.CountedWorkouts(plan, snapshot.Workouts, monday);
-        var layout = WeekScheduleRules.Layout(plan, snapshot.WeekSchedules, snapshot.Breaks, today);
+        var done = WeekRules.CountedWorkouts(plan, main, snapshot.Workouts, monday);
+        var layout = WeekScheduleRules.Layout(plan, main, snapshot.WeekSchedules, snapshot.Breaks, today);
         var scheduled = layout.Sessions.Count;
-        var target = TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly weekly ? weekly.WeeklyTarget : 0;
+        var target = main.Rhythm is TrackRhythm.Weekly weekly ? weekly.WeeklyTarget : 0;
 
-        var missed = WeekScheduleRules.MissedInWeek(plan, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, today, today);
+        var missed = WeekScheduleRules.MissedInWeek(plan, main, snapshot.WeekSchedules, snapshot.Breaks, snapshot.Workouts, today, today);
         var missedCodes = missed
             .OrderBy(m => m.Date)
             .Select(m => SessionCode(m.SessionName))
