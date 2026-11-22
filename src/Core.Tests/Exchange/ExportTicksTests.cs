@@ -96,7 +96,7 @@ public class ExportTicksTests
         var plan = Assert.Single(document.Plans!);
         Assert.Equal("hyrox-2027", plan.Id);
         Assert.Equal(ExchangeTestData.Snapshot().Plans[0].Sessions.Select(s => s.Id), plan.Sessions.Select(s => s.Id));
-        Assert.Equal(3, plan.Phases.Count);
+        Assert.Equal(3, plan.Tracks[0].Phases.Count);
     }
 
     [Fact]
@@ -176,7 +176,8 @@ public class ExportTicksTests
     public void A_Workout_of_a_Plan_that_is_not_exported_loses_its_Session_link_so_the_file_stays_valid()
     {
         var snapshot = ExchangeTestData.Snapshot();
-        var oldPlan = snapshot.Plans.Single(p => !p.IsActive) with { Sessions = [new Session("old-s", "Old", DayOfWeek.Monday, SessionType.Cardio, null, [])] };
+        var old = snapshot.Plans.Single(p => !p.IsActive);
+        var oldPlan = old with { Sessions = [new Session("old-s", "Old", old.Tracks[0].Id, DefaultDay.Monday, SessionType.Cardio, null, [])] };
         var plans = snapshot.Plans.Select(p => p.IsActive ? p : oldPlan).ToList();
         var workouts = snapshot.Workouts.Select(w => w.Id == "w-3" ? w with { SessionId = "old-s", Planned = [] } : w).ToList();
 

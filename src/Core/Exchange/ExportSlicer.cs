@@ -81,8 +81,8 @@ internal static class ExportSlicer
     private static HashSet<string> ReferencedExerciseIds(IReadOnlyList<Plan>? plans, IReadOnlyList<Workout>? workouts)
     {
         var rows = (plans ?? []).SelectMany(p => p.Sessions.SelectMany(s => s.Exercises)
-            .Concat(p.Phases.SelectMany(ph => ph.SessionOverrides.SelectMany(o => o.Exercises))));
-        var goals = (plans ?? []).SelectMany(p => p.Phases.SelectMany(ph => ph.Goals)).Select(g => g.ExerciseId);
+            .Concat(p.Tracks.SelectMany(t => t.Phases).SelectMany(ph => ph.SessionOverrides.SelectMany(o => o.Exercises))));
+        var goals = (plans ?? []).SelectMany(p => p.Tracks.SelectMany(t => t.Phases).SelectMany(ph => ph.Goals)).Select(g => g.ExerciseId);
         var fromWorkouts = (workouts ?? []).SelectMany(w =>
             w.Planned.Select(r => r.ExerciseId)
                 .Concat(w.Entries.SelectMany(e => new[] { e.ExerciseId, e.SwappedFromExerciseId }.OfType<string>()))

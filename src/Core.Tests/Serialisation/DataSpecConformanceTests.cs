@@ -32,7 +32,7 @@ public partial class DataSpecConformanceTests
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(e => $"{e.Path}: {e.Message}")));
         Assert.Empty(result.Warnings);
         var plan = Assert.Single(result.Document!.Plans!);
-        Assert.Equal((2, 2), (plan.Phases.Count, plan.Sessions.Count));
+        Assert.Equal((2, 2), (plan.Tracks[0].Phases.Count, plan.Sessions.Count));
     }
 
     [Fact]

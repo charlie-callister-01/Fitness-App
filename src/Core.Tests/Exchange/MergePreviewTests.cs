@@ -2,6 +2,7 @@ using Core.Exchange;
 using Core.Model;
 using Core.Serialisation;
 using Core.Storage;
+using Core.Tests.Rules.TestData;
 
 namespace Core.Tests.Exchange;
 
@@ -18,9 +19,9 @@ public class MergePreviewTests
             [new WorkoutEntry("squat", EntryStatus.Done, null, null, null, [new WorkoutSet($"set-{id}", weightKg, 5, null, null, null, false)])], null);
 
     private static Plan MakePlan(string id, bool active, params string[] sessionIds) =>
-        new(id, $"Plan {id}", active, new DateOnly(2026, 12, 1), null, null, 3, 2, false, 2.5,
-            [new Phase($"ph-{id}", "Base", 1, 4, [], [])],
-            [.. sessionIds.Select(s => new Session(s, $"Session {s}", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise("squat", 3, 5, null, null)]))]);
+        PlanFixture.Make(id: id, name: $"Plan {id}", isActive: active, start: new DateOnly(2026, 12, 1), incrementKg: 2.5,
+            phases: [new Phase($"ph-{id}", "Base", 1, 4, [], [])],
+            sessions: [.. sessionIds.Select(s => PlanFixture.Session(s, DefaultDay.Monday, SessionType.Strength, $"Session {s}", exercises: [new SessionExercise("squat", 3, 5, null, null)], trackId: $"{id}-main"))]);
 
     private static ExchangeDocument Doc() => new(ExchangeFormat.CurrentVersion, null, null, null, null);
 

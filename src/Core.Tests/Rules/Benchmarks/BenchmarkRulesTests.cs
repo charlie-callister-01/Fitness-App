@@ -150,7 +150,7 @@ public class BenchmarkRulesTests
     [Fact]
     public void A_benchmark_with_a_zero_interval_is_not_a_benchmark_and_never_throws()
     {
-        var plan = Plan() with { Sessions = [new Session("test", "Test", DayOfWeek.Saturday, SessionType.Test, 0, [])] };
+        var plan = Plan() with { Sessions = [PlanFixture.Session("test", DefaultDay.Saturday, SessionType.Test, name: "Test", benchmarkEveryWeeks: 0)] };
 
         Assert.Null(BenchmarkRules.NextDue(plan, [], [], D(2026, 2, 3)));
         Assert.DoesNotContain(BenchmarkRules.List(plan, Library, []), e => e.Latest is not null);
@@ -159,7 +159,7 @@ public class BenchmarkRulesTests
     [Fact]
     public void Next_benchmark_is_null_without_a_benchmark_session()
     {
-        var plan = Plan() with { Sessions = [new Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [])] };
+        var plan = Plan() with { Sessions = [PlanFixture.Session("lower", DefaultDay.Monday, name: "Lower")] };
 
         Assert.Null(BenchmarkRules.NextDue(plan, [], [], D(2026, 2, 3)));
     }

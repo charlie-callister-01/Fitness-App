@@ -32,7 +32,11 @@ public static class PlanSaveRules
     }
 
     private static bool IsDifferent(Plan composed, Plan saved) =>
-        composed with { Phases = saved.Phases, Sessions = saved.Sessions } != saved
-        || !composed.Phases.SequenceEqual(saved.Phases)
+        composed with { Tracks = saved.Tracks, Sessions = saved.Sessions } != saved
+        || TracksDiffer(composed.Tracks, saved.Tracks)
         || !composed.Sessions.SequenceEqual(saved.Sessions);
+
+    private static bool TracksDiffer(IReadOnlyList<Track> a, IReadOnlyList<Track> b) =>
+        a.Count != b.Count
+        || a.Zip(b).Any(pair => pair.First with { Phases = pair.Second.Phases } != pair.Second || !pair.First.Phases.SequenceEqual(pair.Second.Phases));
 }

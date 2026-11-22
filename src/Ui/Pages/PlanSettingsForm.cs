@@ -1,6 +1,7 @@
 using System.Globalization;
 using Core.Model;
 using Core.Rules.PlanEditing;
+using Core.Rules.Tracks;
 
 namespace Ui.Pages;
 
@@ -26,16 +27,20 @@ public sealed record PlanSettingsForm
 
     public string WeightIncrement { get; set; } = "";
 
-    public static PlanSettingsForm From(Plan plan) => new()
+    public static PlanSettingsForm From(Plan plan)
     {
-        StartDate = plan.StartDate.ToString(DateFormat, CultureInfo.InvariantCulture),
-        Goal = plan.Goal ?? "",
-        GoalDate = plan.GoalDate?.ToString(DateFormat, CultureInfo.InvariantCulture) ?? "",
-        WeeklyTarget = plan.WeeklyTarget.ToString(CultureInfo.InvariantCulture),
-        StreakMinimum = plan.StreakMinWorkoutsPerWeek.ToString(CultureInfo.InvariantCulture),
-        CustomWorkoutsCount = plan.StreakCountsCustomWorkouts,
-        WeightIncrement = plan.WeightIncrementKg.ToString("0.##", CultureInfo.InvariantCulture),
-    };
+        var weekly = TrackRules.Main(plan).Rhythm as TrackRhythm.Weekly;
+        return new()
+        {
+            StartDate = plan.StartDate.ToString(DateFormat, CultureInfo.InvariantCulture),
+            Goal = plan.Goal ?? "",
+            GoalDate = plan.GoalDate?.ToString(DateFormat, CultureInfo.InvariantCulture) ?? "",
+            WeeklyTarget = (weekly?.WeeklyTarget ?? 0).ToString(CultureInfo.InvariantCulture),
+            StreakMinimum = (weekly?.StreakMinWorkoutsPerWeek ?? 0).ToString(CultureInfo.InvariantCulture),
+            CustomWorkoutsCount = weekly?.StreakCountsCustomWorkouts ?? false,
+            WeightIncrement = plan.WeightIncrementKg.ToString("0.##", CultureInfo.InvariantCulture),
+        };
+    }
 
     /// <summary>The settings these fields spell out, or the plain reason they cannot be read or are refused by the Plan rules.</summary>
     public PlanEditResult<PlanSettings> Read(Plan plan)

@@ -91,7 +91,7 @@ public sealed class CustomWorkoutDraftTests : BunitContext
     [Fact]
     public async Task The_picker_offers_the_Exercises_of_this_weeks_Missed_Sessions_first()
     {
-        var core = new Session("core", "Core", DayOfWeek.Monday, SessionType.Body, null,
+        var core = Session("core", "Core", DayOfWeek.Monday, SessionType.Body, null,
             [new SessionExercise("pullup", 3, 5, null, null), new SessionExercise("plank", 2, null, null, null)]);
         var data = await OpenSeededAsync(plan: Plan([core]));
         var cut = await RenderDraftAsync(data, now: Now.AddDays(2));

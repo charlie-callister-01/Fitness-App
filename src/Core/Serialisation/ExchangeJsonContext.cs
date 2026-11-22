@@ -20,11 +20,13 @@ internal sealed class CamelCaseEnumConverter<T>() : JsonStringEnumConverter<T>(J
         typeof(CamelCaseEnumConverter<Theme>),
         typeof(CamelCaseEnumConverter<Mode>),
         typeof(CamelCaseEnumConverter<SessionType>),
-        typeof(CamelCaseEnumConverter<DayOfWeek>),
+        typeof(CamelCaseEnumConverter<DefaultDay>),
+        typeof(CamelCaseEnumConverter<TrackCadence>),
         typeof(CamelCaseEnumConverter<EntryStatus>),
         typeof(CamelCaseEnumConverter<PainStatus>),
         typeof(CamelCaseEnumConverter<PainSeverity>),
         typeof(CamelCaseEnumConverter<BodyArea>),
     ])]
 [JsonSerializable(typeof(ExchangeDocument))]
+[JsonSerializable(typeof(V1ExchangeDocument))]
 internal sealed partial class ExchangeJsonContext : JsonSerializerContext;

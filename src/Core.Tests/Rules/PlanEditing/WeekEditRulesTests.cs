@@ -86,11 +86,11 @@ public class WeekEditRulesTests
     [Fact]
     public void Making_a_day_the_default_changes_the_Session_in_the_Plan_for_every_week()
     {
-        var plan = Valid(WeekEditRules.MakeDefaultDay(Standard, "push", DayOfWeek.Friday));
+        var plan = Valid(WeekEditRules.MakeDefaultDay(Standard, "push", DefaultDay.Friday));
 
-        Assert.Equal(DayOfWeek.Friday, plan.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Equal(DefaultDay.Friday, plan.Sessions.Single(s => s.Id == "push").DefaultDay);
         Assert.Equal(Mon.AddDays(11), WeekScheduleRules.Layout(plan, [], [], Mon.AddDays(7)).Sessions.Single(s => s.SessionId == "push").Date);
-        Assert.Contains("no longer", Reason(WeekEditRules.MakeDefaultDay(Standard, "gone", DayOfWeek.Friday)));
+        Assert.Contains("no longer", Reason(WeekEditRules.MakeDefaultDay(Standard, "gone", DefaultDay.Friday)));
     }
 
     // Breaks
@@ -259,7 +259,7 @@ public class WeekEditRulesTests
     {
         var changes = Valid(WeekEditRules.MoveSession(Standard, [], "push", Mon, Mon.AddDays(4), makeDefaultDay: true));
 
-        Assert.Equal(DayOfWeek.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Equal(DefaultDay.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
         Assert.Null(changes.ChangedSchedule);
     }
 
@@ -270,7 +270,7 @@ public class WeekEditRulesTests
 
         var changes = Valid(WeekEditRules.MoveSession(Standard, [existing], "push", Mon, Mon.AddDays(4), makeDefaultDay: true));
 
-        Assert.Equal(DayOfWeek.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
+        Assert.Equal(DefaultDay.Friday, changes.ChangedPlan!.Sessions.Single(s => s.Id == "push").DefaultDay);
         Assert.Equal(new WeekSchedule(Mon, [new SessionMove("pull", Mon.AddDays(4))]), changes.ChangedSchedule, ScheduleComparer);
         Assert.Equal(2, changes.ToChanges().Count);
     }

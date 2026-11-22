@@ -20,8 +20,8 @@ public sealed class HomeActionsTests : BunitContext
 
     private static Plan TwoSessionPlan() => Plan(
     [
-        new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)]),
-        new("upper", "Upper", DayOfWeek.Wednesday, SessionType.Strength, null, [new SessionExercise(Lunge, 2, 10, null, null)]),
+        Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)]),
+        Session("upper", "Upper", DayOfWeek.Wednesday, SessionType.Strength, null, [new SessionExercise(Lunge, 2, 10, null, null)]),
     ]);
 
     private IRenderedComponent<Home> RenderHome(AppData data, DateTimeOffset? now = null)

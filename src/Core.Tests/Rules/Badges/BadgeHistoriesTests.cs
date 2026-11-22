@@ -1,6 +1,7 @@
 using Core.Model;
 using Core.Rules.Badges;
 using Core.Storage;
+using Core.Tests.Rules.TestData;
 
 namespace Core.Tests.Rules.Badges;
 
@@ -9,8 +10,8 @@ public class BadgeHistoriesTests
     private static readonly DateOnly Day = new(2026, 11, 16);
 
     private static Plan PlanOf(string id, bool active, string sessionId) =>
-        new(id, id, active, Day, null, null, 3, 2, false, 2.5, [],
-            [new Session(sessionId, "S", DayOfWeek.Monday, SessionType.Strength, null, [])]);
+        PlanFixture.Make(id: id, name: id, isActive: active, start: Day, incrementKg: 2.5,
+            sessions: [PlanFixture.Session(sessionId, DefaultDay.Monday, name: "S", trackId: $"{id}-main")]);
 
     private static Workout WorkoutOn(string sessionId) =>
         new("w1", Day, sessionId, false, null, null, [], [], null);

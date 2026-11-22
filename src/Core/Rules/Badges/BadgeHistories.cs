@@ -21,5 +21,6 @@ public static class BadgeHistories
     private static Plan PlanOf(DataSnapshot snapshot, Workout workout) =>
         snapshot.Plans.FirstOrDefault(p => p.Sessions.Any(s => s.Id == workout.SessionId))
             ?? ActivePlan.Of(snapshot.Plans)
-            ?? new Plan("none", "No Plan", false, workout.Date, null, null, 0, 1, false, 2.5, [], []);
+            ?? new Plan("none", "No Plan", false, workout.Date, null, null, 2.5,
+                [new Track("none-main", "Main", new TrackRhythm.Weekly(0, 1, false), [])], []);
 }

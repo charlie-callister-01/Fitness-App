@@ -49,8 +49,9 @@ public static class WeekScheduleRules
         Plan plan, Session session, DateOnly monday, IReadOnlyList<SessionMove> moves, IReadOnlyList<DateOnly> breakDays)
     {
         if (!BenchmarkWeeks.IsScheduledInWeek(plan, session, monday)) return null;
+        if (session.DefaultDay.AsDayOfWeek() is not { } day) return null;
         var move = moves.FirstOrDefault(m => m.SessionId == session.Id && WeekCalendar.InWeek(monday, m.Date));
-        var date = move?.Date ?? WeekCalendar.DefaultDate(monday, session.DefaultDay);
+        var date = move?.Date ?? WeekCalendar.DefaultDate(monday, day);
         return new(session, date, move is not null, breakDays.Contains(date));
     }
 

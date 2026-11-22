@@ -1,4 +1,5 @@
 using Core.Model;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Phases;
@@ -38,7 +39,8 @@ public static class PhaseRules
         if (phase is not null)
             return new(PhaseState.InPhase, week, phase, week - phase.StartWeek + 1, phase.EndWeek - phase.StartWeek + 1);
 
-        var state = plan.Phases.Count > 0 && week > plan.Phases.Max(p => p.EndWeek) ? PhaseState.AfterEnd : PhaseState.NoPhase;
+        var phases = TrackRules.Main(plan).Phases;
+        var state = phases.Count > 0 && week > phases.Max(p => p.EndWeek) ? PhaseState.AfterEnd : PhaseState.NoPhase;
         return new(state, week, null, null, null);
     }
 
@@ -80,7 +82,7 @@ public static class PhaseRules
         WeekRules.PlanWeekNumber(plan, today) is { } week ? PhaseOfWeek(plan, week) : null;
 
     private static Phase? PhaseOfWeek(Plan plan, int week) =>
-        plan.Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek);
+        TrackRules.Main(plan).Phases.FirstOrDefault(p => week >= p.StartWeek && week <= p.EndWeek);
 
     /// <summary>
     /// A goal's Set meets it when it has a weight and reps, each at least the goal's. A Set missing either (a time, a distance)

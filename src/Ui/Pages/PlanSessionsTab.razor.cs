@@ -14,7 +14,7 @@ public sealed class SessionSheetDraft
 
     public string Name { get; set; } = "";
 
-    public DayOfWeek Day { get; set; } = DayOfWeek.Monday;
+    public DefaultDay Day { get; set; } = DefaultDay.Monday;
 
     public SessionType Type { get; set; } = SessionType.Strength;
 
@@ -24,8 +24,8 @@ public sealed class SessionSheetDraft
 
 public sealed partial class PlanSessionsTab
 {
-    private static readonly DayOfWeek[] Days =
-        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+    private static readonly DefaultDay[] Days =
+        [DefaultDay.Monday, DefaultDay.Tuesday, DefaultDay.Wednesday, DefaultDay.Thursday, DefaultDay.Friday, DefaultDay.Saturday, DefaultDay.Sunday];
 
     private IReadOnlyList<Exercise>? _libraryList;
     private Dictionary<string, Exercise> _library = [];

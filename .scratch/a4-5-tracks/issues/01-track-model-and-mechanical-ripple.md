@@ -14,9 +14,14 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
+Notes: Implemented `Track`, `TrackRhythm` (`Weekly` / `Daily`), `TrackCadence`, `DefaultDay`, `SessionType.Mobility`, `TrackRules`, and `V1ToV2Upgrader` (`<planId>-main`, named `"Main"`), keeping temporary format 1 writing via `V1ToV2Upgrader.ToV1Document` until ticket 02. Zero test expectations loosened; all baseline tests pass with mechanical fixture adjustments only.
 
-- [ ] `Plan` has no weekly target, Streak fields or Phases; `Track` and `Session.TrackId` exist; the rhythm cannot be built in an impossible state.
-- [ ] A v1 document reads into one Main Track (`<planId>-main`) through the upgrader; the data-spec v1 Plan example still reads.
-- [ ] `dotnet build` has 0 warnings; every existing Core, Ui and Web test passes with only mechanical fixture changes (a test whose expected result changes is a finding, written in this file under Notes, not loosened).
-- [ ] No rule gains per-Track behaviour yet; no screen shows Tracks.
+- [x] `Plan` has no weekly target, Streak fields or Phases; `Track` and `Session.TrackId` exist; the rhythm cannot be built in an impossible state.
+- [x] A v1 document reads into one Main Track (`<planId>-main`) through the upgrader; the data-spec v1 Plan example still reads.
+- [x] `dotnet build` has 0 warnings; every existing Core, Ui and Web test passes with only mechanical fixture changes (a test whose expected result changes is a finding, written in this file under Notes, not loosened).
+- [x] No rule gains per-Track behaviour yet; no screen shows Tracks.
+
+## Comments
+
+- 2026-11-22: Resolved on branch `a4-5/ticket-01`. Added `TrackModelTests` (3 tests) and `V1ToV2UpgraderTests` (3 tests); `Core.Tests` 1,342, `Ui.Tests` 611, `Web.Tests` 39 (all passing, 0 warnings).

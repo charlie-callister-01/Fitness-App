@@ -9,7 +9,7 @@ namespace Ui.Tests.Components;
 public sealed class TodayCardTests : BunitContext
 {
     private static readonly DateOnly Wed = new(2026, 11, 18);
-    private static readonly Session Lower = new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null,
+    private static readonly Session Lower = new("lower", "Lower", "t", DefaultDay.Monday, SessionType.Strength, null,
         [new SessionExercise("a", 3, 5, null, null), new SessionExercise("b", 3, 5, null, null)]);
 
     private IRenderedComponent<Ui.Components.TodayCard> Show(TodayCardModel card, Action<ComponentParameterCollectionBuilder<Ui.Components.TodayCard>>? more = null) =>

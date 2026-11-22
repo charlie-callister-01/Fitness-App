@@ -19,8 +19,8 @@ public sealed class WeekTests : BunitContext
     /// <summary>Lower on Monday and Upper on Wednesday, both for the whole Plan.</summary>
     private static Plan TwoSessionPlan() => Plan(
     [
-        new("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)]),
-        new("upper", "Upper", DayOfWeek.Wednesday, SessionType.Strength, null, [new SessionExercise(Lunge, 2, 10, null, null)]),
+        Session("lower", "Lower", DayOfWeek.Monday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)]),
+        Session("upper", "Upper", DayOfWeek.Wednesday, SessionType.Strength, null, [new SessionExercise(Lunge, 2, 10, null, null)]),
     ]);
 
     private IRenderedComponent<Week> RenderWeek(AppData data, int daysLater = 0)
@@ -98,7 +98,7 @@ public sealed class WeekTests : BunitContext
         var move = Assert.Single(Schedules(data)[0].Moves);
         Assert.Equal(("upper", Today.AddDays(4)), (move.SessionId, move.Date));
         var plan = data.Snapshot.Plans.Single();
-        Assert.Equal(DayOfWeek.Wednesday, plan.Sessions.Single(s => s.Id == "upper").DefaultDay);
+        Assert.Equal(DefaultDay.Wednesday, plan.Sessions.Single(s => s.Id == "upper").DefaultDay);
         var nextWeek = WeekScheduleRules.Layout(plan, Schedules(data), [], Today.AddDays(7));
         Assert.Equal(Wednesday.AddDays(7), nextWeek.Sessions.Single(s => s.SessionId == "upper").Date);
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[role='dialog']")));
@@ -116,7 +116,7 @@ public sealed class WeekTests : BunitContext
         cut.FindAll("[role='dialog'] input[type='radio']")[1].Change(true);
         ClickInSheet(cut, "Move");
 
-        cut.WaitForAssertion(() => Assert.Equal(DayOfWeek.Friday, data.Snapshot.Plans.Single().Sessions.Single(s => s.Id == "upper").DefaultDay));
+        cut.WaitForAssertion(() => Assert.Equal(DefaultDay.Friday, data.Snapshot.Plans.Single().Sessions.Single(s => s.Id == "upper").DefaultDay));
         Assert.Empty(Schedules(data));
         var nextWeek = WeekScheduleRules.Layout(data.Snapshot.Plans.Single(), [], [], Today.AddDays(7));
         Assert.Equal(Today.AddDays(11), nextWeek.Sessions.Single(s => s.SessionId == "upper").Date);

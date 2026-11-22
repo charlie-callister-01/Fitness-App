@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Rules.Schedule;
+using Core.Rules.Tracks;
 using Core.Rules.Weeks;
 
 namespace Core.Rules.Nudges;
@@ -39,9 +40,11 @@ public static class NudgeRules
         nudges.AddRange(Missed(plan, schedules, breaks, workouts, today));
 
         var done = WeekRules.CountedWorkouts(plan, workouts, monday);
-        if (today.DayNumber - monday.DayNumber >= OneShortFromDayIndex && done == plan.WeeklyTarget - 1)
+        if (TrackRules.Main(plan).Rhythm is TrackRhythm.Weekly weekly
+            && today.DayNumber - monday.DayNumber >= OneShortFromDayIndex
+            && done == weekly.WeeklyTarget - 1)
             nudges.Add(new(NudgeKind.OneShortOfTarget,
-                $"One workout short of your target of {plan.WeeklyTarget} this week."));
+                $"One workout short of your target of {weekly.WeeklyTarget} this week."));
 
         if (lastBackup is null)
             nudges.Add(new(NudgeKind.NoRecentBackup, "No Backup yet. Make one so you don't lose your data."));
