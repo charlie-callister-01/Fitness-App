@@ -1,6 +1,8 @@
 using Bunit;
 using Core.Model;
 using Core.Storage;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Ui.Pages;
 using static Ui.Tests.Pages.PageFixture;
 
@@ -80,14 +82,27 @@ public sealed class TrophiesBadgesTests : BunitContext
     }
 
     [Fact]
-    public async Task Bests_is_a_placeholder_and_Calendar_shows_the_heatmap()
+    public async Task Bests_lists_the_personal_best_and_Calendar_shows_the_heatmap()
     {
         var cut = await RenderAsync([First], Finished("w1", Today, Set("a", 20, 5)));
 
         cut.FindAll(".fa-trophies__tabs button").Single(b => b.TextContent.Trim() == "Bests").Click();
-        Assert.NotNull(cut.Find(".empty"));
+        Assert.NotNull(cut.Find(".fa-bests"));
 
         cut.FindAll(".fa-trophies__tabs button").Single(b => b.TextContent.Trim() == "Calendar").Click();
         Assert.NotNull(cut.Find(".fa-heat__grid"));
+    }
+
+    [Fact]
+    public async Task A_badge_query_opens_that_Badges_detail_straight_away()
+    {
+        var data = await OpenSeededAsync(plan: Plan(), workouts: Finished("w1", Today, Set("a", 20, 5)));
+        await data.CommitAsync(Change.Put(Ten));
+        Wire(this, data);
+        Services.GetRequiredService<NavigationManager>().NavigateTo("trophies?badge=ten");
+
+        var cut = Render<Trophies>();
+
+        Assert.Contains("10 Workouts", cut.Find(".fa-badgedetail__name").TextContent);
     }
 }
