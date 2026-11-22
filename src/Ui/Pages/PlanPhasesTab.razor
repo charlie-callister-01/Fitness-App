@@ -1,0 +1,187 @@
+@using System.Globalization
+@using Core.Ids
+@using Core.Model
+@using Core.Rules.PlanEditing
+@using Core.Storage
+@inject AppData Data
+@inject IIdGenerator Ids
+@* The Plan editor's Phases tab (design S-05, C-20): a row per Phase with the weeks and dates it covers; Edit expands the row in place to
+   change the focus, the first and last week and the optional Phase goals. Overlaps and reversed ranges are named in a message under the
+   list and hold Save back. *@
+<div class="fa-phases">
+    @if (State.Draft.Phases.Count == 0)
+    {
+        <p class="fa-muted">No Phases yet. Add one to split the Plan into blocks of weeks.</p>
+    }
+
+    <ul class="fa-phases__list">
+        @foreach (var phase in State.Draft.Phases)
+        {
+            var id = phase.Id;
+            var open = _expandedId == id;
+            <li class="fa-phase fa-panel">
+                <div class="fa-phase__summary">
+                    <div>
+                        <p class="fa-title fa-title--m fa-phase__name">@NameOf(phase)</p>
+                        <p class="fa-muted fa-phase__weeks">@WeeksText(phase)</p>
+                    </div>
+                    <Button Variant="ButtonVariant.Secondary" AccessibleName="@(open ? $"Close {NameOf(phase)}" : $"Edit {NameOf(phase)}")" OnClick="() => Toggle(id)">@(open ? "Done" : "Edit")</Button>
+                </div>
+
+                @if (open)
+                {
+                    <div class="fa-phase__edit">
+                        <label class="fa-phase__field">
+                            <span class="fa-label">Focus</span>
+                            <input class="fa-phase__control" type="text" disabled="@Disabled" value="@phase.Focus" @oninput="e => SetFocus(id, e)" />
+                        </label>
+                        <div class="fa-phase__pair">
+                            <label class="fa-phase__field">
+                                <span class="fa-label">First week</span>
+                                <input class="fa-phase__control" type="number" inputmode="numeric" min="1" disabled="@Disabled" value="@phase.StartWeek" @onchange="e => SetWeek(id, e, first: true)" />
+                            </label>
+                            <label class="fa-phase__field">
+                                <span class="fa-label">Last week</span>
+                                <input class="fa-phase__control" type="number" inputmode="numeric" min="1" disabled="@Disabled" value="@phase.EndWeek" @onchange="e => SetWeek(id, e, first: false)" />
+                            </label>
+                        </div>
+
+                        <p class="fa-label">Phase goals (optional)</p>
+                        @if (phase.Goals.Count == 0)
+                        {
+                            <p class="fa-muted">No goal. With one, the Plan can tell you when you are ready to move on early.</p>
+                        }
+
+                        @for (var i = 0; i < phase.Goals.Count; i++)
+                        {
+                            var index = i;
+                            var goal = phase.Goals[i];
+                            <div class="fa-phase__goal">
+                                <label class="fa-phase__field">
+                                    <span class="fa-label">Goal Exercise</span>
+                                    <select class="fa-phase__control" disabled="@Disabled" @onchange="e => SetGoalExercise(id, index, e)">
+                                        @foreach (var exercise in Data.Snapshot.Exercises)
+                                        {
+                                            <option value="@exercise.Id" selected="@(exercise.Id == goal.ExerciseId)">@exercise.Name</option>
+                                        }
+                                    </select>
+                                </label>
+                                <div class="fa-phase__pair">
+                                    <label class="fa-phase__field">
+                                        <span class="fa-label">Weight (kg)</span>
+                                        <input class="fa-phase__control" type="text" inputmode="decimal" disabled="@Disabled" value="@goal.WeightKg.ToString("0.##", CultureInfo.InvariantCulture)" @onchange="e => SetGoalWeight(id, index, e)" />
+                                    </label>
+                                    <label class="fa-phase__field">
+                                        <span class="fa-label">Reps</span>
+                                        <input class="fa-phase__control" type="text" inputmode="numeric" disabled="@Disabled" value="@goal.Reps" @onchange="e => SetGoalReps(id, index, e)" />
+                                    </label>
+                                </div>
+                                <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" AccessibleName="@($"Remove goal {index + 1}")" OnClick="() => RemoveGoal(id, index)">Remove goal</Button>
+                            </div>
+                        }
+
+                        <div class="fa-phase__actions">
+                            <Button Variant="ButtonVariant.Secondary" Disabled="@(Disabled || Data.Snapshot.Exercises.Count == 0)" OnClick="() => AddGoal(id)">Add goal</Button>
+                            <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" AccessibleName="@($"Remove Phase {NameOf(phase)}")" OnClick="() => RemovePhase(id)">Remove Phase</Button>
+                        </div>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+
+    @if (State.PhasesProblem is { } problem)
+    {
+        <p class="fa-well fa-phases__problem" role="alert">@problem</p>
+    }
+
+    <Button Variant="ButtonVariant.Secondary" Disabled="Disabled" OnClick="AddPhase">Add Phase</Button>
+</div>
+
+@code {
+    private string? _expandedId;
+
+    [Parameter, EditorRequired]
+    public PlanEditState State { get; set; } = default!;
+
+    /// <summary>The whole editor cannot be changed (read-only window or a save running).</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Something in the tab changed, so the page can re-check Save.</summary>
+    [Parameter]
+    public EventCallback OnEdited { get; set; }
+
+    private static string NameOf(Phase phase) => string.IsNullOrWhiteSpace(phase.Focus) ? "Unnamed Phase" : phase.Focus;
+
+    private string WeeksText(Phase phase)
+    {
+        var weeks = phase.StartWeek == phase.EndWeek ? $"Week {phase.StartWeek}" : $"Weeks {phase.StartWeek} to {phase.EndWeek}";
+        if (phase.StartWeek < 1 || phase.EndWeek < phase.StartWeek)
+        {
+            return weeks;
+        }
+
+        var (start, end) = PlanEditRules.PhaseDates(State.Preview, phase);
+        return $"{weeks} · {start.ToString("d MMM", CultureInfo.InvariantCulture)} to {end.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}";
+    }
+
+    private void Toggle(string id) => _expandedId = _expandedId == id ? null : id;
+
+    private Task ChangePhase(string id, Func<Phase, Phase> change)
+    {
+        State.Change(plan => plan with { Phases = [.. plan.Phases.Select(p => p.Id == id ? change(p) : p)] });
+        return OnEdited.InvokeAsync();
+    }
+
+    private Task ChangeGoal(string id, int index, Func<PhaseGoal, PhaseGoal> change) =>
+        ChangePhase(id, p => p with { Goals = [.. p.Goals.Select((g, i) => i == index ? change(g) : g)] });
+
+    private Task SetFocus(string id, ChangeEventArgs e) => ChangePhase(id, p => p with { Focus = e.Value?.ToString() ?? "" });
+
+    private Task SetWeek(string id, ChangeEventArgs e, bool first) =>
+        int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var week)
+            ? ChangePhase(id, p => first ? p with { StartWeek = week } : p with { EndWeek = week })
+            : Task.CompletedTask;
+
+    private Task SetGoalExercise(string id, int index, ChangeEventArgs e) =>
+        ChangeGoal(id, index, g => g with { ExerciseId = e.Value?.ToString() ?? "" });
+
+    private Task SetGoalWeight(string id, int index, ChangeEventArgs e) =>
+        double.TryParse(e.Value?.ToString()?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var kg)
+            ? ChangeGoal(id, index, g => g with { WeightKg = kg })
+            : Task.CompletedTask;
+
+    private Task SetGoalReps(string id, int index, ChangeEventArgs e) =>
+        int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var reps)
+            ? ChangeGoal(id, index, g => g with { Reps = reps })
+            : Task.CompletedTask;
+
+    private Task AddGoal(string id)
+    {
+        var library = Data.Snapshot.Exercises;
+        var first = library.FirstOrDefault(e => e.LogKind == LogKind.Load) ?? library.FirstOrDefault();
+        return first is null
+            ? Task.CompletedTask
+            : ChangePhase(id, p => p with { Goals = [.. p.Goals, new PhaseGoal(first.Id, 0, 1)] });
+    }
+
+    private Task RemoveGoal(string id, int index) =>
+        ChangePhase(id, p => p with { Goals = [.. p.Goals.Where((_, i) => i != index)] });
+
+    private Task AddPhase()
+    {
+        var start = State.Draft.Phases.Count == 0 ? 1 : State.Draft.Phases.Max(p => p.EndWeek) + 1;
+        var phase = new Phase(Ids.NewId(), "New Phase", start, start + 3, [], []);
+        State.Change(plan => plan with { Phases = [.. plan.Phases, phase] });
+        _expandedId = phase.Id;
+        return OnEdited.InvokeAsync();
+    }
+
+    private Task RemovePhase(string id)
+    {
+        State.Change(plan => plan with { Phases = [.. plan.Phases.Where(p => p.Id != id)] });
+        _expandedId = null;
+        return OnEdited.InvokeAsync();
+    }
+}

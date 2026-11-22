@@ -28,6 +28,27 @@ public class PlanEditRulesTests
 
     private static string[] Ids(IEnumerable<SessionExercise> rows) => [.. rows.Select(r => r.ExerciseId)];
 
+    private static Phase WithGoal(string exerciseId, double kg, int reps) =>
+        new("g", "Strength", 1, 4, [new PhaseGoal(exerciseId, kg, reps)], []);
+
+    [Theory]
+    [InlineData("", 50, 5)]
+    [InlineData("squat", -1, 5)]
+    [InlineData("squat", 50, 0)]
+    public void A_Phase_goal_without_an_Exercise_or_with_impossible_numbers_is_refused(string exerciseId, double kg, int reps)
+    {
+        var reason = PlanEditRules.ValidatePhases([WithGoal(exerciseId, kg, reps)]);
+
+        Assert.NotNull(reason);
+        Assert.Contains("Strength", reason);
+    }
+
+    [Fact]
+    public void A_Phase_goal_with_zero_weight_is_allowed()
+    {
+        Assert.Null(PlanEditRules.ValidatePhases([WithGoal("pullup", 0, 8)]));
+    }
+
     // Settings
 
     [Fact]

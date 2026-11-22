@@ -1,0 +1,65 @@
+.fa-plans {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-plans__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.fa-plans__header h1 {
+    margin: 0;
+}
+
+.fa-plans__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fa-plans__plan--active {
+    outline: var(--border-thick) solid var(--primary);
+    outline-offset: calc(-1 * var(--border-thick));
+}
+
+.fa-plans__name,
+.fa-plans__active,
+.fa-plans__summary {
+    margin: 0;
+}
+
+.fa-plans__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.fa-plans__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fa-plans__control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: var(--border-thin) solid var(--input-border);
+    border-radius: var(--radius-control);
+}
+
+.fa-plans__control:focus-visible {
+    outline: var(--border-thick) solid var(--focus);
+    outline-offset: var(--outline-offset);
+}
