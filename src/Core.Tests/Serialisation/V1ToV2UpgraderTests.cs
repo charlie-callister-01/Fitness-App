@@ -89,4 +89,77 @@ public class V1ToV2UpgraderTests
         var session = Assert.Single(plan.Sessions);
         Assert.Equal("p1-main", session.TrackId);
     }
+
+    [Fact]
+    public void V1_backup_with_plans_workouts_and_schedules_reads_and_upgrades_cleanly()
+    {
+        const string v1Backup = """
+        {
+          "formatVersion": 1,
+          "exportedAt": "2026-11-16T09:30:00+00:00",
+          "exportedFrom": "fitness-app 0.1",
+          "exercises": [
+            { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load", "isBenchmark": true }
+          ],
+          "settings": {
+            "displayWeightUnit": "kg",
+            "displayDistanceUnit": "km",
+            "weightIncrementKg": 2.5,
+            "restTimerSeconds": 90,
+            "streakMinWorkoutsPerWeek": 3,
+            "streakCountsCustomWorkouts": false
+          },
+          "weighIns": [{ "id": "wi-1", "date": "2026-11-16", "weightKg": 84.35 }],
+          "breaks": [{ "id": "xmas", "startDate": "2026-12-20", "endDate": "2027-01-02", "reason": "Holiday" }],
+          "badges": [{ "id": "b1", "name": "Streak", "metric": "streak", "target": 4 }],
+          "guides": [{ "exerciseId": "goblet-squat", "works": "Quads" }],
+          "plans": [
+            {
+              "id": "hyrox-2027",
+              "name": "HYROX London",
+              "isActive": true,
+              "startDate": "2026-10-19",
+              "goal": "HYROX London Doubles",
+              "goalDate": "2027-04-24",
+              "weeklyTarget": 5,
+              "streakMinWorkoutsPerWeek": 4,
+              "streakCountsCustomWorkouts": false,
+              "weightIncrementKg": 2,
+              "phases": [
+                { "id": "foundation", "focus": "Foundation", "startWeek": 1, "endWeek": 8, "goals": [{ "exerciseId": "goblet-squat", "weightKg": 24, "reps": 10 }] }
+              ],
+              "sessions": [
+                { "id": "a-lower", "name": "A: Lower", "defaultDay": "monday", "type": "strength", "exercises": [{ "exerciseId": "goblet-squat", "sets": 3, "reps": 8 }] }
+              ]
+            }
+          ],
+          "workouts": [
+            {
+              "id": "w-1",
+              "date": "2026-11-16",
+              "sessionId": "a-lower",
+              "entries": [{ "exerciseId": "goblet-squat", "status": "done", "sets": [{ "id": "s-1", "weightKg": 24, "reps": 8 }] }]
+            }
+          ],
+          "weekSchedules": [
+            { "weekStart": "2026-11-16", "moves": [{ "sessionId": "a-lower", "date": "2026-11-18" }] }
+          ]
+        }
+        """;
+
+        var result = ExchangeFormat.Read(v1Backup);
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(e => $"{e.Path}: {e.Message}")));
+        Assert.Empty(result.Warnings);
+        var doc = result.Document!;
+        Assert.Equal(2, doc.FormatVersion);
+        var plan = Assert.Single(doc.Plans!);
+        var main = Assert.Single(plan.Tracks);
+        Assert.Equal(("hyrox-2027-main", "Main"), (main.Id, main.Name));
+        Assert.Equal(new TrackRhythm.Weekly(5, 4, false), main.Rhythm);
+        Assert.Single(main.Phases);
+        Assert.Equal("hyrox-2027-main", Assert.Single(plan.Sessions).TrackId);
+        Assert.Single(doc.Workouts!);
+        Assert.Single(doc.WeekSchedules!);
+    }
 }

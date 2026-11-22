@@ -37,7 +37,7 @@ public class ExerciseAndSettingsRoundTripTests
     {
         var json = ExchangeFormat.Write(TestData.Minimal());
 
-        Assert.Contains("\"formatVersion\":1", json);
+        Assert.Contains("\"formatVersion\":2", json);
         Assert.Contains("\"logKind\":\"load\"", json);
         Assert.Contains("\"weightIncrementKg\":2.5", json);
         Assert.Contains("\"displayWeightUnit\":\"kg\"", json);

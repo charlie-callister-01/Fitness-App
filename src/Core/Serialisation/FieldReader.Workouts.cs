@@ -28,13 +28,32 @@ internal sealed partial class FieldReader
         return number;
     }
 
-    /// <summary>An optional whole number that, when present, must be between <paramref name="min"/> and <paramref name="max"/> inclusive.</summary>
-    public int? OptionalIntInRange(string name, int min, int max)
+    /// <summary>A required whole number that must be between <paramref name="min"/> and <paramref name="max"/> inclusive.</summary>
+    public int RequiredIntInRange(string name, int min, int max)
     {
-        var number = OptionalInt(name, int.MinValue);
-        if (number is { } n && (n < min || n > max))
+        if (!TryTakeRequired(name, out var value))
         {
-            Sink.Error(ChildPath(name), "out_of_range", $"{ChildPath(name)} must be between {min} and {max} (it was {n}).");
+            return 0;
+        }
+
+        var path = ChildPath(name);
+        if (ParseInt(path, value, int.MinValue) is not { } number)
+        {
+            return 0;
+        }
+
+        return CheckRange(path, number, min, max) ?? 0;
+    }
+
+    /// <summary>An optional whole number that, when present, must be between <paramref name="min"/> and <paramref name="max"/> inclusive.</summary>
+    public int? OptionalIntInRange(string name, int min, int max) =>
+        OptionalInt(name, int.MinValue) is { } number ? CheckRange(ChildPath(name), number, min, max) : null;
+
+    private int? CheckRange(string path, int number, int min, int max)
+    {
+        if (number < min || number > max)
+        {
+            Sink.Error(path, "out_of_range", $"{path} must be between {min} and {max} (it was {number}).");
             return null;
         }
 

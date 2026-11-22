@@ -20,6 +20,9 @@ internal sealed class ReadContext
 internal sealed class ParseFindings
 {
     private readonly HashSet<Phase> _phasesWithUnreadableWeeks = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<Plan> _plansWithMissingTracks = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<Track> _tracksWithUnreadableCadence = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<Session> _sessionsWithUnreadableDefaultDay = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>Nothing was unreadable: for a document built in memory.</summary>
     public static ParseFindings None { get; } = new();
@@ -32,4 +35,16 @@ internal sealed class ParseFindings
     public void MarkWeeksUnreadable(Phase phase) => _phasesWithUnreadableWeeks.Add(phase);
 
     public bool AreWeeksUnreadable(Phase phase) => _phasesWithUnreadableWeeks.Contains(phase);
+
+    public void MarkTracksMissing(Plan plan) => _plansWithMissingTracks.Add(plan);
+
+    public bool AreTracksMissing(Plan plan) => _plansWithMissingTracks.Contains(plan);
+
+    public void MarkCadenceUnreadable(Track track) => _tracksWithUnreadableCadence.Add(track);
+
+    public bool IsCadenceUnreadable(Track track) => _tracksWithUnreadableCadence.Contains(track);
+
+    public void MarkDefaultDayUnreadable(Session session) => _sessionsWithUnreadableDefaultDay.Add(session);
+
+    public bool IsDefaultDayUnreadable(Session session) => _sessionsWithUnreadableDefaultDay.Contains(session);
 }

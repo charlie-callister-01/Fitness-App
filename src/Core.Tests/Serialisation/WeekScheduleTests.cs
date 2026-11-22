@@ -215,4 +215,25 @@ public class WeekScheduleTests
 
         Assert.Equal(("weekSchedules[0].moves[0].date", "out_of_range"), (error.Path, error.Code));
     }
+
+    [Fact]
+    public void Moving_a_daily_session_is_rejected()
+    {
+        var doc = PlanTestData.Rich();
+        var plan0 = doc.Plans![0];
+        var withDaily = plan0 with
+        {
+            Tracks = [.. plan0.Tracks, new Track("mobility", "Mobility", new TrackRhythm.Daily(75), [])],
+            Sessions = [.. plan0.Sessions, new Session("m-mobility", "Morning mobility", "mobility", DefaultDay.Daily, SessionType.Mobility, null, [])],
+        };
+        var withMove = doc with
+        {
+            Plans = [withDaily, .. doc.Plans.Skip(1)],
+            WeekSchedules = [Week(Monday, Move("m-mobility", Monday.AddDays(1)))],
+        };
+
+        Assert.Equal(("weekSchedules[0].moves[0].sessionId", "invalid_value"), OnlyIssue(withMove));
+        var error = SingleError(ExchangeFormat.Write(withMove));
+        Assert.Equal(("weekSchedules[0].moves[0].sessionId", "invalid_value"), (error.Path, error.Code));
+    }
 }

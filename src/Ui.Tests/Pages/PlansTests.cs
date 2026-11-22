@@ -16,14 +16,19 @@ public sealed class PlansTests : BunitContext
 
     private static Phase Ph(string id, string focus, int start, int end) => new(id, focus, start, end, [], []);
 
-    private static Plan Other(string id = "other", string name = "Winter block") =>
-        WithMainPhases(Plan(), [Ph("o1", "Base", 1, 6)]) with
+    private static Plan Other(string id = "other", string name = "Winter block")
+    {
+        var trackId = $"{id}-main";
+        var basePlan = Plan();
+        return basePlan with
         {
             Id = id,
             Name = name,
             IsActive = false,
-            Sessions = [Session("o-lower", "Legs", DayOfWeek.Tuesday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)])],
+            Tracks = [basePlan.Tracks[0] with { Id = trackId, Phases = [Ph("o1", "Base", 1, 6)] }],
+            Sessions = [Session("o-lower", "Legs", DayOfWeek.Tuesday, SessionType.Strength, null, [new SessionExercise(Squat, 3, 8, null, null)], trackId)],
         };
+    }
 
     private IRenderedComponent<Plans> RenderPlans(AppData data)
     {
