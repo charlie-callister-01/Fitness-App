@@ -98,7 +98,8 @@ public static partial class PromptPack
             "");
     }
 
-    private static bool HasGuideContent(DataSnapshot snapshot, string exerciseId) =>
+    /// <summary>True when the Exercise has a Guide with content beyond personal notes.</summary>
+    public static bool HasGuideContent(DataSnapshot snapshot, string exerciseId) =>
         snapshot.Guides.Any(g => g.ExerciseId == exerciseId && GuidesImport.HasContent(g));
 
     private static string Describe(DateRange? range) =>
