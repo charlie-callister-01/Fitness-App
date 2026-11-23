@@ -6,10 +6,10 @@ Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Accessibility sca
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] One parameterised test per screen × Theme × Mode × (empty, fixture); sheets opened where they need data.
-- [ ] No serious or critical violations remain; each fix is in the app, not the test.
-- [ ] Any suppression has rule, selector and reason in the single suppression list.
-- [ ] Moderate and minor findings are listed in `docs/REFACTOR.md`.
-- [ ] bUnit tests updated where markup changed; `dotnet build` 0 warnings; all tests green.
+- [x] One parameterised test per screen × Theme × Mode × (empty, fixture); sheets opened where they need data.
+- [x] No serious or critical violations remain; each fix is in the app, not the test.
+- [x] Any suppression has rule, selector and reason in the single suppression list.
+- [x] Moderate and minor findings are listed in `docs/REFACTOR.md`.
+- [x] bUnit tests updated where markup changed; `dotnet build` 0 warnings; all tests green.

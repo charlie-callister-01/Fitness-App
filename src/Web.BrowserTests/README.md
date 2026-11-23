@@ -43,6 +43,15 @@ The B11 hardening tests run the real published app, not single modules.
   pre-import Backup download is accepted by the context. `FixtureBackupTests` keep it valid against the current exchange format.
   The A5 example dataset is git-ignored and is not used.
 
+## axe scans (`App/AxeScanTests.cs`)
+
+- `Axe.ScanAsync(page)` injects the axe-core script embedded in the pinned `Deque.AxeCore.Commons` package (never a CDN) and runs it
+  against the WCAG 2.0/2.1 A and AA tags once animations have settled.
+- One test per screen (S-01 to S-13 at their routes, one per tab) x Theme x Mode x (empty, fixture), plus each sheet that needs data
+  to open (Home's sheets, the Exercise and Workout menus, Guide, Skip, Swap picker, Pain check, Date range). Serious and critical
+  violations fail; moderate and minor are written to the test output as `AXE-BACKLOG` lines for `docs/REFACTOR.md`.
+- Suppressions live only in `App/AxeSuppressions.cs` (rule, selector, one-line reason), for third-party markup or a proven false positive.
+
 ## Running
 
 The default `dotnet test` skips this project (it is still built, so warnings-as-errors apply) because it needs a browser.

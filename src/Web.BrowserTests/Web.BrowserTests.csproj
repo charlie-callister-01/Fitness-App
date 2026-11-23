@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
+    <!-- axe-core, pinned: its axe.min.js is an embedded resource, so the scans never fetch it at run time. -->
+    <PackageReference Include="Deque.AxeCore.Commons" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Playwright" />

@@ -13,6 +13,7 @@ public class TokenContrastTests
         new(["text-muted"], "surface", Text),
         new(["text-heading"], "surface", NonText),
         new(["text-label"], "surface", Text),
+        new(["text-label"], "surface-sunken", Text),
         new(["input-text"], "input-bg", 7.0),
         new(["input-pending"], "input-bg", Text),
         new(["input-bg", "input-border"], "surface", NonText),
