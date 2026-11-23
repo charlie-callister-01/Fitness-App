@@ -30,10 +30,12 @@ function trapTab(dialog, event) {
     }
 }
 
-export function attach(dialog, opener) {
+// headingSelector names the screen's heading (Ui.Accessibility.ScreenHeading), focused on close when there is no opener to return to.
+export function attach(dialog, opener, headingSelector) {
     const handle = nextHandle++;
     const entry = {
         opener: opener || document.activeElement,
+        headingSelector,
         onKeyDown: (event) => trapTab(dialog, event),
     };
     document.addEventListener('keydown', entry.onKeyDown, true);
@@ -51,15 +53,14 @@ export function detach(handle) {
     if (opener && opener !== document.body && opener.isConnected && typeof opener.focus === 'function') {
         opener.focus();
     } else if (open.size === 0) {
-        focusHeading();
+        focusHeading(entry.headingSelector);
     }
 }
 
 // There is no opener to return to (it was the page body, or it has gone because the screen changed, as on Finish before the Pain
-// check): the screen's heading takes focus, as
-// it does after navigation, rather than leaving it on the page body.
-function focusHeading() {
-    const heading = document.querySelector('#main-content h1');
+// check): the screen's heading takes focus, as it does after navigation, rather than leaving it on the page body.
+function focusHeading(selector) {
+    const heading = selector ? document.querySelector(selector) : null;
     if (!heading) return;
     if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
     heading.focus({ preventScroll: true });

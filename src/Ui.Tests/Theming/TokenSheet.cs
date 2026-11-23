@@ -28,7 +28,7 @@ internal sealed partial class TokenSheet
 
             var theme = Enum.Parse<Theme>(selector.Groups["theme"].Value, ignoreCase: true);
             var mode = Enum.Parse<Mode>(selector.Groups["mode"].Value, ignoreCase: true);
-            sets[(theme, mode)] =ColourDeclaration().Matches(block.Groups["body"].Value)
+            sets[(theme, mode)] = ColourDeclaration().Matches(block.Groups["body"].Value)
                 .ToDictionary(d => d.Groups["token"].Value, d => d.Groups["value"].Value.ToUpperInvariant());
         }
 

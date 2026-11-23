@@ -3,7 +3,6 @@ using Core.Rules.Insight;
 using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
-using Ui.Accessibility;
 using Ui.Browser;
 using Ui.Pages;
 using Ui.Saving;
@@ -28,8 +27,10 @@ public sealed partial class ExportTab : IDisposable
     private ExportResult _result = default!;
     private bool _canShare;
     private string? _exportStatus;
+    private int _exportStatusKey;
     private string? _exportError;
     private string? _backupStatus;
+    private int _backupStatusKey;
     private string? _backupError;
 
     [Parameter] public string? Preset { get; set; }
@@ -39,7 +40,6 @@ public sealed partial class ExportTab : IDisposable
     [Inject] private IBuildInfo BuildInfo { get; set; } = default!;
     [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
-    [Inject] private Announcer Announcer { get; set; } = default!;
 
     private DateOnly? PlanStart => Page.ActivePlan?.StartDate;
 
@@ -54,7 +54,7 @@ public sealed partial class ExportTab : IDisposable
     protected override void OnInitialized()
     {
         Page = new PageContext(Data, Clock);
-        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice, Announcer);
+        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice);
         if (string.Equals(Preset, "llm", StringComparison.OrdinalIgnoreCase))
         {
             _range = new RangeChoice(RangePreset.Custom, new DateRange(Page.Today.AddDays(-6), Page.Today));
@@ -202,6 +202,7 @@ public sealed partial class ExportTab : IDisposable
         if (outcome.Message is { } message)
         {
             _backupStatus = message;
+            _backupStatusKey++;
         }
         else if (outcome.Error is { } error)
         {
@@ -209,11 +210,11 @@ public sealed partial class ExportTab : IDisposable
         }
     }
 
-    // The line stays on screen; the shared live region reads it out.
+    // The StatusLine shows it and reads it out.
     private void ReportExported(string status)
     {
         _exportStatus = status;
-        Announcer.Announce(status);
+        _exportStatusKey++;
     }
 
     private static bool IsChecked(ChangeEventArgs e) => e.Value is bool value && value;

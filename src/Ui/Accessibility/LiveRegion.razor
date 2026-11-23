@@ -16,9 +16,9 @@
 
     public void Dispose() => Announcer.Announced -= OnAnnounced;
 
-    private void OnAnnounced() => _ = InvokeAsync(ShowAsync);
+    private void OnAnnounced(string message) => _ = InvokeAsync(() => ShowAsync(message));
 
-    private async Task ShowAsync()
+    private async Task ShowAsync(string message)
     {
         var announcement = ++_announcement;
         _text = "";
@@ -29,7 +29,7 @@
             return;
         }
 
-        _text = Announcer.Message ?? "";
+        _text = message;
         StateHasChanged();
     }
 }

@@ -239,7 +239,7 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
         var cut = await OpenAsync(restSeconds: "60");
         var announced = new List<string>();
         var announcer = Services.GetRequiredService<Announcer>();
-        announcer.Announced += () => announced.Add(announcer.Message!);
+        announcer.Announced += announced.Add;
         ConfirmSet(cut, 1);
 
         Pass(TimeSpan.FromSeconds(30));
@@ -248,9 +248,11 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
         Assert.Equal("off", cut.Find(".fa-confirmbar__rest").GetAttribute("aria-live"));
 
         Pass(TimeSpan.FromSeconds(30));
-        cut.WaitForAssertion(() => Assert.Null(Rest(cut)));
-
-        Assert.Equal(["Rest over"], announced);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Null(Rest(cut));
+            Assert.Equal(["Rest over"], announced);
+        });
     }
 
     [Fact]

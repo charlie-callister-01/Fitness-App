@@ -12,6 +12,9 @@ namespace Web.BrowserTests.App;
 [Collection(AppCollection.Name)]
 public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
 {
+    // The fixture Plan's daily Session (Start Mobility flow on Home).
+    private const string MobilitySessionName = "Mobility flow";
+
     public static TheoryData<string, Theme, Mode, bool> ScreenData()
     {
         var data = new TheoryData<string, Theme, Mode, bool>();
@@ -62,16 +65,7 @@ public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
         ["C-13 Pain check"] = async page =>
         {
             await StartMobilityAsync(page);
-            await page.Page.GetByRole(AriaRole.Button, new() { Name = "Workout menu", Exact = true }).ClickAsync();
-            await Dialog(page.Page).GetByRole(AriaRole.Button, new() { Name = "Finish", Exact = false }).First.ClickAsync();
-            var partial = page.Page.GetByRole(AriaRole.Dialog, new() { Name = "Finish as Partial?" });
-            await partial.Or(page.Page.GetByRole(AriaRole.Dialog, new() { Name = "Any pain today?" })).First.WaitForAsync();
-            if (await partial.IsVisibleAsync())
-            {
-                await partial.GetByRole(AriaRole.Button).Filter(new() { HasText = "Finish" }).First.ClickAsync();
-            }
-
-            await page.Page.GetByRole(AriaRole.Dialog, new() { Name = "Any pain today?" }).WaitForAsync();
+            await page.FinishToPainCheckAsync();
         },
         ["Exercise menu"] = async page =>
         {
@@ -99,7 +93,7 @@ public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
         ["Workout menu"] = async page =>
         {
             await StartMobilityAsync(page);
-            await page.Page.GetByRole(AriaRole.Button, new() { Name = "Workout menu", Exact = true }).ClickAsync();
+            await page.WorkoutMenu.ClickAsync();
         },
         ["C-15 Date range"] = async page =>
         {
@@ -127,12 +121,7 @@ public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
 
     private static ILocator Dialog(IPage page) => page.GetByRole(AriaRole.Dialog).Last;
 
-    private static async Task StartMobilityAsync(AppPage page)
-    {
-        await MainContent(page.Page).GetByRole(AriaRole.Button, new() { Name = "Start Mobility flow", Exact = true }).ClickAsync();
-        await page.Page.WaitForURLAsync("**/log/**");
-        await page.Page.GetByRole(AriaRole.Button, new() { Name = "Workout menu", Exact = true }).WaitForAsync();
-    }
+    private static Task StartMobilityAsync(AppPage page) => page.StartSessionAsync(MobilitySessionName);
 
     private static Task OpenExerciseMenuAsync(IPage page) =>
         page.GetByRole(AriaRole.Button, new() { Name = "Menu for " }).First.ClickAsync();

@@ -2,7 +2,6 @@ using Core.Exchange;
 using Core.Rules.Formatting;
 using Core.Storage;
 using Core.Time;
-using Ui.Accessibility;
 using Ui.Browser;
 
 namespace Ui.Saving;
@@ -10,18 +9,17 @@ namespace Ui.Saving;
 /// <summary>Result of running the shared Backup download and timestamp-recording flow: the success message once it finished, else an error to show (or neither when it was busy or the store failure went to the notice).</summary>
 public sealed record BackupOutcome(string? Message, string? Error);
 
-/// <summary>Shared Backup download + timestamp recording with a busy guard and last-backup formatting; a finished Backup is announced politely.</summary>
+/// <summary>Shared Backup download + timestamp recording with a busy guard and last-backup formatting; the screen shows and announces the success message.</summary>
 public sealed class BackupFlow(
     AppData data,
     IClock clock,
     IBuildInfo buildInfo,
     IBrowserCapabilities browser,
-    SaveFailureNotice notice,
-    Announcer announcer)
+    SaveFailureNotice notice)
 {
     public bool IsBusy { get; private set; }
 
-    /// <summary>What a finished Backup says, on screen and through the <see cref="Announcer"/>.</summary>
+    /// <summary>What a finished Backup says, shown (and read out) by the screen that ran it.</summary>
     private static string SuccessMessage(string fileName) => $"Backup downloaded ({fileName}).";
 
     public static string FormatLastBackup(DateTimeOffset? lastBackupAt) => lastBackupAt is { } at
@@ -53,7 +51,6 @@ public sealed class BackupFlow(
             }
 
             var message = SuccessMessage(exported.FileName);
-            announcer.Announce(message);
             return new BackupOutcome(message, null);
         }
         finally

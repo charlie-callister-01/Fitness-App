@@ -72,7 +72,7 @@ public sealed partial class SettingsPage : IDisposable
     {
         Page = new PageContext(Data, Clock);
         _save = new GuardedSave(Data, Notice);
-        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice, Announcer);
+        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice);
         SyncDraftsFromSnapshot();
         Data.Changed += OnDataChanged;
         Themes.Changed += OnThemeChanged;
@@ -186,6 +186,12 @@ public sealed partial class SettingsPage : IDisposable
         _backupError = null;
         var outcome = await _backup.RunAsync();
         _backupError = outcome.Error;
+
+        // Settings shows no Backup line (the Last backed up date changes), so the success is only read out.
+        if (outcome.Message is { } message)
+        {
+            Announcer.Announce(message);
+        }
     }
 
     private async Task RequestPersistenceAsync()

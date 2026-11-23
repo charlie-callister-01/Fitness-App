@@ -1,9 +1,10 @@
 .shell {
     min-height: 100dvh;
     box-sizing: border-box;
-    /* Room for the fixed bottom bar and the safe areas. */
-    padding: env(safe-area-inset-top) env(safe-area-inset-right)
-             calc(var(--bar-tab) + env(safe-area-inset-bottom)) env(safe-area-inset-left);
+    /* Room for the fixed bottom bar and the safe areas; padding-left comes from the shared .fa-railed rule (components.css). */
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: calc(var(--bar-tab) + env(safe-area-inset-bottom));
 }
 
 .column {
@@ -22,10 +23,9 @@
     }
 }
 
-/* The left rail takes 220 px; the column centres in what is left. */
+/* From 900 px the TabBar is a left rail (its room is the shared .fa-railed rule), so no bottom bar room. */
 @media (min-width: 900px) {
     .shell {
-        padding-left: 220px;
         padding-bottom: 0;
     }
 }

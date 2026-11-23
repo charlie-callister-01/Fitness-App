@@ -44,7 +44,8 @@
     accent-color: var(--primary);
 }
 
-.fa-prompts__status {
+/* Rendered by StatusLine, a child component, so the rule reaches through. */
+::deep .fa-prompts__status {
     margin: 0;
     color: var(--text);
 }

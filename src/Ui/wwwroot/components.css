@@ -17,6 +17,11 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-label { font-family: var(--font-label); font-size: calc(0.875rem * var(--display-scale)); line-height: 1.286; font-weight: var(--w-label); color: var(--text-label); }
 .fa-muted { color: var(--text-muted); font-size: 0.875rem; line-height: 1.429; }
 
+/* Layouts beside the TabBar (C-12): this rule alone owns their padding-left. Phones keep the left safe area; from 900 px the left
+   rail takes --rail-width (it carries the left safe area) and the content centres in what is left. */
+.fa-railed { padding-left: env(safe-area-inset-left); }
+@media (min-width: 900px) { .fa-railed { padding-left: var(--rail-width); } }
+
 /* Panels and wells */
 .fa-panel { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-panel); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
 .fa-well { background: var(--surface-sunken); border-radius: var(--r-control); box-shadow: var(--shadow-sunken); padding: var(--space-3); }
@@ -83,7 +88,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 [data-theme="clean"] .fa-confirmbar__info b { color: var(--text); }
 .fa-confirmbar__row { display: grid; grid-template-columns: var(--tap-primary) 1fr var(--tap-primary); gap: var(--space-3); }
 
-/* State chips (C-07) */
+/* State chips (C-12) */
 .fa-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .fa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--space-8); padding: 0 var(--space-3); border: var(--border-thin) solid currentColor; border-radius: var(--r-control); font-family: var(--font-label); font-size: calc(0.8125rem * var(--display-scale)); font-weight: var(--w-label); background: var(--surface); }
 .fa-chip--pr { color: var(--pr-text); } .fa-chip--done { color: var(--done-text); } .fa-chip--partial { color: var(--state-partial); } .fa-chip--skipped { color: var(--state-skipped); } .fa-chip--swapped { color: var(--state-swapped); } .fa-chip--missed { color: var(--state-missed); border-style: dashed; } .fa-chip--pain { color: var(--state-pain); }

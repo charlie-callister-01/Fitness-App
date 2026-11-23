@@ -2,13 +2,13 @@
 <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="UiAssemblies">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate @key="CurrentPath" RouteData="@routeData" Selector="h1" />
+        <FocusOnNavigate @key="CurrentPath" RouteData="@routeData" Selector="@Ui.Accessibility.ScreenHeading.Selector" />
     </Found>
     <NotFound>
         <LayoutView Layout="@typeof(MainLayout)">
             <Ui.Pages.NotFound />
         </LayoutView>
-        <FocusOnNavigate @key="CurrentPath" RouteData="@NotFoundRoute" Selector="h1" />
+        <FocusOnNavigate @key="CurrentPath" RouteData="@NotFoundRoute" Selector="@Ui.Accessibility.ScreenHeading.Selector" />
     </NotFound>
 </Router>
 @* The one polite live region every screen announces through (Ui.Accessibility.Announcer); outside the Router so it is never re-created. *@

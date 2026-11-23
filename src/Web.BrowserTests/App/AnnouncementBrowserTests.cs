@@ -36,11 +36,7 @@ public sealed class AnnouncementBrowserTests(AppFixture app)
     {
         await using var page = await app.OpenAsync("/backup?tab=import&kind=restore");
 
-        await page.Page.Locator("#import-paste").FillAsync(FixtureBackup.Json);
-        await page.Page.GetByRole(AriaRole.Button, new() { Name = "Check", Exact = true }).ClickAsync();
-        var apply = page.Page.GetByTestId("import-preview").GetByRole(AriaRole.Button, new() { Name = "Apply", Exact = true });
-        await Assertions.Expect(apply).ToBeEnabledAsync(new() { Timeout = 10_000 });
-        await apply.ClickAsync();
+        await page.ApplyImportAsync(FixtureBackup.Json);
 
         await Assertions.Expect(Region(page)).ToContainTextAsync("Import applied.");
     }
@@ -54,11 +50,11 @@ public sealed class AnnouncementBrowserTests(AppFixture app)
 
         // The fixture leaves a Mobility flow open; finish it so A: Lower can start.
         await page.GotoAsync($"/log/{FixtureBackup.OpenWorkoutId}");
-        await FinishAsync(log);
+        await FinishAsync(page);
         await page.GotoAsync("/");
-        await StartLowerAsync(log);
+        await page.StartSessionAsync(LowerSessionName);
 
-        await log.GetByRole(AriaRole.Button, new() { Name = "Workout menu" }).ClickAsync();
+        await page.WorkoutMenu.ClickAsync();
         await log.GetByRole(AriaRole.Group, new() { Name = "Rest timer" }).GetByRole(AriaRole.Button, new() { Name = "60 s", Exact = true }).ClickAsync();
         await log.Keyboard.PressAsync("Escape");
 
@@ -77,42 +73,16 @@ public sealed class AnnouncementBrowserTests(AppFixture app)
         await Assertions.Expect(log.Locator(".fa-confirmbar__rest")).ToHaveCountAsync(0);
         await Assertions.Expect(Region(page)).ToHaveTextAsync("Rest over");
 
-        await FinishAsync(log);
+        await FinishAsync(page);
         await Assertions.Expect(Region(page)).ToHaveTextAsync("Badge unlocked: 40 kg goblet squat");
         Assert.Empty(page.Errors);
     }
 
-    // Workout menu, Finish Workout, Finish as Partial when asked, and No to the Pain check.
-    private static async Task FinishAsync(IPage log)
+    // Finishes the live Workout (as Partial when asked) and answers No to the Pain check.
+    private static async Task FinishAsync(AppPage page)
     {
-        await log.GetByRole(AriaRole.Button, new() { Name = "Workout menu" }).ClickAsync();
-        await log.GetByRole(AriaRole.Button, new() { Name = "Finish Workout" }).ClickAsync();
-        var partial = log.GetByRole(AriaRole.Dialog, new() { Name = "Finish as Partial?" });
-        var pain = log.GetByRole(AriaRole.Dialog, new() { Name = "Any pain today?" });
-        await partial.Or(pain).First.WaitForAsync();
-        if (await partial.IsVisibleAsync())
-        {
-            await partial.GetByRole(AriaRole.Button, new() { Name = "Finish", Exact = true }).ClickAsync();
-        }
-
+        var pain = await page.FinishToPainCheckAsync();
         await pain.GetByRole(AriaRole.Button, new() { Name = "No", Exact = true }).ClickAsync();
-        await log.GetByRole(AriaRole.Link, new() { Name = "Done", Exact = true }).WaitForAsync();
-    }
-
-    // Starts the Plan's "A: Lower" Session: from Today when it is today's, otherwise through Do a different Session.
-    private static async Task StartLowerAsync(IPage home)
-    {
-        var today = home.GetByRole(AriaRole.Region, new() { Name = "Today", Exact = true });
-        if (await today.GetByText(LowerSessionName).CountAsync() > 0)
-        {
-            await today.GetByRole(AriaRole.Button, new() { Name = "Start" }).First.ClickAsync();
-        }
-        else
-        {
-            await home.GetByRole(AriaRole.Button, new() { Name = "Do a different Session" }).ClickAsync();
-            await home.GetByRole(AriaRole.Dialog).Locator(".fa-sessionrow", new() { HasText = LowerSessionName }).ClickAsync();
-        }
-
-        await Assertions.Expect(home.Locator("#main-content h1")).ToHaveTextAsync(LowerSessionName);
+        await page.Page.GetByRole(AriaRole.Link, new() { Name = "Done", Exact = true }).WaitForAsync();
     }
 }

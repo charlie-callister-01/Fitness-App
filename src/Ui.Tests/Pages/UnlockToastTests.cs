@@ -57,7 +57,7 @@ public sealed class UnlockToastTests : BunitContext
     {
         var announced = 0;
         var cut = await RenderSummaryAsync(unlocks: true);
-        Services.GetRequiredService<Announcer>().Announced += () => announced++;
+        Services.GetRequiredService<Announcer>().Announced += _ => announced++;
         var summary = cut.Instance;
 
         // The summary is shown again (re-opened by its URL, or the page re-created): the toast is a new component for the same unlock.

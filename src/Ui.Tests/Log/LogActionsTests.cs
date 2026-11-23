@@ -22,7 +22,7 @@ public sealed class LogActionsTests
         var session = new LogSession(
             data, clock, new FakeTicker(), new RecordingWakeLock(), new RestTimerSetting(new FakeDevicePreferences()),
             new FinishFlow(data, notice, clock, new CountingIds()), new LoggedAfterwardsFlow(data, notice), new Announcer(), () => { });
-        var actions = new LogActions(data, notice, new CountingIds(), state, new LogViewBuilder(data, state), session, new Announcer()) { WorkoutId = "w-now" };
+        var actions = new LogActions(data, notice, new CountingIds(), state, new LogViewBuilder(data, state), session) { WorkoutId = "w-now" };
         return new Rig(actions, state, data);
     }
 
