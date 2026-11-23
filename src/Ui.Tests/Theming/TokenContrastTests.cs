@@ -1,3 +1,5 @@
+using Core.Model;
+
 namespace Ui.Tests.Theming;
 
 // Recomputes the design document §4.2 contrast table from tokens.css for all four Theme × Mode sets.
@@ -35,14 +37,14 @@ public class TokenContrastTests
         new(["on-tab-active"], "tab-active", Text),
     ];
 
-    public static TheoryData<string, string> SetsAndPairs()
+    public static TheoryData<Theme, Mode, string> SetsAndPairs()
     {
-        var data = new TheoryData<string, string>();
-        foreach (var set in TokenSheet.SetNames)
+        var data = new TheoryData<Theme, Mode, string>();
+        foreach (var (theme, mode) in TokenSheet.Sets)
         {
             foreach (var pair in Pairs)
             {
-                data.Add(set, pair.Name);
+                data.Add(theme, mode, pair.Name);
             }
         }
 
@@ -51,16 +53,16 @@ public class TokenContrastTests
 
     [Theory]
     [MemberData(nameof(SetsAndPairs))]
-    public void Every_section_4_2_pair_meets_its_minimum(string set, string pairName)
+    public void Every_section_4_2_pair_meets_its_minimum(Theme theme, Mode mode, string pairName)
     {
-        var tokens = TokenSheet.Load().Set(set);
+        var tokens = TokenSheet.Load().Set(theme, mode);
         var pair = Pairs.Single(p => p.Name == pairName);
 
         var ratio = pair.Foregrounds.Max(fg => Wcag.ContrastRatio(tokens[fg], tokens[pair.Background]));
 
         Assert.True(
             ratio >= pair.Min,
-            $"{set}: {pair.Name} is {ratio:0.00}:1, needs {pair.Min}:1.");
+            $"{theme} {mode}: {pair.Name} is {ratio:0.00}:1, needs {pair.Min}:1.");
     }
 
     [Fact]
@@ -68,11 +70,10 @@ public class TokenContrastTests
     {
         var sheet = TokenSheet.Load();
 
-        Assert.Equal(["Keep dark", "Keep light", "Clean dark", "Clean light"], TokenSheet.SetNames);
-        Assert.Equal("#4A4237", sheet.Set("Keep dark")["surface"]);
-        Assert.Equal("#E8DFC8", sheet.Set("Keep light")["surface"]);
-        Assert.Equal("#1B1E22", sheet.Set("Clean dark")["surface"]);
-        Assert.Equal("#FFFFFF", sheet.Set("Clean light")["surface"]);
+        Assert.Equal("#4A4237", sheet.Set(Theme.Keep, Mode.Dark)["surface"]);
+        Assert.Equal("#E8DFC8", sheet.Set(Theme.Keep, Mode.Light)["surface"]);
+        Assert.Equal("#1B1E22", sheet.Set(Theme.Clean, Mode.Dark)["surface"]);
+        Assert.Equal("#FFFFFF", sheet.Set(Theme.Clean, Mode.Light)["surface"]);
     }
 
     private sealed record ContrastPair(string[] Foregrounds, string Background, double Min)
