@@ -31,7 +31,8 @@ The B11 hardening tests run the real published app, not single modules.
   `TextScale` (root font size multiple; 2 = 200%), `ReducedMotion`, `WithFixture`. The context's colour scheme is dark, so
   `Mode.System` resolves to dark.
 - `AppPage.Page` is the Playwright page; `GotoAsync(route)` moves inside the app with `Blazor.navigateTo` (no reload, so a save in
-  flight is never cut off) and waits for the new screen's h1; `ReloadAsync()` restarts the app from stored data; `Errors` collects
+  flight is never cut off) and waits for the new screen's h1 (a new element, or the same one focused again when two routes share a
+  page; a change of query alone is not waited for); `ReloadAsync()` restarts the app from stored data; `Errors` collects
   uncaught page errors and console errors; `DatabaseName` is this test's database.
 - Each test gets its own context and a uniquely named database: an init script renames the production `fitness-app` database
   to a `test-<guid>` name before the app's scripts run. The same init script sets the root font size for `TextScale`.

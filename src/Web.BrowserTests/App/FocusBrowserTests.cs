@@ -51,6 +51,24 @@ public sealed partial class FocusBrowserTests(AppFixture app)
     }
 
     [Fact]
+    public async Task Moving_between_two_routes_of_one_screen_focuses_its_h1()
+    {
+        await using var page = await app.OpenAsync("/custom", new AppPageOptions { WithFixture = true });
+
+        await page.GotoAsync("/custom/makeup/no-such-session");
+
+        var heading = page.Page.Locator("h1");
+        await Assertions.Expect(heading).ToHaveTextAsync("Make up a Session");
+        await Assertions.Expect(heading).ToBeFocusedAsync();
+
+        // Two Guides render the same h1 element with new text.
+        await page.GotoAsync("/exercises/goblet-squat/guide");
+        await page.GotoAsync("/exercises/plank/guide");
+        await Assertions.Expect(heading).ToHaveTextAsync("Plank");
+        await Assertions.Expect(heading).ToBeFocusedAsync();
+    }
+
+    [Fact]
     public async Task ExercisePicker_keeps_focus_inside_closes_on_Escape_and_returns_focus()
     {
         await using var page = await app.OpenAsync("/custom", new AppPageOptions { WithFixture = true });
