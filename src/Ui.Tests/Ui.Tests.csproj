@@ -17,6 +17,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Read by the token contrast test. -->
+    <None Include="..\Ui\wwwroot\tokens.css" Link="tokens.css" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ui\Ui.csproj" />
     <!-- Fault-injecting store for the failure-path tests. -->
     <ProjectReference Include="..\Core.Tests\Core.Tests.csproj" />
