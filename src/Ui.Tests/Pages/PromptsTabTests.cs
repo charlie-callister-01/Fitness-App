@@ -49,7 +49,7 @@ public sealed class PromptsTabTests : BunitContext
         Assert.Single(browser.CopiedTexts);
         Assert.Equal(expectedAnalyse, browser.CopiedTexts[0]);
         Assert.Equal("Copied.", cut.FindAll(".fa-prompts__card")[0].QuerySelector(".fa-prompts__status")!.TextContent.Trim());
-        Assert.Equal("Copied.", Services.GetRequiredService<Ui.Saving.Announcer>().Message);
+        Assert.Equal("Copied.", Services.GetRequiredService<Ui.Accessibility.Announcer>().Message);
         Assert.Null(cut.FindAll(".fa-prompts__card")[0].QuerySelector(".fa-prompts__status")!.GetAttribute("role"));
 
         cut.FindAll(".fa-prompts__card")[1].QuerySelectorAll("button").First(b => b.TextContent.Trim() == "Copy prompt").Click();

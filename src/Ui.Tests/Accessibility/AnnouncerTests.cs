@@ -1,8 +1,8 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
-using Ui.Saving;
+using Ui.Accessibility;
 
-namespace Ui.Tests.Saving;
+namespace Ui.Tests.Accessibility;
 
 /// <summary>The shared polite live region and the announcer every screen speaks through.</summary>
 public sealed class AnnouncerTests : BunitContext

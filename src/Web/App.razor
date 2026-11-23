@@ -11,8 +11,8 @@
         <FocusOnNavigate @key="CurrentPath" RouteData="@NotFoundRoute" Selector="h1" />
     </NotFound>
 </Router>
-@* The one polite live region every screen announces through (Ui.Saving.Announcer); outside the Router so it is never re-created. *@
-<Ui.Saving.LiveRegion />
+@* The one polite live region every screen announces through (Ui.Accessibility.Announcer); outside the Router so it is never re-created. *@
+<Ui.Accessibility.LiveRegion />
 
 @code {
     // Pages live in the Ui assembly; the router must be told to scan it.
