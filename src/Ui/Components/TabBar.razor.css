@@ -30,6 +30,6 @@
         gap: var(--space-3);
         padding: 0 var(--space-4);
         height: var(--tap-log);
-        font-size: calc(14px * var(--display-scale));
+        font-size: calc(0.875rem * var(--display-scale));
     }
 }
