@@ -481,6 +481,15 @@ public sealed class GuidePageTests : BunitContext
         Assert.Equal(workoutBefore, data.Snapshot.Workouts.Single());
     }
 
+    [Fact]
+    public async Task Empty_Guide_state_offers_Import_Guides_link_to_Import_tab_with_guides_kind()
+    {
+        var cut = await RenderPageAsync(guide: null);
+
+        var link = cut.FindAll("a").Single(a => a.TextContent.Trim() == "Import Guides");
+        Assert.Equal("backup?tab=import&kind=guides", link.GetAttribute("href"));
+    }
+
     /// <summary>A store that can hold its writes until released, and counts them, so a test can tap while a save is running.</summary>
     private sealed class GateStore(IDataStore inner) : IDataStore
     {

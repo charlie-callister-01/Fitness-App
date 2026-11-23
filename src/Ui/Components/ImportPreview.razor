@@ -1,0 +1,144 @@
+@using Core.Exchange
+@using Core.Model
+@using Core.Storage
+
+<section class="fa-panel fa-import-preview" data-testid="import-preview" aria-label="Import preview">
+    <div class="fa-import-preview__summary" data-testid="import-summary">
+        @foreach (var line in Preview.Summary)
+        {
+            <p>@line</p>
+        }
+    </div>
+
+    @if (NearMatches.Count > 0)
+    {
+        <div class="fa-import-preview__rows" role="group" aria-label="Exercise matches">
+            @foreach (var match in NearMatches)
+            {
+                var incomingId = match.IncomingId;
+                var isOpen = match.Outcome == ExerciseOutcome.NeedsDecision;
+                <div class="fa-import-preview__row @(isOpen ? "fa-import-preview__row--decision" : "fa-import-preview__row--keep")"
+                     data-testid="exercise-match-row">
+                    @if (isOpen)
+                    {
+                        @if (match.Candidates.Count == 1)
+                        {
+                            var candidate = match.Candidates[0];
+                            <p class="fa-import-preview__text">
+                                <strong>@match.IncomingName</strong> — Did you mean <strong>@candidate.Name</strong>?
+                            </p>
+                            <div class="fa-import-preview__choices">
+                                <Button Variant="ButtonVariant.Secondary" OnClick="() => ChooseExercise(incomingId, ExerciseChoice.Use(candidate.Id))">Yes</Button>
+                                <Button Variant="ButtonVariant.Secondary" OnClick="() => ChooseExercise(incomingId, ExerciseChoice.AddAsNew)">Keep as new</Button>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="fa-import-preview__text">
+                                <strong>@match.IncomingName</strong> — Did you mean one of these?
+                            </p>
+                            <div class="fa-import-preview__choices">
+                                @foreach (var candidate in match.Candidates)
+                                {
+                                    var cid = candidate.Id;
+                                    <Button Variant="ButtonVariant.Secondary" OnClick="() => ChooseExercise(incomingId, ExerciseChoice.Use(cid))">Yes, @candidate.Name</Button>
+                                }
+                                <Button Variant="ButtonVariant.Secondary" OnClick="() => ChooseExercise(incomingId, ExerciseChoice.AddAsNew)">Keep as new</Button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        var chosenName = match.Candidates.FirstOrDefault(c => c.Id == match.Chosen)?.Name;
+                        <p class="fa-import-preview__text">
+                            <strong>@match.IncomingName</strong> → @(chosenName is not null ? $"Matched to {chosenName}" : "Kept as new Exercise")
+                        </p>
+                        <div class="fa-import-preview__choices">
+                            @foreach (var candidate in match.Candidates)
+                            {
+                                var cid = candidate.Id;
+                                var label = match.Candidates.Count == 1 ? "Yes" : $"Yes, {candidate.Name}";
+                                <Button Variant="ButtonVariant.Secondary" Pressed="match.Chosen == cid" OnClick="() => ChooseExercise(incomingId, ExerciseChoice.Use(cid))">@label</Button>
+                            }
+                            <Button Variant="ButtonVariant.Secondary" Pressed="match.Outcome == ExerciseOutcome.New" OnClick="() => ChooseExercise(incomingId, ExerciseChoice.AddAsNew)">Keep as new</Button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Preview.Items.Count > 0)
+    {
+        <ul class="fa-import-preview__rows" aria-label="Changes">
+            @foreach (var item in Preview.Items)
+            {
+                <li class="fa-import-preview__row @RowModifier(item.Action)">
+                    <p class="fa-import-preview__text">@item.Text</p>
+                    @if (GetKeepOrReplaceChoice(item) is { } choice)
+                    {
+                        <div class="fa-import-preview__choices">
+                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Keep" OnClick="() => ChooseKeepOrReplace(item, KeepOrReplace.Keep)">Keep mine</Button>
+                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Replace" OnClick="() => ChooseKeepOrReplace(item, KeepOrReplace.Replace)">Replace</Button>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+
+    <p class="fa-muted fa-import-preview__note">An automatic Backup is downloaded before applying.</p>
+
+    <div class="fa-import-preview__actions">
+        <Button Variant="ButtonVariant.Secondary" Disabled="Applying" OnClick="OnCancel">Cancel</Button>
+        <Button Variant="ButtonVariant.Primary" Disabled="@(!CanWrite || Applying || !Preview.IsReady)" OnClick="OnApply">Apply</Button>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Core.Exchange.ImportPreview Preview { get; set; } = default!;
+    [Parameter, EditorRequired] public ImportDecisions Decisions { get; set; } = ImportDecisions.None;
+    [Parameter] public EventCallback<ImportDecisions> DecisionsChanged { get; set; }
+    [Parameter] public bool CanWrite { get; set; } = true;
+    [Parameter] public bool Applying { get; set; }
+    [Parameter] public EventCallback OnApply { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private List<ExerciseMatch> NearMatches => Preview.Matches.Where(m => m.Candidates.Count > 0).ToList();
+
+    private Task ChooseExercise(string incomingId, ExerciseChoice choice) =>
+        DecisionsChanged.InvokeAsync(Decisions.WithExercise(incomingId, choice));
+
+    private KeepOrReplace? GetKeepOrReplaceChoice(ImportItem item)
+    {
+        if (item.Kind is not (RecordKind.Guide or RecordKind.Workout))
+        {
+            return null;
+        }
+
+        var choice = item.Kind == RecordKind.Guide
+            ? Decisions.GuideChoice(item.Key)
+            : Decisions.WorkoutChoice(item.Key);
+        var offered = item.OffersReplace || (item.Action == ImportItemAction.Change && choice == KeepOrReplace.Replace);
+        return offered ? choice : null;
+    }
+
+    private Task ChooseKeepOrReplace(ImportItem item, KeepOrReplace choice) => item.Kind switch
+    {
+        RecordKind.Guide => DecisionsChanged.InvokeAsync(Decisions.WithGuide(item.Key, choice)),
+        RecordKind.Workout => DecisionsChanged.InvokeAsync(Decisions.WithWorkout(item.Key, choice)),
+        _ => Task.CompletedTask,
+    };
+
+    private static string RowModifier(ImportItemAction action) => action switch
+    {
+        ImportItemAction.Add => "fa-import-preview__row--add",
+        ImportItemAction.Change => "fa-import-preview__row--change",
+        ImportItemAction.Keep => "fa-import-preview__row--keep",
+        ImportItemAction.Ignore => "fa-import-preview__row--ignore",
+        ImportItemAction.Note => "fa-import-preview__row--note",
+        ImportItemAction.Warning => "fa-import-preview__row--warning",
+        ImportItemAction.Blocker => "fa-import-preview__row--blocker",
+        _ => "fa-import-preview__row--note",
+    };
+}

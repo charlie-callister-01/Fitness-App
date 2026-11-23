@@ -1,0 +1,83 @@
+@using Core.Exchange
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="fa-import">
+    <section class="fa-panel fa-import__section" aria-labelledby="import-heading">
+        <h2 id="import-heading" class="fa-title fa-title--m">Import</h2>
+
+        <div class="fa-import__field" role="group" aria-label="Import kind">
+            <span class="fa-label">Kind</span>
+            <div class="fa-chips">
+                @foreach (var option in KindOptions)
+                {
+                    var kind = option.Kind;
+                    <Button Variant="ButtonVariant.Secondary" Pressed="_kindSelected && _kind == kind" OnClick="() => SelectKind(kind)">@option.Label</Button>
+                }
+            </div>
+        </div>
+
+        <label class="fa-import__field" for="import-paste">
+            <span class="fa-label">Paste JSON</span>
+            <textarea id="import-paste" class="fa-import__textarea" rows="8" aria-label="Paste JSON"
+                      value="@_inputText" @oninput="OnTextInput"></textarea>
+        </label>
+
+        <div class="fa-import__actions">
+            <Button Variant="ButtonVariant.Primary" OnClick="Check">Check</Button>
+        </div>
+
+        <div class="fa-import__field">
+            <label class="fa-label" for="import-file">Or choose a file</label>
+            <InputFile id="import-file" class="fa-import__file" accept=".json,application/json,.txt" OnChange="OnFileSelectedAsync" />
+        </div>
+
+        <p class="fa-muted fa-import__hint">An automatic Backup is downloaded before any changes are applied.</p>
+    </section>
+
+    @if (_errors.Count > 0)
+    {
+        <div class="fa-panel fa-import__errors" data-testid="import-errors" role="alert">
+            <p class="fa-label">Could not read this Import</p>
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (_notices.Count > 0)
+    {
+        <div class="fa-well" data-testid="import-notices" role="status">
+            @foreach (var notice in _notices)
+            {
+                <p class="fa-import__hint">@notice</p>
+            }
+        </div>
+    }
+
+    @if (_appliedSummary is { Count: > 0 })
+    {
+        <div class="fa-panel" data-testid="import-applied" role="status">
+            <p class="fa-label">Import applied</p>
+            <ul>
+                @foreach (var line in _appliedSummary)
+                {
+                    <li>@line</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (_preview is not null)
+    {
+        <ImportPreview Preview="_preview"
+                       Decisions="_decisions"
+                       DecisionsChanged="OnDecisionsChanged"
+                       CanWrite="Page.CanWrite"
+                       Applying="_applying"
+                       OnApply="ApplyAsync"
+                       OnCancel="CancelPreview" />
+    }
+</div>

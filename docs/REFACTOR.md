@@ -15,3 +15,11 @@ Findings from `/thermo-nuclear-code-quality-review` and architecture passes. Ope
 6. **Extract shared `GuardedWorkoutStart` helper in `Ui` (`src/Ui/Pages/Home.razor.cs` and `src/Ui/Pages/Week.razor.cs`):** Both `Home.StartAndOpenAsync` and `Week.OnStartDailyAsync` duplicate the `GuardedSave.RunAsync` + `WorkoutStarter.StartAsync` + `Navigation.NavigateTo($"log/{workout.Id}")` ceremony. Move onto `PageContext` or a small `Ui.Saving` helper.
 7. ~~**Consolidate `PlanEditState.Read` cross-Track problem discovery (`src/Ui/Pages/PlanEditState.cs`)**~~ *(resolved in A4.5 PR 2 review fix pass)*
 8. **Split `PlanEditorTests.cs` (`src/Ui.Tests/Pages/PlanEditorTests.cs`):** `PlanEditorTests.cs` has grown past 500 lines with the Track selector, split Settings, and per-Track Phases/Sessions suites; split into `PlanEditorSettingsAndTracksTests.cs`, `PlanEditorPhasesTests.cs`, and `PlanEditorSessionsTests.cs`.
+
+## From Data and settings (B9 + B10) thermo-nuclear review (23 Nov 2026)
+
+9. ~~**Extract shared `BackupFlow` helper (`src/Ui/Pages/SettingsPage.razor.cs` and `src/Ui/Components/ExportTab.razor.cs`)**~~ *(resolved on `feature/data-and-settings`: `src/Ui/Saving/BackupFlow.cs`)*
+10. ~~**Parallelize `Home.RefreshAsync` / `SettingsPage.RefreshDataStatusAsync` and drop redundant `Rebuild()` (`src/Ui/Pages/Home.razor.cs` and `src/Ui/Pages/SettingsPage.razor.cs`)**~~ *(resolved on `feature/data-and-settings`)*
+11. ~~**Collapse `SettingsPage` field-change boilerplate (`src/Ui/Pages/SettingsPage.razor.cs`)**~~ *(resolved on `feature/data-and-settings`)*
+12. ~~**Unify Keep/Replace toggle branch in `ImportPreview.razor` (`src/Ui/Components/ImportPreview.razor`)**~~ *(resolved on `feature/data-and-settings`)*
+13. ~~**Split `ExportImportTests.cs` (`src/Ui.Tests/Pages/ExportImportTests.cs`, currently 551 lines)**~~ *(resolved on `feature/data-and-settings`: split into `ExportTabTests.cs`, `ImportTabTests.cs`, `PromptsTabTests.cs`)*

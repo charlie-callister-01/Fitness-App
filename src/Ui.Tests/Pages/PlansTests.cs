@@ -219,4 +219,22 @@ public sealed class PlansTests : BunitContext
         Assert.Equal("Active · week 1", card.QuerySelector(".fa-plans__active")?.TextContent.Trim());
         Assert.Contains("2 Tracks · 1 Session · 0 Phases", card.TextContent);
     }
+
+    [Fact]
+    public async Task Offers_Import_a_Plan_link_to_Import_tab_with_plan_kind()
+    {
+        var cut = RenderPlans(await OpenWithAsync(Plan()));
+
+        var link = cut.FindAll("a").Single(a => a.TextContent.Trim() == "Import a Plan");
+        Assert.Equal("backup?tab=import&kind=plan", link.GetAttribute("href"));
+    }
+
+    [Fact]
+    public async Task Empty_Plans_state_also_offers_Import_a_Plan_link()
+    {
+        var cut = RenderPlans(await OpenWithAsync());
+
+        var link = cut.FindAll("a").Single(a => a.TextContent.Trim() == "Import a Plan");
+        Assert.Equal("backup?tab=import&kind=plan", link.GetAttribute("href"));
+    }
 }

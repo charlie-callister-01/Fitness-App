@@ -284,3 +284,15 @@ bUnit and Core tests cover the Track selector, split Plan/Track settings, Add Tr
 - [ ] 10. v1 Backup restored then edited: restore or open a formatVersion 1 dataset, verify it upgrades cleanly to one "Main" Track with identical Streak and week progress, then open the Plan editor, add a daily mobility Track with a daily Session, save, and verify Home and the Week view update immediately.
 - [ ] 11. Read-only state: open the app in a second window and check the Plan editor (Track selector, "+ Add Track", Move up, Move down, Settings, Phases, Sessions), Week view "Every day" row, and Home daily cards and extra week lines — all write/start controls are disabled and the read-only reason is shown.
 
+
+## First run and Two quick things manual checks (Data and settings, B9 + B10)
+
+bUnit and Core tests cover empty-state detection, the minimal Plan, the Welcome actions, Start with an empty Plan, and the Two quick things card's visibility and dismissal. They cannot check CSS at 360 px, the real install prompt or real persistent-storage grants.
+
+- [ ] 1. Welcome at 360 px in all four looks (Keep Dark, Keep Light, Clean Dark, Clean Light): on a fresh profile (no Plans, Workouts or Weigh-ins) Home shows "Welcome to the Keep", the local-only note, and Import my Plan, Restore a Backup and Start with an empty Plan stacked full width with at least 44 px tap targets and no sideways scroll.
+- [ ] 2. Welcome actions: Import my Plan opens Backup on the Import tab with Plan selected; Restore a Backup opens it with Backup selected; Start with an empty Plan opens the new Plan's editor (one weekly Main Track, no Sessions), and Home then shows the normal view.
+- [ ] 3. Two quick things card at 360 px in all four looks: with a Plan stored, the card shows Install (when offered), Keep my data (when storage is not granted) and Back up, plus Dismiss, with no clipped text.
+- [ ] 4. Real phone, install: in the browser (not installed) tap Install, accept the prompt, reopen the installed app and confirm the card no longer offers Install. On iOS Safari, where no prompt exists, confirm Install is not shown.
+- [ ] 5. Real phone, persistence: tap Keep my data and confirm the card (and Settings) reflect the browser's answer; where it is denied, the card stays until dismissed.
+- [ ] 6. Dismiss: tap Dismiss, reload and reopen after a day; the card stays hidden on this device. Clearing site data brings it back.
+- [ ] 7. Read-only (second window open): Welcome's Start with an empty Plan is disabled and the read-only reason shows.

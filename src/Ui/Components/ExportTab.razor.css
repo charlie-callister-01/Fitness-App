@@ -1,0 +1,64 @@
+.fa-export {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.fa-export h2 {
+    margin: 0;
+}
+
+.fa-export__section {
+    gap: var(--space-3);
+}
+
+.fa-export__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.fa-export__checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+    cursor: pointer;
+}
+
+.fa-export__checkbox input {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    accent-color: var(--primary);
+}
+
+.fa-export__hint,
+.fa-export__summary {
+    margin: 0;
+}
+
+.fa-export__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.fa-export__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.fa-export__status {
+    margin: 0;
+    color: var(--text);
+}
+
+.fa-export__error {
+    margin: 0;
+    color: var(--danger);
+}
