@@ -296,3 +296,15 @@ bUnit and Core tests cover empty-state detection, the minimal Plan, the Welcome 
 - [ ] 5. Real phone, persistence: tap Keep my data and confirm the card (and Settings) reflect the browser's answer; where it is denied, the card stays until dismissed.
 - [ ] 6. Dismiss: tap Dismiss, reload and reopen after a day; the card stays hidden on this device. Clearing site data brings it back.
 - [ ] 7. Read-only (second window open): Welcome's Start with an empty Plan is disabled and the read-only reason shows.
+
+## Hardening manual checks (B11)
+
+`Web.BrowserTests` covers axe-core scans on every screen and sheet, token contrast for all four Theme × Mode sets, 360 px overflow at 100% and 200% root text, the left rail and Home two-column layout at 900 px, `<h1>` and sheet focus, and the shared live region. These are what a real phone, screen reader and human eye still need to verify (ticket 09, combined with the owed checks above).
+
+- [ ] 1. Largest phone text size: raise the device's system/accessibility text size to its largest setting and open Home, Workout log, Progress, Weight, Trophies, Plans and Settings. Text scales, nothing overlaps or clips, and tap targets remain reachable.
+- [ ] 2. Screen-reader smoke test (TalkBack or VoiceOver): navigate Home, the Workout log (confirm a Set, trigger a validation error, check the live-region announcement) and a sheet (open, Tab/swipe through controls, close and confirm focus returns).
+- [ ] 3. Reduced motion: enable the phone's "Remove animations" / "Reduce motion" setting; check Home, Workout log, sheets and UnlockToast — nothing animates or flashes.
+- [ ] 4. Tablet or desktop window (≥ 900 px): check the 220 px left rail (no bottom bar) and Home's two-column layout (Today card, week strip and Week lines on the left; Orbs, Nudges, Recent PRs and Weight on the right), plus Progress, Weight, Trophies and Weekly review.
+- [ ] 5. Default-size visual spot-check: at the default text size, spot-check Home, Workout log and Progress against `docs/design/assets/mockups/S-01-*`, `S-02-*` and `S-07-*` to confirm the `rem` spacing/typography pass kept the same visual proportions.
+- [ ] 6. Performance (ticket 08): record warm-cache cold start to interactive Home on the phone (target < 3 s) with date and build identifier.
+  - **2026-11-23 (`bfde41d`, before `InvariantGlobalization`):** Lighthouse mobile on `https://charlie-callister-01.github.io/Fitness-App/` scored Accessibility 100, Best Practices 100, SEO 82, Performance 40 (FCP 1.0 s, LCP 20.0 s, TBT 1,530 ms, CLS 0.002; 3,609 KiB transferred over gzip including 192.7 KiB `icudt_EFIGS.dat`). IL trimming is active (`dotnet-illink`, 0 warnings); GitHub Pages does not serve `.br`. Added `<InvariantGlobalization>true</InvariantGlobalization>` to `src/Web/Web.csproj` (`icudt` removed; `_framework` `.gz` total 3,348.9 KB). Cold-cache Slow 4G Lighthouse ≥ 90 remains out of reach without AOT/Brotli/lazy-loading (propose a follow-up spec if needed after checking warm start on the phone).
