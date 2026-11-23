@@ -2,6 +2,8 @@
 
 One line per session, newest first, written by `/end-session`.
 
+## 2026-11-23: Grilled, specced and ticketed Hardening (B11, 9 tickets); built tickets 01–07 in parallel (whole-app browser host + fixture, token contrast test, axe on every screen, rem text scaling + 360 px overflow, left rail + Home two columns, h1/sheet focus, shared live region), applied code-review and thermo-nuclear fixes (REFACTOR 15–21), and opened PR #34. PRs #34.
+
 ## 2026-11-23: Reviewed Data and settings (B9+B10) (`code-review` + `thermo-nuclear-code-quality-review`), applied all 5 review fixes (`BackupFlow`, `Task.WhenAll` refreshes, `SettingsPage` handler helper, `ImportPreview` Keep/Replace unification, split `ExportImportTests`), and opened PR #33. PRs #33.
 ## 2026-11-22: Ticketed and built A5 (tickets 01–07: `tools/LegacyConverter`, format-2 example dataset & report CLI, Restore & Core rules proof tests, opt-in real-folder check, A2 assumption check against `view.js`) plus code-review fixes. PRs #32.
 ## 2026-11-22: Implemented A4.5 PR 2 (tickets 11–15: Plan editor Track selector & split Settings, per-Track Phases & Sessions, Week view Every day row, Plans list & Home Track cards/lines, Guide & Library Track context, manual checks) plus review fixes. PRs #31.
