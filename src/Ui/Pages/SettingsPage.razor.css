@@ -26,7 +26,7 @@
     border: var(--border-thin) solid var(--input-border);
     border-radius: var(--r-control);
     font-family: var(--font-ui);
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 .fa-settings__input:disabled {
@@ -65,5 +65,5 @@
 .fa-settings__error {
     margin: 0;
     color: var(--pr-text);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
