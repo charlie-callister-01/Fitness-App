@@ -2,7 +2,7 @@
 @implements IDisposable
 @inject NavigationManager Navigation
 
-<nav class="tabbar fa-tabbar" aria-label="Main">
+<nav class="tabbar fa-tabbar@(RailOnly ? " tabbar--rail-only" : "")" aria-label="Main">
     @foreach (var tab in Tabs)
     {
         <a class="fa-tab" href="@tab.Href" aria-current="@(IsActive(tab) ? "page" : null)">
@@ -13,6 +13,9 @@
 </nav>
 
 @code {
+    /// <summary>Shown only as the left rail from 900 px, never as the bottom bar: the Workout log keeps the rail on wide screens only.</summary>
+    [Parameter] public bool RailOnly { get; set; }
+
     private sealed record Tab(string Label, IconName Icon, string Href);
 
     // Hrefs are relative to the document base, so they work under the /Fitness-App/ sub-path. A tab owns every route whose first path
