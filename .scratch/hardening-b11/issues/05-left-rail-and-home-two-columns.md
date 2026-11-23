@@ -2,7 +2,7 @@
 
 Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Wide layout).
 
-**What to build:** From 900 px, the TabBar (C-12) becomes a fixed 220 px left rail: same items and order as the bottom bar including More, stacked, icon beside word. The content area is offset by the rail, and safe-area padding follows. The Workout log keeps the rail and stays a single centred column capped at 430 px, with its ConfirmBar spanning the log column, not the rail. Home uses the shared wide-first two-column rule from 900 px: TodayCard, WeekStrip and Nudges in the main column; Streak, Badges and next Benchmark in the side column, grouped as in `S-01-home-desktop.png`. First run stays single column. 431–899 px keeps the 560 px centred column. Plan editor list-and-detail is not built.
+**What to build:** From 900 px, the TabBar (C-12) becomes a fixed 220 px left rail: same items and order as the bottom bar including More, stacked, icon beside word. The content area is offset by the rail, and safe-area padding follows. The Workout log keeps the rail and stays a single centred column capped at 430 px, with its ConfirmBar spanning the log column, not the rail. Home uses the shared wide-first two-column rule from 900 px: TodayCard, WeekStrip, orb row (Streak, Phase, days to race) and Nudges in the main column; Recent PRs and Weight in the side column, grouped as in `S-01-home-desktop.png`. First run stays single column. 431–899 px keeps the 560 px centred column. Plan editor list-and-detail is not built.
 
 **Blocked by:** 01
 

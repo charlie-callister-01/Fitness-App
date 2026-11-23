@@ -11,5 +11,7 @@ Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Text scaling, Ove
 - [x] No font size or line height in the Ui styles is in `px`; non-text sizes are unchanged.
 - [x] At 360 px, every screen (empty and fixture) has scroll width ≤ viewport width at 100% and 200% root text.
 - [x] Ellipsised tile names have the full name in their accessible name.
-- [x] At the default text size the app looks the same as before (spot-check Home, Workout log and Progress against the mockups).
+- [ ] At the default text size the app looks the same as before (spot-check Home, Workout log and Progress against the mockups).
 - [x] `dotnet build` 0 warnings; all tests green.
+
+**Notes:** The default-size spot-check against the mockups moved to ticket 09.

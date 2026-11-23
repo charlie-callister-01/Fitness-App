@@ -54,7 +54,7 @@ Harden the finished app against §9 and §10 as written (WCAG 2.1 AA; any 2.2 it
 16. As the owner, I want each rail item to show its icon beside its word, so that the rail is easy to scan.
 17. As the owner, I want the rail to stay visible on the Workout log, so that I can leave the log the same way as any other screen.
 18. As the owner, I want the Workout log to stay a single centred column of at most 430 px on wide screens, so that logging looks and works like it does on my phone.
-19. As the owner, I want Home on a wide screen to show the TodayCard, week strip and Nudges in the main column and the Streak, Badges and next Benchmark beside them, so that I see the whole week at a glance (mockup `S-01-home-desktop.png`).
+19. As the owner, I want Home on a wide screen to show the TodayCard, week strip, orb row (Streak, Phase, days to race) and Nudges in the main column and Recent PRs and Weight beside them, so that I see the whole week at a glance (mockup `S-01-home-desktop.png`).
 20. As the owner, I want screens between 431 and 899 px to keep the 560 px centred column, so that large phones and small tablets stay readable.
 21. As the owner, I want the wide layout checked in the browser tests, so that the rail and Home's two columns do not regress.
 
@@ -118,7 +118,7 @@ Harden the finished app against §9 and §10 as written (WCAG 2.1 AA; any 2.2 it
 ### Wide layout
 - The TabBar (C-12) is the only navigation component: from 900 px the shell lays it out as a fixed 220 px left rail, items stacked, icon beside word, same items and order as the bottom bar including More. The shell's content area is offset by the rail. Safe-area padding moves with it (bottom for the bar, left for the rail where relevant).
 - The Workout log keeps the rail and stays a single centred column capped at 430 px; its ConfirmBar spans the log column, not the rail.
-- Home adopts the existing shared wide-first two-column rule from 900 px: main column holds the TodayCard, WeekStrip and Nudges; the side column holds the Streak, Badges and next Benchmark, grouped as in `S-01-home-desktop.png`. First run (Welcome, Two quick things) stays single column.
+- Home adopts the existing shared wide-first two-column rule from 900 px: main column holds the TodayCard, WeekStrip, orb row (Streak, Phase, days to race) and Nudges; the side column holds Recent PRs and Weight, grouped as in `S-01-home-desktop.png`. First run (Welcome, Two quick things) stays single column.
 - 431–899 px keeps the existing 560 px centred column.
 - Plan editor list-and-detail at 900 px is **not** built (see Out of Scope).
 
