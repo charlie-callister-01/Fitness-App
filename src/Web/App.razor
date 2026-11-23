@@ -9,6 +9,8 @@
         </LayoutView>
     </NotFound>
 </Router>
+@* The one polite live region every screen announces through (Ui.Saving.Announcer); outside the Router so it is never re-created. *@
+<Ui.Saving.LiveRegion />
 
 @code {
     // Pages live in the Ui assembly; the router must be told to scan it.

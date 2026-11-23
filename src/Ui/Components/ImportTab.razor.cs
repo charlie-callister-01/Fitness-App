@@ -45,6 +45,7 @@ public sealed partial class ImportTab : IDisposable
     [Inject] private IClock Clock { get; set; } = default!;
     [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+    [Inject] private Announcer Announcer { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -176,6 +177,7 @@ public sealed partial class ImportTab : IDisposable
             {
                 case ApplyOutcome.Applied applied:
                     _appliedSummary = applied.Summary;
+                    Announcer.Announce(string.Join(" ", ["Import applied.", .. applied.Summary]));
                     _preview = null;
                     _inspected = null;
                     _notices = [];
