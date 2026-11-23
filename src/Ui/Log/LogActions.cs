@@ -21,18 +21,20 @@ public sealed class LogActions
     private readonly LogEditState _state;
     private readonly LogViewBuilder _builder;
     private readonly LogSession _session;
+    private readonly Announcer _announcer;
     private readonly GuardedSave _save;
     private readonly WorkoutWriter _writer;
     private readonly ExerciseWriter _exerciseWriter;
 
     public LogActions(
-        AppData data, SaveFailureNotice notice, IIdGenerator ids, LogEditState state, LogViewBuilder builder, LogSession session)
+        AppData data, SaveFailureNotice notice, IIdGenerator ids, LogEditState state, LogViewBuilder builder, LogSession session, Announcer announcer)
     {
         _data = data;
         _ids = ids;
         _state = state;
         _builder = builder;
         _session = session;
+        _announcer = announcer;
         _save = new GuardedSave(data, notice);
         _writer = new WorkoutWriter(data, _save);
         _exerciseWriter = new ExerciseWriter(data, _save);
@@ -108,6 +110,10 @@ public sealed class LogActions
                     _state.Confirmed(key);
                     _session.StartRest(Open is { LoggedAfterwards: true });
                     _state.Toast = Open is { } saved ? _builder.ToastFor(saved, info.ExerciseId, row.Index) : null;
+                    if (_state.Toast is { } pr)
+                    {
+                        _announcer.Announce(pr);
+                    }
                 }
 
                 break;
