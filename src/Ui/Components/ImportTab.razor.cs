@@ -4,7 +4,6 @@ using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-using Ui.Accessibility;
 using Ui.Browser;
 using Ui.Pages;
 using Ui.Saving;
@@ -38,6 +37,7 @@ public sealed partial class ImportTab : IDisposable
     private List<string> _errors = [];
     private List<string> _notices = [];
     private IReadOnlyList<string>? _appliedSummary;
+    private int _appliedKey;
     private bool _applying;
 
     [Parameter] public ImportKind? InitialKind { get; set; }
@@ -46,7 +46,6 @@ public sealed partial class ImportTab : IDisposable
     [Inject] private IClock Clock { get; set; } = default!;
     [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
-    [Inject] private Announcer Announcer { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -64,6 +63,9 @@ public sealed partial class ImportTab : IDisposable
     public void Dispose() => Data.Changed -= OnDataChanged;
 
     private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>What the applied result says out loud; the panel shows the same summary lines.</summary>
+    private string? AppliedText => _appliedSummary is { } summary ? string.Join(" ", ["Import applied.", .. summary]) : null;
 
     private void OnTextInput(ChangeEventArgs e)
     {
@@ -178,7 +180,7 @@ public sealed partial class ImportTab : IDisposable
             {
                 case ApplyOutcome.Applied applied:
                     _appliedSummary = applied.Summary;
-                    Announcer.Announce(string.Join(" ", ["Import applied.", .. applied.Summary]));
+                    _appliedKey++;
                     _preview = null;
                     _inspected = null;
                     _notices = [];

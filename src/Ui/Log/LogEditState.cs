@@ -44,7 +44,17 @@ public sealed class LogEditState
     public FocusRequest? Focus { get; private set; }
 
     /// <summary>The "PR!" line for the Set just confirmed; cleared by any other action.</summary>
-    public string? Toast { get; set; }
+    public string? Toast { get; private set; }
+
+    /// <summary>Bumped each time a Set's confirm sets <see cref="Toast"/>, so the line reads out a repeated "PR!" again.</summary>
+    public int ToastKey { get; private set; }
+
+    /// <summary>Shows the "PR!" line for the Set just confirmed, or none.</summary>
+    public void ShowToast(string? toast)
+    {
+        Toast = toast;
+        ToastKey++;
+    }
 
     /// <summary>Starts over for a Workout: shows <paramref name="current"/>, drops every edit.</summary>
     public void Reset(int current, bool resumed)

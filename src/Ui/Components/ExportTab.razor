@@ -57,10 +57,7 @@
             }
         </div>
 
-        @if (_exportStatus is { Length: > 0 })
-        {
-            <p class="fa-export__status" data-testid="export-status">@_exportStatus</p>
-        }
+        <StatusLine Text="@_exportStatus" Key="_exportStatusKey" class="fa-export__status" data-testid="export-status" />
         @if (_exportError is { Length: > 0 })
         {
             <p class="fa-export__error" data-testid="export-error" role="alert">@_exportError</p>
@@ -80,10 +77,7 @@
             <Button Variant="ButtonVariant.Primary" Glyph="IconName.Backup" Disabled="WriteDisabled" OnClick="BackUpAsync">Export everything (Backup)</Button>
         </div>
 
-        @if (_backupStatus is { Length: > 0 })
-        {
-            <p class="fa-export__status" data-testid="backup-status">@_backupStatus</p>
-        }
+        <StatusLine Text="@_backupStatus" Key="_backupStatusKey" class="fa-export__status" data-testid="backup-status" />
         @if (_backupError is { Length: > 0 })
         {
             <p class="fa-export__error" data-testid="backup-error" role="alert">@_backupError</p>

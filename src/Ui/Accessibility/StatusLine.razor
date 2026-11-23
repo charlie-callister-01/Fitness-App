@@ -1,0 +1,42 @@
+@inject Announcer Announcer
+
+@* A status line that stays on the screen and is read out once through the shared live region, so the shown and the spoken words
+   cannot drift. Render it from the start (it shows nothing while Text is empty) and bump Key each time the status is set: a new Key
+   with Text announces Text, even when it repeats the last one. The first parameters seen never announce, so a line that is created
+   again, or redrawn, says nothing new. ChildContent, when given, is what shows instead of a plain <p> of Text. *@
+@if (!string.IsNullOrWhiteSpace(Text))
+{
+    if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <p @attributes="Attributes">@Text</p>
+    }
+}
+
+@code {
+    private int? _seenKey;
+
+    /// <summary>What the line says, on screen and out loud; empty shows nothing.</summary>
+    [Parameter] public string? Text { get; set; }
+
+    /// <summary>Changed by the owner of the line each time the status is set; a change announces <see cref="Text"/>.</summary>
+    [Parameter] public int Key { get; set; }
+
+    /// <summary>What shows in place of a plain paragraph of <see cref="Text"/>.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attributes { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (_seenKey is { } seen && seen != Key && !string.IsNullOrWhiteSpace(Text))
+        {
+            Announcer.Announce(Text);
+        }
+
+        _seenKey = Key;
+    }
+}

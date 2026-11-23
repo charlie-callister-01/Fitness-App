@@ -129,10 +129,7 @@ else
                         }
                     </div>
 
-                    @if (State.Toast is { } toast)
-                    {
-                        <p class="fa-well fa-toast">@toast</p>
-                    }
+                    <StatusLine Text="@State.Toast" Key="State.ToastKey" class="fa-well fa-toast" />
 
                     <div class="log__tools">
                         <button type="button" class="log__link" @onclick="() => State.AddSet(id)">Add Set</button>

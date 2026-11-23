@@ -80,7 +80,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _finish = new FinishFlow(Data, Notice, Clock, Ids);
         _afterwards = new LoggedAfterwardsFlow(Data, Notice);
         _session = new LogSession(Data, Clock, Ticker, WakeLock, RestSetting, _finish, _afterwards, Announcer, OnDataChanged);
-        _actions = new LogActions(Data, Notice, Ids, State, _builder, _session, Announcer);
+        _actions = new LogActions(Data, Notice, Ids, State, _builder, _session);
     }
 
     protected override Task OnAfterRenderAsync(bool firstRender) => _session.SyncScreenLockAsync(OpenWorkout);

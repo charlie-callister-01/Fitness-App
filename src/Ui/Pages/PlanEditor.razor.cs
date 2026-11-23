@@ -5,7 +5,6 @@ using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
-using Ui.Accessibility;
 using Ui.Saving;
 
 namespace Ui.Pages;
@@ -23,6 +22,7 @@ public sealed partial class PlanEditor : IDisposable
     private string? _leaveTarget;
     private bool _allowLeave;
     private bool _justSaved;
+    private int _savedKey;
     private string? _trackMessage;
     private bool _addTrackOpen;
     private string _newTrackName = "";
@@ -36,7 +36,6 @@ public sealed partial class PlanEditor : IDisposable
     [Inject] private IIdGenerator Ids { get; set; } = default!;
 
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
-    [Inject] private Announcer Announcer { get; set; } = default!;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -167,7 +166,7 @@ public sealed partial class PlanEditor : IDisposable
             state.MarkSaved(plan);
             _trackMessage = null;
             _justSaved = true;
-            Announcer.Announce("Plan saved.");
+            _savedKey++;
         }
     }
 

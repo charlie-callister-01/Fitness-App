@@ -4,8 +4,8 @@ namespace Ui.Accessibility;
 
 /// <summary>
 /// The one way a screen tells a screen-reader user that something happened (Badge unlocked, a PR, rest over, an export, Backup or
-/// import result). Screens hand it a message; the shell's <see cref="LiveRegion"/> reads it out politely. Visible status text stays
-/// on the screen as it is; only the announcement comes through here. A failed save is not announced here: the
+/// import result). Screens hand it a message; the shell's <see cref="LiveRegion"/> reads it out politely. A status line that also shows on
+/// screen goes through <see cref="StatusLine"/>, so the shown and spoken words are one string. A failed save is not announced here: the
 /// <see cref="SaveFailureBanner"/> stays assertive (<c>role="alert"</c>).
 /// </summary>
 public sealed class Announcer
