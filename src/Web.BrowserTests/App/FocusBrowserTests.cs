@@ -26,8 +26,17 @@ public sealed partial class FocusBrowserTests(AppFixture app)
             await page.GotoAsync(route == "/more" ? "/settings" : "/more");
             await page.GotoAsync(route);
 
-            // Let a screen that loads its data settle before reading it.
-            await page.Page.WaitForTimeoutAsync(300);
+            // Let a screen that loads its data settle: wait for its one h1 to hold focus, or give up and report what is there.
+            try
+            {
+                await page.Page.WaitForFunctionAsync(
+                    "() => { const h = document.querySelectorAll('h1'); return h.length === 1 && document.activeElement === h[0]; }",
+                    null, new() { Timeout = 5_000 });
+            }
+            catch (TimeoutException)
+            {
+                // Reported below with the route.
+            }
             var state = await page.Page.EvaluateAsync<string>(
                 "() => { const h = document.querySelectorAll('h1'); const f = h.length === 1 && document.activeElement === h[0]; " +
                 "return `${h.length} h1, focused ${f}, outline ${h.length ? getComputedStyle(h[0]).outlineStyle : '-'}`; }");
@@ -112,7 +121,7 @@ public sealed partial class FocusBrowserTests(AppFixture app)
     {
         // The fixture's open "Morning mobility" Workout has every Exercise done, so Finish goes straight to the Pain check.
         await using var page = await app.OpenAsync($"/log/{FixtureBackup.OpenWorkoutId}", new AppPageOptions { WithFixture = true });
-        await page.Page.GetByRole(AriaRole.Button, new() { Name = "Workout menu", Exact = true }).ClickAsync();
+        await page.WorkoutMenu.ClickAsync();
         await page.Page.GetByRole(AriaRole.Button, new() { NameRegex = FinishWorkout() }).ClickAsync();
         var sheet = page.Page.GetByRole(AriaRole.Dialog, new() { Name = "Any pain today?" });
 

@@ -132,10 +132,59 @@ public sealed class AppPage : IAsyncDisposable
     // Every screen has an h1 in the layout's main region once Blazor has rendered (the loading placeholder has none).
     private Task WaitForRenderAsync() => Page.Locator("#main-content h1").First.WaitForAsync();
 
-    /// <summary>The real Restore path: paste the Backup on the Import tab, Check, Apply.</summary>
-    private async Task RestoreFixtureAsync()
+    /// <summary>The live Workout's Workout menu button.</summary>
+    public ILocator WorkoutMenu => Page.GetByRole(AriaRole.Button, new() { Name = "Workout menu", Exact = true });
+
+    /// <summary>
+    /// Starts the Session named <paramref name="name"/> from Home: its daily Start button, else Today's Start when it is today's,
+    /// else through Do a different Session. Waits until its log is open.
+    /// </summary>
+    public async Task StartSessionAsync(string name)
     {
-        await Page.Locator("#import-paste").FillAsync(FixtureBackup.Json);
+        var main = Page.Locator("#main-content");
+        var today = main.GetByRole(AriaRole.Region, new() { Name = "Today", Exact = true });
+        await today.WaitForAsync();
+
+        var daily = main.GetByRole(AriaRole.Button, new() { Name = $"Start {name}", Exact = true });
+        if (await daily.CountAsync() > 0)
+        {
+            await daily.ClickAsync();
+        }
+        else if (await today.GetByText(name).CountAsync() > 0)
+        {
+            await today.GetByRole(AriaRole.Button, new() { Name = "Start" }).First.ClickAsync();
+        }
+        else
+        {
+            await main.GetByRole(AriaRole.Button, new() { Name = "Do a different Session" }).ClickAsync();
+            await Page.GetByRole(AriaRole.Dialog).Locator(".fa-sessionrow", new() { HasText = name }).ClickAsync();
+        }
+
+        await Page.WaitForURLAsync("**/log/**");
+        await WorkoutMenu.WaitForAsync();
+    }
+
+    /// <summary>On the live Workout: Workout menu, Finish Workout, Finish as Partial when asked, until the Pain check is open.</summary>
+    public async Task<ILocator> FinishToPainCheckAsync()
+    {
+        await WorkoutMenu.ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Finish Workout" }).ClickAsync();
+        var partial = Page.GetByRole(AriaRole.Dialog, new() { Name = "Finish as Partial?" });
+        var pain = Page.GetByRole(AriaRole.Dialog, new() { Name = "Any pain today?" });
+        await partial.Or(pain).First.WaitForAsync();
+        if (await partial.IsVisibleAsync())
+        {
+            await partial.GetByRole(AriaRole.Button, new() { Name = "Finish", Exact = true }).ClickAsync();
+        }
+
+        await pain.WaitForAsync();
+        return pain;
+    }
+
+    /// <summary>The real Import path, on the Import tab: paste <paramref name="json"/>, Check, Apply.</summary>
+    public async Task ApplyImportAsync(string json)
+    {
+        await Page.Locator("#import-paste").FillAsync(json);
         await Page.GetByRole(AriaRole.Button, new() { Name = "Check", Exact = true }).ClickAsync();
         var apply = Page.GetByTestId("import-preview").GetByRole(AriaRole.Button, new() { Name = "Apply", Exact = true });
         try
@@ -144,10 +193,16 @@ public sealed class AppPage : IAsyncDisposable
         }
         catch (PlaywrightException)
         {
-            throw new InvalidOperationException($"The fixture Backup cannot be applied: {await Page.Locator("#main-content").InnerTextAsync()}");
+            throw new InvalidOperationException($"The import cannot be applied: {await Page.Locator("#main-content").InnerTextAsync()}");
         }
 
         await apply.ClickAsync();
+    }
+
+    /// <summary>The real Restore path: the fixture Backup through <see cref="ApplyImportAsync"/>.</summary>
+    private async Task RestoreFixtureAsync()
+    {
+        await ApplyImportAsync(FixtureBackup.Json);
 
         var applied = Page.GetByTestId("import-applied");
         var errors = Page.GetByTestId("import-errors");
