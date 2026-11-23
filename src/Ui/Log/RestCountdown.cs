@@ -77,9 +77,14 @@ public sealed class RestCountdown(IClock clock, ISecondTicker ticker) : IDisposa
     {
         try
         {
-            while (clock.UtcNow < _endsAt)
+            while (true)
             {
                 await ticker.WaitNextAsync(cancellation);
+                if (clock.UtcNow >= _endsAt)
+                {
+                    break;
+                }
+
                 Changed?.Invoke();
             }
         }
@@ -88,10 +93,14 @@ public sealed class RestCountdown(IClock clock, ISecondTicker ticker) : IDisposa
             return;
         }
 
-        if (!cancellation.IsCancellationRequested)
+        if (cancellation.IsCancellationRequested)
         {
-            Stop();
-            Ended?.Invoke();
+            return;
         }
+
+        // Ended comes before the Changed that clears the readout, so whoever redraws on Changed sees the end already announced.
+        Dispose();
+        Ended?.Invoke();
+        Changed?.Invoke();
     }
 }

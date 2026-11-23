@@ -248,9 +248,11 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
         Assert.Equal("off", cut.Find(".fa-confirmbar__rest").GetAttribute("aria-live"));
 
         Pass(TimeSpan.FromSeconds(30));
-        cut.WaitForAssertion(() => Assert.Null(Rest(cut)));
-
-        Assert.Equal(["Rest over"], announced);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Null(Rest(cut));
+            Assert.Equal(["Rest over"], announced);
+        });
     }
 
     [Fact]

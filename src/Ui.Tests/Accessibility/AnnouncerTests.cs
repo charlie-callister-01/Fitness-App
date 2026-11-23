@@ -41,7 +41,7 @@ public sealed class AnnouncerTests : BunitContext
 
         _announcer.Announce("Rest over");
 
-        Assert.Equal("", cut.Find("[data-testid='live-region']").TextContent);
+        cut.WaitForAssertion(() => Assert.Equal("", cut.Find("[data-testid='live-region']").TextContent));
         cut.WaitForAssertion(() => Assert.Equal("Rest over", cut.Find("[data-testid='live-region']").TextContent));
     }
 
