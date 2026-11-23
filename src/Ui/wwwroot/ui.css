@@ -42,15 +42,15 @@ a.fa-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 /* The one shared two-column rule: one column on a phone, two from 900 px. Opt in with fa-twocol; fa-twocol--wide-first gives the first column twice the width. */
 .fa-twocol {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
 }
 
 @media (min-width: 900px) {
     .fa-twocol {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: start;
     }
 
-    .fa-twocol--wide-first { grid-template-columns: 2fr 1fr; }
+    .fa-twocol--wide-first { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 }
