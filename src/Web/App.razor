@@ -7,10 +7,14 @@
         <LayoutView Layout="@typeof(MainLayout)">
             <Ui.Pages.NotFound />
         </LayoutView>
+        <FocusOnNavigate RouteData="@NotFoundRoute" Selector="h1" />
     </NotFound>
 </Router>
 
 @code {
     // Pages live in the Ui assembly; the router must be told to scan it.
     private static readonly System.Reflection.Assembly[] UiAssemblies = [typeof(Ui.Pages.Home).Assembly];
+
+    // The not-found screen has no route of its own; this lets its h1 take focus on arrival like every other screen's.
+    private static readonly RouteData NotFoundRoute = new(typeof(Ui.Pages.NotFound), new Dictionary<string, object?>());
 }

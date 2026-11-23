@@ -110,6 +110,8 @@ public sealed partial class Home : IDisposable
         Data.Changed += OnDataChanged;
         Browser.InstallAvailabilityChanged += OnInstallAvailabilityChanged;
         Rebuild();
+        // Known before the first render, so the h1 the router focuses on arrival is the one that stays (Welcome or the greeting).
+        _welcome = FirstRun.IsEmpty(Data.Snapshot);
         await RefreshAsync();
     }
 

@@ -6,10 +6,10 @@ Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Focus, Reduced mo
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Every routed page state renders exactly one `<h1>` (asserted in browser tests over all routes, empty and fixture).
-- [ ] After in-app navigation, focus is on the new page's `<h1>`.
-- [ ] For each of the four sheets: initial focus inside, Tab and Shift+Tab stay inside, Esc closes (or is refused where the sheet's owner refuses), focus returns to the opener.
-- [ ] The reduced-motion check passes.
-- [ ] `dotnet build` 0 warnings; all tests green.
+- [x] Every routed page state renders exactly one `<h1>` (asserted in browser tests over all routes, empty and fixture).
+- [x] After in-app navigation, focus is on the new page's `<h1>`.
+- [x] For each of the four sheets: initial focus inside, Tab and Shift+Tab stay inside, Esc closes (or is refused where the sheet's owner refuses), focus returns to the opener.
+- [x] The reduced-motion check passes.
+- [x] `dotnet build` 0 warnings; all tests green.
