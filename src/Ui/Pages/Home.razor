@@ -59,7 +59,9 @@ else
         </section>
     }
 
-    <div class="fa-home__columns">
+    @* Design §9 and S-01-home-desktop.png: the main column (today, the week, Orbs, Nudges) and the side column (Recent PRs, Weight) sit side by
+       side from 900 px through the shared fa-twocol rule; below that they stack in this order. *@
+    <div class="fa-home__columns fa-twocol fa-twocol--wide-first">
         <div class="fa-home__main">
             <TodayCard Card="_view.Today" Today="Page.Today" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Starting="_save.IsBusy"
                        OnStart="StartAsync" OnContinue="OnContinue" OnOpenSummary="OnOpenSummary"
@@ -151,9 +153,7 @@ else
                     }
                 </section>
             }
-        </div>
 
-        <div class="fa-home__side">
             @if (_view.Orbs is { } orbs)
             {
                 <OrbRow Orbs="orbs" OnOpenProgress="OnOpenProgress" OnOpenCalendar="OnOpenCalendar" />
@@ -166,7 +166,9 @@ else
                     <NudgeCard Item="nudge" OnAction="OnNudgeAction" OnDismiss="OnNudgeDismiss" />
                 }
             }
+        </div>
 
+        <div class="fa-home__side">
             <RecentPrsPanel Prs="_view.RecentPrs" Exercises="Data.Snapshot.Exercises" Converter="Converter" />
             <WeightPanel Panel="_view.Weight" Converter="Converter" OnLogWeight="OnLogWeight" />
         </div>
