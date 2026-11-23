@@ -105,3 +105,37 @@
         gap: var(--space-4);
     }
 }
+
+.fa-home__welcome {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fa-home__welcome h1 {
+    margin: 0;
+}
+
+.fa-home__welcome-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-quickthings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.fa-quickthings p {
+    margin: 0;
+}
+
+.fa-quickthings__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+}
+

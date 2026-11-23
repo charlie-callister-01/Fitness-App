@@ -16,10 +16,11 @@ public sealed class HomeTests : BunitContext
 {
     private readonly SaveFailureNotice _notice = new();
 
-    private async Task<IRenderedComponent<Home>> RenderHomeAsync(AppData? data = null, DateTimeOffset? now = null)
+    private async Task<IRenderedComponent<Home>> RenderHomeAsync(
+        AppData? data = null, DateTimeOffset? now = null, FakeDevicePreferences? preferences = null, FakeBrowserCapabilities? browser = null)
     {
-        data ??= await AppData.OpenAsync(new InMemoryDataStore());
-        Wire(this, data, _notice);
+        data ??= await OpenSeededAsync(plan: Plan());
+        Wire(this, data, _notice, preferences, browser);
         if (now is { } clockNow)
         {
             Services.AddSingleton<IClock>(new FixedClock(clockNow));
@@ -51,7 +52,9 @@ public sealed class HomeTests : BunitContext
     [Fact]
     public async Task With_no_active_plan_home_says_so_and_offers_no_start()
     {
-        var cut = await RenderHomeAsync(await OpenSeededAsync());
+        var seeded = await OpenSeededAsync();
+        Assert.IsType<CommitResult.Committed>(await seeded.CommitAsync([Change.Put(new WeighIn("w1", Today, 80))]));
+        var cut = await RenderHomeAsync(seeded);
 
         Assert.Contains("No active Plan", cut.Markup);
         Assert.False(Has(cut, "Start"));
@@ -458,5 +461,113 @@ public sealed class HomeTests : BunitContext
         cut.WaitForAssertion(() => Assert.Contains("out of storage", _notice.Message));
         Assert.Empty(data.Snapshot.Workouts);
         Assert.Equal("", CurrentPath);
+    }
+
+    // First run (S-12) and Two quick things.
+    private static async Task<AppData> OpenEmptyAsync(InMemoryStorageEnvironment? environment = null) =>
+        await AppData.OpenAsync(new InMemoryDataStore(), environment);
+
+    private static async Task<AppData> OpenPlannedAsync(InMemoryStorageEnvironment environment)
+    {
+        var data = await AppData.OpenAsync(new InMemoryDataStore(), environment);
+        Assert.IsType<CommitResult.Committed>(await data.CommitAsync([.. PageFixture.Exercises.Select(Change.Put), Change.Put(Plan())]));
+        return data;
+    }
+
+    [Fact]
+    public async Task With_nothing_stored_home_welcomes_with_three_ways_to_start()
+    {
+        var cut = await RenderHomeAsync(await OpenEmptyAsync());
+
+        Assert.Equal("Welcome to the Keep", cut.Find("h1").TextContent.Trim());
+        Assert.Contains("only on this device", cut.Markup);
+        Assert.Equal("backup?tab=import&kind=plan", cut.Find("a.fa-btn[href*='kind=plan']").GetAttribute("href"));
+        Assert.Equal("Import my Plan", cut.Find("a.fa-btn[href*='kind=plan']").TextContent.Trim());
+        Assert.Equal("backup?tab=import&kind=backup", cut.Find("a.fa-btn[href*='kind=backup']").GetAttribute("href"));
+        Assert.Equal("Restore a Backup", cut.Find("a.fa-btn[href*='kind=backup']").TextContent.Trim());
+        Assert.True(Has(cut, "Start with an empty Plan"));
+        Assert.Empty(cut.FindAll(".fa-quickthings"));
+    }
+
+    [Fact]
+    public async Task Starting_with_an_empty_plan_saves_an_active_plan_and_opens_its_editor()
+    {
+        var data = await OpenEmptyAsync();
+        var cut = await RenderHomeAsync(data);
+
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Start with an empty Plan").Click();
+
+        cut.WaitForAssertion(() => Assert.Single(data.Snapshot.Plans));
+        var plan = Assert.Single(data.Snapshot.Plans);
+        Assert.True(plan.IsActive);
+        Assert.IsType<TrackRhythm.Weekly>(Assert.Single(plan.Tracks).Rhythm);
+        Assert.Equal(Today, plan.StartDate);
+        cut.WaitForAssertion(() => Assert.Equal($"plans/{plan.Id}", CurrentPath));
+    }
+
+    [Fact]
+    public async Task In_a_read_only_window_the_empty_plan_start_is_disabled_with_the_reason()
+    {
+        var data = await OpenEmptyAsync(new InMemoryStorageEnvironment { WriterLock = WriterLockResult.HeldElsewhere });
+        var cut = await RenderHomeAsync(data);
+
+        Assert.True(cut.FindAll("button").Single(b => b.TextContent.Trim() == "Start with an empty Plan").HasAttribute("disabled"));
+        Assert.NotEmpty(cut.FindAll(".fa-well"));
+        Assert.Empty(data.Snapshot.Plans);
+    }
+
+    [Fact]
+    public async Task Two_quick_things_offer_install_storage_and_backup_once_a_plan_exists()
+    {
+        var environment = new InMemoryStorageEnvironment { Persistence = PersistenceStatus.NotGranted };
+        var browser = new FakeBrowserCapabilities { CanInstall = true };
+        var data = await OpenPlannedAsync(environment);
+        var cut = await RenderHomeAsync(data, browser: browser);
+
+        var card = cut.Find(".fa-quickthings");
+        Assert.Contains("Two quick things", card.TextContent);
+        Assert.DoesNotContain(cut.FindAll("h1"), h => h.TextContent.Contains("Welcome"));
+
+        cut.Find(".fa-quickthings button[aria-label='Install the app']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(1, browser.InstallPrompts));
+
+        var before = environment.PersistenceRequests;
+        cut.Find(".fa-quickthings button[aria-label='Keep my data on this device']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(before + 1, environment.PersistenceRequests));
+
+        Assert.Equal("backup", cut.Find(".fa-quickthings a[href]").GetAttribute("href"));
+    }
+
+    [Fact]
+    public async Task Dismissing_two_quick_things_hides_it_for_good_on_this_device()
+    {
+        var preferences = new FakeDevicePreferences();
+        var data = await OpenPlannedAsync(new InMemoryStorageEnvironment { Persistence = PersistenceStatus.NotGranted });
+        var cut = await RenderHomeAsync(data, preferences: preferences);
+
+        cut.Find(".fa-quickthings button.fa-home__link[aria-label='Dismiss: Two quick things']").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".fa-quickthings")));
+        Assert.Contains("1", preferences.Values.Values);
+    }
+
+    [Fact]
+    public async Task A_dismissed_two_quick_things_stays_hidden_on_the_next_visit()
+    {
+        var preferences = new FakeDevicePreferences();
+        preferences.Values["quick-things-dismissed"] = "1";
+        var data = await OpenPlannedAsync(new InMemoryStorageEnvironment { Persistence = PersistenceStatus.NotGranted });
+        var cut = await RenderHomeAsync(data, preferences: preferences);
+
+        Assert.Empty(cut.FindAll(".fa-quickthings"));
+    }
+
+    [Fact]
+    public async Task Two_quick_things_stay_away_when_installed_and_persistent()
+    {
+        var data = await OpenPlannedAsync(new InMemoryStorageEnvironment());
+        var cut = await RenderHomeAsync(data, browser: new FakeBrowserCapabilities { IsStandalone = true });
+
+        Assert.Empty(cut.FindAll(".fa-quickthings"));
     }
 }
