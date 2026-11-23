@@ -35,6 +35,7 @@ public sealed partial class PlanEditor : IDisposable
     [Inject] private IIdGenerator Ids { get; set; } = default!;
 
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+    [Inject] private Announcer Announcer { get; set; } = default!;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -165,6 +166,7 @@ public sealed partial class PlanEditor : IDisposable
             state.MarkSaved(plan);
             _trackMessage = null;
             _justSaved = true;
+            Announcer.Announce("Plan saved.");
         }
     }
 

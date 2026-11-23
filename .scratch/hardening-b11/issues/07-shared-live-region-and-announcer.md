@@ -6,11 +6,11 @@ Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Announcements).
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The live region is present on every page from first render and is polite.
-- [ ] bUnit tests cover the announcer (message set, repeat message re-announced) and each component's call.
-- [ ] Browser tests see the region's text for Badge unlocked, rest timer end, a new PR and an Import result.
-- [ ] The rest timer announces only at zero, not each second.
-- [ ] Save failures remain `role="alert"`; no new assertive regions.
-- [ ] `dotnet build` 0 warnings; all tests green.
+- [x] The live region is present on every page from first render and is polite.
+- [x] bUnit tests cover the announcer (message set, repeat message re-announced) and each component's call.
+- [x] Browser tests see the region's text for Badge unlocked, rest timer end, a new PR and an Import result.
+- [x] The rest timer announces only at zero, not each second.
+- [x] Save failures remain `role="alert"`; no new assertive regions.
+- [x] `dotnet build` 0 warnings; all tests green.

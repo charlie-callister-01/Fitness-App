@@ -9,15 +9,19 @@ namespace Ui.Saving;
 /// <summary>Result of running the shared Backup download and timestamp-recording flow.</summary>
 public sealed record BackupOutcome(bool Succeeded, string? FileName, string? Error);
 
-/// <summary>Shared Backup download + timestamp recording with a busy guard and last-backup formatting.</summary>
+/// <summary>Shared Backup download + timestamp recording with a busy guard and last-backup formatting; a finished Backup is announced politely.</summary>
 public sealed class BackupFlow(
     AppData data,
     IClock clock,
     IBuildInfo buildInfo,
     IBrowserCapabilities browser,
-    SaveFailureNotice notice)
+    SaveFailureNotice notice,
+    Announcer announcer)
 {
     public bool IsBusy { get; private set; }
+
+    /// <summary>What a finished Backup says, on screen and through the <see cref="Announcer"/>.</summary>
+    public static string SuccessMessage(string fileName) => $"Backup downloaded ({fileName}).";
 
     public static string FormatLastBackup(DateTimeOffset? lastBackupAt) => lastBackupAt is { } at
         ? DisplayFormat.WeekdayDay(DateOnly.FromDateTime(at.ToLocalTime().DateTime))
@@ -47,6 +51,7 @@ public sealed class BackupFlow(
                 return new BackupOutcome(false, null, null);
             }
 
+            announcer.Announce(SuccessMessage(exported.FileName));
             return new BackupOutcome(true, exported.FileName, null);
         }
         finally

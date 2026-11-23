@@ -83,7 +83,7 @@
             }
             else if (_justSaved)
             {
-                <p class="fa-muted" role="status">Saved.</p>
+                <p class="fa-muted">Saved.</p>
             }
 
             <Button Variant="ButtonVariant.Primary" Disabled="@(Disabled || !_state.IsDirty || _state.Snapshot.Composed is null)" OnClick="SaveAsync">Save</Button>
