@@ -3,7 +3,7 @@
 @* For the Workout log: no navigation on a phone; from 900 px the left rail stays (design §9). *@
 <SkipLink Target="() => main" />
 <TabBar RailOnly="true" />
-<main id="main-content" class="fullscreen" tabindex="-1" @ref="main"><SaveFailureBanner />@Body</main>
+<main id="main-content" class="fullscreen fa-railed" tabindex="-1" @ref="main"><SaveFailureBanner />@Body</main>
 
 @code {
     private ElementReference main;

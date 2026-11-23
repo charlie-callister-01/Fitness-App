@@ -1,12 +1,8 @@
+/* padding-left comes from the shared .fa-railed rule (components.css): the left safe area, or the rail from 900 px. */
 .fullscreen {
     min-height: 100dvh;
     box-sizing: border-box;
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-}
-
-/* The left rail takes 220 px (it carries the left safe area); the log centres in what is left. */
-@media (min-width: 900px) {
-    .fullscreen {
-        padding-left: 220px;
-    }
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
 }
