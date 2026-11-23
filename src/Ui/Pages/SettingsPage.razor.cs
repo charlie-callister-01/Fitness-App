@@ -1,8 +1,6 @@
 using System.Globalization;
-using Core.Exchange;
 using Core.Model;
 using Core.Rules.Editing;
-using Core.Rules.Formatting;
 using Core.Rules.Units;
 using Core.Storage;
 using Core.Time;
@@ -21,6 +19,7 @@ public sealed partial class SettingsPage : IDisposable
 {
     private PageContext Page = default!;
     private GuardedSave _save = default!;
+    private BackupFlow _backup = default!;
 
     private string _weightIncrementText = "";
     private string? _weightIncrementError;
@@ -44,13 +43,11 @@ public sealed partial class SettingsPage : IDisposable
 
     private Settings Current => Data.Snapshot.Settings;
 
-    private bool WriteDisabled => !Page.CanWrite || _save.IsBusy;
+    private bool WriteDisabled => !Page.CanWrite || _save.IsBusy || _backup.IsBusy;
 
     private string WeightUnitLabel => new UnitConverter(Current).WeightLabel;
 
-    private string LastBackupText => Data.LastBackupAt is { } at
-        ? DisplayFormat.WeekdayDay(DateOnly.FromDateTime(at.ToLocalTime().DateTime))
-        : "Never";
+    private string LastBackupText => BackupFlow.FormatLastBackup(Data.LastBackupAt);
 
     private string PersistenceStatusText => Data.Health.Persistence switch
     {
@@ -73,6 +70,7 @@ public sealed partial class SettingsPage : IDisposable
     {
         Page = new PageContext(Data, Clock);
         _save = new GuardedSave(Data, Notice);
+        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice);
         SyncDraftsFromSnapshot();
         Data.Changed += OnDataChanged;
         Themes.Changed += OnThemeChanged;
@@ -101,16 +99,27 @@ public sealed partial class SettingsPage : IDisposable
 
     private void OnInstallAvailabilityChanged() => _ = InvokeAsync(async () =>
     {
-        _isStandalone = await Browser.IsStandaloneAsync();
-        _canInstall = await Browser.CanInstallAsync();
+        await RefreshInstallStatusAsync();
         StateHasChanged();
     });
 
     private async Task RefreshDataStatusAsync()
     {
-        await Data.RefreshEstimateAsync();
-        _isStandalone = await Browser.IsStandaloneAsync();
-        _canInstall = await Browser.CanInstallAsync();
+        var estimateTask = Data.RefreshEstimateAsync();
+        var standaloneTask = Browser.IsStandaloneAsync();
+        var canInstallTask = Browser.CanInstallAsync();
+        await Task.WhenAll(estimateTask, standaloneTask, canInstallTask);
+        _isStandalone = standaloneTask.Result;
+        _canInstall = canInstallTask.Result;
+    }
+
+    private async Task RefreshInstallStatusAsync()
+    {
+        var standaloneTask = Browser.IsStandaloneAsync();
+        var canInstallTask = Browser.CanInstallAsync();
+        await Task.WhenAll(standaloneTask, canInstallTask);
+        _isStandalone = standaloneTask.Result;
+        _canInstall = canInstallTask.Result;
     }
 
     private void SyncDraftsFromSnapshot()
@@ -128,44 +137,28 @@ public sealed partial class SettingsPage : IDisposable
     private Task SetDistanceUnitAsync(DistanceUnit unit) =>
         CommitSettingsAsync(Current with { DisplayDistanceUnit = unit });
 
-    private async Task OnWeightIncrementChangedAsync(ChangeEventArgs e)
-    {
-        _weightIncrementText = e.Value?.ToString() ?? "";
-        var result = SettingsRules.TrySetWeightIncrement(Current, _weightIncrementText);
-        _weightIncrementError = result.Error;
-        if (result.Settings is { } updated)
-        {
-            await CommitSettingsAsync(updated);
-        }
-    }
+    private Task OnWeightIncrementChangedAsync(ChangeEventArgs e) =>
+        ApplySettingAsync(e, v => _weightIncrementText = v, err => _weightIncrementError = err, SettingsRules.TrySetWeightIncrement);
 
-    private async Task OnRestTimerChangedAsync(ChangeEventArgs e)
-    {
-        _restTimerText = e.Value?.ToString() ?? "";
-        var result = SettingsRules.TrySetRestTimer(Current, _restTimerText);
-        _restTimerError = result.Error;
-        if (result.Settings is { } updated)
-        {
-            await CommitSettingsAsync(updated);
-        }
-    }
+    private Task OnRestTimerChangedAsync(ChangeEventArgs e) =>
+        ApplySettingAsync(e, v => _restTimerText = v, err => _restTimerError = err, SettingsRules.TrySetRestTimer);
 
-    private async Task OnGoalWeightChangedAsync(ChangeEventArgs e)
-    {
-        _goalWeightText = e.Value?.ToString() ?? "";
-        var result = SettingsRules.TrySetGoalWeight(Current, _goalWeightText);
-        _goalWeightError = result.Error;
-        if (result.Settings is { } updated)
-        {
-            await CommitSettingsAsync(updated);
-        }
-    }
+    private Task OnGoalWeightChangedAsync(ChangeEventArgs e) =>
+        ApplySettingAsync(e, v => _goalWeightText = v, err => _goalWeightError = err, SettingsRules.TrySetGoalWeight);
 
-    private async Task OnStreakMinChangedAsync(ChangeEventArgs e)
+    private Task OnStreakMinChangedAsync(ChangeEventArgs e) =>
+        ApplySettingAsync(e, v => _streakMinText = v, err => _streakMinError = err, SettingsRules.TrySetStreakMinWorkouts);
+
+    private async Task ApplySettingAsync(
+        ChangeEventArgs e,
+        Action<string> setText,
+        Action<string?> setError,
+        Func<Settings, string?, SettingsUpdateResult> rule)
     {
-        _streakMinText = e.Value?.ToString() ?? "";
-        var result = SettingsRules.TrySetStreakMinWorkouts(Current, _streakMinText);
-        _streakMinError = result.Error;
+        var text = e.Value?.ToString() ?? "";
+        setText(text);
+        var result = rule(Current, text);
+        setError(result.Error);
         if (result.Settings is { } updated)
         {
             await CommitSettingsAsync(updated);
@@ -189,19 +182,8 @@ public sealed partial class SettingsPage : IDisposable
         }
 
         _backupError = null;
-        var now = Clock.UtcNow;
-        var exported = Exporter.Export(Data.Snapshot, ExportRequest.Backup, BuildInfo.Identifier, now);
-        if (!await Browser.DownloadFileAsync(exported.FileName, exported.Text, "application/json"))
-        {
-            _backupError = "Could not start the Backup download.";
-            return;
-        }
-
-        var recorded = await BackupRecorder.RecordAsync(Data, exported, now);
-        if (recorded is StoreResult<Unit>.Failure failure)
-        {
-            Notice.Report(new CommitResult.StoreFailed(failure.Error));
-        }
+        var outcome = await _backup.RunAsync();
+        _backupError = outcome.Error;
     }
 
     private async Task RequestPersistenceAsync()
@@ -213,8 +195,7 @@ public sealed partial class SettingsPage : IDisposable
     private async Task InstallAppAsync()
     {
         await Browser.PromptInstallAsync();
-        _isStandalone = await Browser.IsStandaloneAsync();
-        _canInstall = await Browser.CanInstallAsync();
+        await RefreshInstallStatusAsync();
     }
 
     private static string FormatBytes(long bytes)

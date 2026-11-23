@@ -157,13 +157,18 @@ public sealed partial class Home : IDisposable
 
     private async Task RefreshAsync()
     {
-        Rebuild();
-        _dismissed = await Dismissals.LoadAsync(_view.NudgeKeys);
+        var dismissalsTask = Dismissals.LoadAsync(_view.NudgeKeys);
+        var standaloneTask = Browser.IsStandaloneAsync();
+        var canInstallTask = Browser.CanInstallAsync();
+        var quickDismissedTask = Preferences.GetAsync(QuickThingsDismissedKey);
+        await Task.WhenAll(dismissalsTask, standaloneTask, canInstallTask, quickDismissedTask);
+
+        _dismissed = dismissalsTask.Result;
         _welcome = FirstRun.IsEmpty(Data.Snapshot);
-        _isStandalone = await Browser.IsStandaloneAsync();
-        _canInstall = await Browser.CanInstallAsync();
+        _isStandalone = standaloneTask.Result;
+        _canInstall = canInstallTask.Result;
         _showQuickThings = !_welcome
-            && await Preferences.GetAsync(QuickThingsDismissedKey) != "1"
+            && quickDismissedTask.Result != "1"
             && FirstRun.HasQuickThingsToDo(_isStandalone, Data.Health.Persistence);
         Rebuild();
         StateHasChanged();

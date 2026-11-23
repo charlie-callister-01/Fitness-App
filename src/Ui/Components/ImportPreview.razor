@@ -73,25 +73,13 @@
         <ul class="fa-import-preview__rows" aria-label="Changes">
             @foreach (var item in Preview.Items)
             {
-                var key = item.Key;
-                var isGuideToggle = item.Kind == RecordKind.Guide && (item.OffersReplace || (item.Action == ImportItemAction.Change && Decisions.GuideChoice(key) == KeepOrReplace.Replace));
-                var isWorkoutToggle = item.Kind == RecordKind.Workout && (item.OffersReplace || (item.Action == ImportItemAction.Change && Decisions.WorkoutChoice(key) == KeepOrReplace.Replace));
                 <li class="fa-import-preview__row @RowModifier(item.Action)">
                     <p class="fa-import-preview__text">@item.Text</p>
-                    @if (isGuideToggle)
+                    @if (GetKeepOrReplaceChoice(item) is { } choice)
                     {
-                        var choice = Decisions.GuideChoice(key);
                         <div class="fa-import-preview__choices">
-                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Keep" OnClick="() => ChooseGuide(key, KeepOrReplace.Keep)">Keep mine</Button>
-                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Replace" OnClick="() => ChooseGuide(key, KeepOrReplace.Replace)">Replace</Button>
-                        </div>
-                    }
-                    else if (isWorkoutToggle)
-                    {
-                        var choice = Decisions.WorkoutChoice(key);
-                        <div class="fa-import-preview__choices">
-                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Keep" OnClick="() => ChooseWorkout(key, KeepOrReplace.Keep)">Keep mine</Button>
-                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Replace" OnClick="() => ChooseWorkout(key, KeepOrReplace.Replace)">Replace</Button>
+                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Keep" OnClick="() => ChooseKeepOrReplace(item, KeepOrReplace.Keep)">Keep mine</Button>
+                            <Button Variant="ButtonVariant.Secondary" Pressed="choice == KeepOrReplace.Replace" OnClick="() => ChooseKeepOrReplace(item, KeepOrReplace.Replace)">Replace</Button>
                         </div>
                     }
                 </li>
@@ -121,11 +109,26 @@
     private Task ChooseExercise(string incomingId, ExerciseChoice choice) =>
         DecisionsChanged.InvokeAsync(Decisions.WithExercise(incomingId, choice));
 
-    private Task ChooseGuide(string exerciseId, KeepOrReplace choice) =>
-        DecisionsChanged.InvokeAsync(Decisions.WithGuide(exerciseId, choice));
+    private KeepOrReplace? GetKeepOrReplaceChoice(ImportItem item)
+    {
+        if (item.Kind is not (RecordKind.Guide or RecordKind.Workout))
+        {
+            return null;
+        }
 
-    private Task ChooseWorkout(string workoutId, KeepOrReplace choice) =>
-        DecisionsChanged.InvokeAsync(Decisions.WithWorkout(workoutId, choice));
+        var choice = item.Kind == RecordKind.Guide
+            ? Decisions.GuideChoice(item.Key)
+            : Decisions.WorkoutChoice(item.Key);
+        var offered = item.OffersReplace || (item.Action == ImportItemAction.Change && choice == KeepOrReplace.Replace);
+        return offered ? choice : null;
+    }
+
+    private Task ChooseKeepOrReplace(ImportItem item, KeepOrReplace choice) => item.Kind switch
+    {
+        RecordKind.Guide => DecisionsChanged.InvokeAsync(Decisions.WithGuide(item.Key, choice)),
+        RecordKind.Workout => DecisionsChanged.InvokeAsync(Decisions.WithWorkout(item.Key, choice)),
+        _ => Task.CompletedTask,
+    };
 
     private static string RowModifier(ImportItemAction action) => action switch
     {

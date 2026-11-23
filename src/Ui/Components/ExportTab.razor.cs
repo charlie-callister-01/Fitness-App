@@ -1,5 +1,4 @@
 using Core.Exchange;
-using Core.Rules.Formatting;
 using Core.Rules.Insight;
 using Core.Storage;
 using Core.Time;
@@ -17,6 +16,7 @@ namespace Ui.Components;
 public sealed partial class ExportTab : IDisposable
 {
     private PageContext Page = default!;
+    private BackupFlow _backup = default!;
     private RangeChoice _range = default!;
     private bool _includeWorkouts = true;
     private bool _includePlan = true;
@@ -28,7 +28,6 @@ public sealed partial class ExportTab : IDisposable
     private bool _canShare;
     private string? _exportStatus;
     private string? _exportError;
-    private bool _backingUp;
     private string? _backupStatus;
     private string? _backupError;
 
@@ -42,11 +41,9 @@ public sealed partial class ExportTab : IDisposable
 
     private DateOnly? PlanStart => Page.ActivePlan?.StartDate;
 
-    private bool WriteDisabled => !Page.CanWrite || _backingUp;
+    private bool WriteDisabled => !Page.CanWrite || _backup.IsBusy;
 
-    private string LastBackupText => Data.LastBackupAt is { } at
-        ? DisplayFormat.WeekdayDay(DateOnly.FromDateTime(at.ToLocalTime().DateTime))
-        : "Never";
+    private string LastBackupText => BackupFlow.FormatLastBackup(Data.LastBackupAt);
 
     private string SummaryText => string.Join(" · ", _result.Summary);
 
@@ -55,6 +52,7 @@ public sealed partial class ExportTab : IDisposable
     protected override void OnInitialized()
     {
         Page = new PageContext(Data, Clock);
+        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice);
         if (string.Equals(Preset, "llm", StringComparison.OrdinalIgnoreCase))
         {
             _range = new RangeChoice(RangePreset.Custom, new DateRange(Page.Today.AddDays(-6), Page.Today));
@@ -196,31 +194,16 @@ public sealed partial class ExportTab : IDisposable
             return;
         }
 
-        _backingUp = true;
         _backupStatus = null;
         _backupError = null;
-        try
+        var outcome = await _backup.RunAsync();
+        if (outcome.Succeeded)
         {
-            var now = Clock.UtcNow;
-            var exported = Exporter.Export(Data.Snapshot, ExportRequest.Backup, BuildInfo.Identifier, now);
-            if (!await Browser.DownloadFileAsync(exported.FileName, exported.Text, "application/json"))
-            {
-                _backupError = "Could not start the Backup download.";
-                return;
-            }
-
-            var recorded = await BackupRecorder.RecordAsync(Data, exported, now);
-            if (recorded is StoreResult<Unit>.Failure failure)
-            {
-                Notice.Report(new CommitResult.StoreFailed(failure.Error));
-                return;
-            }
-
-            _backupStatus = $"Backup downloaded ({exported.FileName}).";
+            _backupStatus = $"Backup downloaded ({outcome.FileName}).";
         }
-        finally
+        else if (outcome.Error is { } error)
         {
-            _backingUp = false;
+            _backupError = error;
         }
     }
 
