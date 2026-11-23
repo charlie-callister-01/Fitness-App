@@ -6,10 +6,10 @@ Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Wide layout).
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] At ≥ 900 px the TabBar sits as a left rail with the same items as at 360 px; below 900 px it is the bottom bar.
-- [ ] At ≥ 900 px the Workout log column is at most 430 px wide and centred in the space beside the rail; the ConfirmBar does not cover the rail.
-- [ ] At ≥ 900 px Home shows the main and side columns side by side with the grouping from the mockup; at 360 px it is one column in the current order.
-- [ ] Browser tests assert these by element positions at 1280 px, 700 px and 360 px.
-- [ ] bUnit tests updated for Home markup; `dotnet build` 0 warnings; all tests green.
+- [x] At ≥ 900 px the TabBar sits as a left rail with the same items as at 360 px; below 900 px it is the bottom bar.
+- [x] At ≥ 900 px the Workout log column is at most 430 px wide and centred in the space beside the rail; the ConfirmBar does not cover the rail.
+- [x] At ≥ 900 px Home shows the main and side columns side by side with the grouping from the mockup; at 360 px it is one column in the current order.
+- [x] Browser tests assert these by element positions at 1280 px, 700 px and 360 px.
+- [x] bUnit tests updated for Home markup; `dotnet build` 0 warnings; all tests green.
