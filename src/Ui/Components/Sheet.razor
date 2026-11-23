@@ -61,28 +61,36 @@
         _syncing = true;
         try
         {
-            while (true)
+            while (await SyncOnceAsync())
             {
-                if (Open && _attached is null)
-                {
-                    _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-                    _attached = await _module.InvokeAsync<int>("attach", _dialog, Opener);
-                }
-                else if (!Open && _attached is { } handle && _module is not null)
-                {
-                    _attached = null;
-                    await _module.InvokeVoidAsync("detach", handle);
-                }
-                else
-                {
-                    break;
-                }
             }
         }
         finally
         {
             _syncing = false;
         }
+    }
+
+    // One step towards the attached state matching Open; false once it already matches. The ordering is deliberately asymmetric:
+    // attach records the handle only after JS returns it (there is none before), and the _syncing guard keeps a render landing
+    // meanwhile from attaching twice; detach clears the handle before the await, so DisposeAsync during that call does not detach again.
+    private async Task<bool> SyncOnceAsync()
+    {
+        if (Open && _attached is null)
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            _attached = await _module.InvokeAsync<int>("attach", _dialog, Opener, ScreenHeading.Selector);
+            return true;
+        }
+
+        if (!Open && _attached is { } handle && _module is not null)
+        {
+            _attached = null;
+            await _module.InvokeVoidAsync("detach", handle);
+            return true;
+        }
+
+        return false;
     }
 
     private Task CloseAsync() => OnClose.InvokeAsync();
