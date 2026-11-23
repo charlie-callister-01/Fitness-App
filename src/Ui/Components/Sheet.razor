@@ -26,6 +26,7 @@
     private ElementReference _dialog;
     private IJSObjectReference? _module;
     private int? _attached;
+    private bool _syncing;
 
     [Parameter]
     public bool Open { get; set; }
@@ -50,15 +51,37 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Open && _attached is null)
+        // A render that lands while a JS call is awaited must not attach a second time (that leaks a Tab trap); the running pass
+        // keeps going until the attached state matches Open.
+        if (_syncing)
         {
-            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-            _attached = await _module.InvokeAsync<int>("attach", _dialog, Opener);
+            return;
         }
-        else if (!Open && _attached is { } handle && _module is not null)
+
+        _syncing = true;
+        try
         {
-            _attached = null;
-            await _module.InvokeVoidAsync("detach", handle);
+            while (true)
+            {
+                if (Open && _attached is null)
+                {
+                    _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+                    _attached = await _module.InvokeAsync<int>("attach", _dialog, Opener);
+                }
+                else if (!Open && _attached is { } handle && _module is not null)
+                {
+                    _attached = null;
+                    await _module.InvokeVoidAsync("detach", handle);
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            _syncing = false;
         }
     }
 

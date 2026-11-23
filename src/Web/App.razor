@@ -1,12 +1,14 @@
+@inject NavigationManager Navigation
 <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="UiAssemblies">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        <FocusOnNavigate @key="CurrentPath" RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
         <LayoutView Layout="@typeof(MainLayout)">
             <Ui.Pages.NotFound />
         </LayoutView>
+        <FocusOnNavigate @key="CurrentPath" RouteData="@NotFoundRoute" Selector="h1" />
     </NotFound>
 </Router>
 @* The one polite live region every screen announces through (Ui.Saving.Announcer); outside the Router so it is never re-created. *@
@@ -15,4 +17,11 @@
 @code {
     // Pages live in the Ui assembly; the router must be told to scan it.
     private static readonly System.Reflection.Assembly[] UiAssemblies = [typeof(Ui.Pages.Home).Assembly];
+
+    // The not-found screen has no route of its own; this lets its h1 take focus on arrival like every other screen's.
+    private static readonly RouteData NotFoundRoute = new(typeof(Ui.Pages.NotFound), new Dictionary<string, object?>());
+
+    // FocusOnNavigate only refocuses when the page type changes; keyed by path, a move between two routes of one page (/custom to
+    // /custom/makeup/{id}, one Plan to another) is a new arrival too. The query is left out, so a tab switch keeps focus where it is.
+    private string CurrentPath => new Uri(Navigation.Uri).AbsolutePath;
 }

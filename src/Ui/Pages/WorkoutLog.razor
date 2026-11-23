@@ -14,6 +14,7 @@
         }
         else if (Page.ReadOnlyMessage is { } unreadable && !Page.CanWrite)
         {
+            <h1 class="fa-title fa-title--l">Workout</h1>
             <p class="fa-well log__notice" role="status">@unreadable</p>
         }
         else
