@@ -1,0 +1,214 @@
+{
+  "formatVersion": 2,
+  "exportedAt": "2026-11-20T08:00:00+00:00",
+  "exportedFrom": "browser-test fixture (hand-written, no private data)",
+  "exercises": [
+    { "id": "goblet-squat", "name": "Goblet squat", "logKind": "load", "isBenchmark": true },
+    { "id": "push-up", "name": "Push-up", "logKind": "reps" },
+    { "id": "row-erg", "name": "Row erg 1000 m", "logKind": "time" },
+    { "id": "plank", "name": "Plank", "logKind": "seconds" },
+    { "id": "cat-cow", "name": "Cat-cow", "logKind": "tickOnly" },
+    { "id": "hip-flexor-stretch", "name": "Hip flexor stretch", "logKind": "tickOnly" }
+  ],
+  "settings": {
+    "displayWeightUnit": "kg",
+    "displayDistanceUnit": "km",
+    "weightIncrementKg": 2.5,
+    "restTimerSeconds": 90,
+    "streakMinWorkoutsPerWeek": 2,
+    "streakCountsCustomWorkouts": false,
+    "theme": "keep",
+    "mode": "system"
+  },
+  "plans": [
+    {
+      "id": "test-plan",
+      "name": "Test Plan",
+      "isActive": true,
+      "startDate": "2026-09-07",
+      "goal": "Sample race",
+      "goalDate": "2027-04-24",
+      "weightIncrementKg": 2,
+      "tracks": [
+        {
+          "id": "main",
+          "name": "Main",
+          "cadence": "weekly",
+          "weeklyTarget": 3,
+          "streakMinWorkoutsPerWeek": 2,
+          "streakCountsCustomWorkouts": false
+        },
+        {
+          "id": "mobility",
+          "name": "Morning mobility",
+          "cadence": "daily",
+          "dayDonePercent": 75
+        }
+      ],
+      "sessions": [
+        {
+          "id": "a-lower",
+          "name": "A: Lower",
+          "trackId": "main",
+          "defaultDay": "monday",
+          "type": "strength",
+          "exercises": [
+            { "exerciseId": "goblet-squat", "sets": 3, "reps": 8, "repsMax": 12, "cue": "Chest tall" },
+            { "exerciseId": "plank", "sets": 2 }
+          ]
+        },
+        {
+          "id": "b-engine",
+          "name": "B: Engine",
+          "trackId": "main",
+          "defaultDay": "wednesday",
+          "type": "cardio",
+          "exercises": [{ "exerciseId": "row-erg", "sets": 2 }]
+        },
+        {
+          "id": "c-upper",
+          "name": "C: Upper",
+          "trackId": "main",
+          "defaultDay": "friday",
+          "type": "strength",
+          "exercises": [{ "exerciseId": "push-up", "sets": 3, "reps": 10 }]
+        },
+        {
+          "id": "m-mobility",
+          "name": "Mobility flow",
+          "trackId": "mobility",
+          "defaultDay": "daily",
+          "type": "mobility",
+          "exercises": [
+            { "exerciseId": "cat-cow", "sets": 1 },
+            { "exerciseId": "hip-flexor-stretch", "sets": 1, "cue": "30 seconds each side" }
+          ]
+        }
+      ]
+    }
+  ],
+  "workouts": [
+    {
+      "id": "w-2026-11-09",
+      "date": "2026-11-09",
+      "sessionId": "a-lower",
+      "startedAt": "2026-11-09T18:00:00+00:00",
+      "endedAt": "2026-11-09T18:45:00+00:00",
+      "planned": [
+        { "exerciseId": "goblet-squat", "sets": 3, "reps": 8, "repsMax": 12, "cue": "Chest tall" },
+        { "exerciseId": "plank", "sets": 2 }
+      ],
+      "entries": [
+        {
+          "exerciseId": "goblet-squat",
+          "status": "done",
+          "rpe": 7,
+          "sets": [
+            { "id": "s-01", "weightKg": 20, "reps": 10 },
+            { "id": "s-02", "weightKg": 20, "reps": 10 },
+            { "id": "s-03", "weightKg": 20, "reps": 9 }
+          ]
+        },
+        {
+          "exerciseId": "plank",
+          "status": "done",
+          "sets": [
+            { "id": "s-04", "durationSeconds": 45 },
+            { "id": "s-05", "durationSeconds": 40 }
+          ]
+        }
+      ],
+      "painCheck": { "id": "p-01", "status": "none" }
+    },
+    {
+      "id": "w-2026-11-11",
+      "date": "2026-11-11",
+      "sessionId": "b-engine",
+      "startedAt": "2026-11-11T07:00:00+00:00",
+      "endedAt": "2026-11-11T07:30:00+00:00",
+      "planned": [{ "exerciseId": "row-erg", "sets": 2 }],
+      "entries": [
+        {
+          "exerciseId": "row-erg",
+          "status": "done",
+          "rpe": 8,
+          "sets": [
+            { "id": "s-06", "distanceM": 1000, "durationSeconds": 250 },
+            { "id": "s-07", "distanceM": 1000, "durationSeconds": 246 }
+          ]
+        }
+      ],
+      "painCheck": { "id": "p-02", "status": "none" }
+    },
+    {
+      "id": "w-2026-11-16",
+      "date": "2026-11-16",
+      "sessionId": "a-lower",
+      "startedAt": "2026-11-16T18:00:00+00:00",
+      "endedAt": "2026-11-16T18:50:00+00:00",
+      "planned": [
+        { "exerciseId": "goblet-squat", "sets": 3, "reps": 8, "repsMax": 12, "cue": "Chest tall" },
+        { "exerciseId": "plank", "sets": 2 }
+      ],
+      "entries": [
+        {
+          "exerciseId": "goblet-squat",
+          "status": "done",
+          "rpe": 8,
+          "sets": [
+            { "id": "s-08", "weightKg": 24, "reps": 10 },
+            { "id": "s-09", "weightKg": 24, "reps": 9 },
+            { "id": "s-10", "weightKg": 24, "reps": 8 }
+          ]
+        },
+        { "exerciseId": "plank", "status": "skipped", "skipReason": "Short on time" }
+      ],
+      "painCheck": {
+        "id": "p-03",
+        "status": "reported",
+        "areas": ["knee"],
+        "severity": "mild",
+        "exerciseId": "goblet-squat"
+      }
+    },
+    {
+      "id": "w-2026-11-17",
+      "date": "2026-11-17",
+      "sessionId": "m-mobility",
+      "loggedAfterwards": true,
+      "planned": [
+        { "exerciseId": "cat-cow", "sets": 1 },
+        { "exerciseId": "hip-flexor-stretch", "sets": 1, "cue": "30 seconds each side" }
+      ],
+      "entries": [
+        { "exerciseId": "cat-cow", "status": "done", "sets": [{ "id": "s-11" }] },
+        { "exerciseId": "hip-flexor-stretch", "status": "done", "sets": [{ "id": "s-12" }] }
+      ]
+    }
+  ],
+  "weighIns": [
+    { "id": "wi-2026-11-02", "date": "2026-11-02", "weightKg": 80.4 },
+    { "id": "wi-2026-11-09", "date": "2026-11-09", "weightKg": 80.1 },
+    { "id": "wi-2026-11-16", "date": "2026-11-16", "weightKg": 79.8 }
+  ],
+  "breaks": [],
+  "badges": [
+    { "id": "first-session", "name": "First Session", "metric": "sessions", "target": 1 },
+    { "id": "squat-40", "name": "40 kg goblet squat", "metric": "goblet-squat", "target": 40 }
+  ],
+  "guides": [
+    {
+      "exerciseId": "goblet-squat",
+      "works": "Quads and glutes",
+      "whyInPlan": "Builds leg strength for lunges and wall balls",
+      "setup": "Hold a kettlebell at your chest, feet shoulder-width apart",
+      "howTo": "Sit down between your heels, then stand tall",
+      "cues": ["Chest up", "Knees out"],
+      "commonMistakes": ["Heels lifting"],
+      "easier": "Box squat",
+      "harder": "Heavier kettlebell",
+      "watchOuts": ["Lower back rounding"]
+    }
+  ],
+  "weekSchedules": []
+}
