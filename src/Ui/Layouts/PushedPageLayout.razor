@@ -3,7 +3,9 @@
 @inject NavigationManager Navigation
 @inject InAppHistory History
 
+@* A pushed page (Plan editor, Guide): no navigation on a phone; from 900 px the left rail stays (design §9). *@
 <SkipLink Target="() => main" />
+<TabBar RailOnly="true" />
 <div class="pushed">
     <header class="bar">
         <Button Variant="ButtonVariant.Icon" Glyph="IconName.Back" AccessibleName="Back" OnClick="GoBack" />

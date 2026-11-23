@@ -83,11 +83,12 @@ public sealed class LayoutTests : BunitContext
     }
 
     [Fact]
-    public void APushedPage_ShowsABackArrowAndNoTabBar()
+    public void APushedPage_ShowsABackArrowAndKeepsOnlyTheWideScreenRail()
     {
         var cut = RenderRoute(typeof(PushedPage));
 
-        Assert.Empty(cut.FindAll("nav"));
+        var nav = Assert.Single(cut.FindAll("nav"));
+        Assert.Contains("tabbar--rail-only", nav.ClassList);
         Assert.NotNull(cut.Find("button[aria-label='Back']"));
         Assert.Contains("page body", cut.Find("main").TextContent);
     }

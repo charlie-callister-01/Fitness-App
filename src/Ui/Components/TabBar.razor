@@ -13,7 +13,7 @@
 </nav>
 
 @code {
-    /// <summary>Shown only as the left rail from 900 px, never as the bottom bar: the Workout log keeps the rail on wide screens only.</summary>
+    /// <summary>Shown only as the left rail from 900 px, never as the bottom bar: the Workout log and pushed pages keep the rail on wide screens only.</summary>
     [Parameter] public bool RailOnly { get; set; }
 
     private sealed record Tab(string Label, IconName Icon, string Href);
