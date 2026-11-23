@@ -6,9 +6,9 @@ Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Token contrast te
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The test covers every pair in §4.2 for all four sets and names the set, pair and ratio on failure.
-- [ ] Changing a token so a pair drops below its threshold makes the test fail (checked once by hand, not committed).
-- [ ] All pairs pass; any token changes are reflected in the §4.2 table.
-- [ ] `dotnet build` 0 warnings; `dotnet test` green.
+- [x] The test covers every pair in §4.2 for all four sets and names the set, pair and ratio on failure.
+- [x] Changing a token so a pair drops below its threshold makes the test fail (checked once by hand, not committed).
+- [x] All pairs pass; any token changes are reflected in the §4.2 table.
+- [x] `dotnet build` 0 warnings; `dotnet test` green.
