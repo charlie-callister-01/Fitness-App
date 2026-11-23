@@ -15,8 +15,8 @@ public sealed class Announcer
     /// <summary>The last message announced, or null before the first.</summary>
     public string? Message { get; private set; }
 
-    /// <summary>Raised for every announcement, including one that repeats the last message.</summary>
-    public event Action? Announced;
+    /// <summary>Raised with the message for every announcement, including one that repeats the last message.</summary>
+    public event Action<string>? Announced;
 
     /// <summary>Reads <paramref name="message"/> out politely; a blank message is ignored.</summary>
     public void Announce(string message)
@@ -27,7 +27,7 @@ public sealed class Announcer
         }
 
         Message = message;
-        Announced?.Invoke();
+        Announced?.Invoke(message);
     }
 
     /// <summary>

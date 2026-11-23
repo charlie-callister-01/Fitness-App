@@ -49,7 +49,7 @@ public sealed class AnnouncerTests : BunitContext
     public void Each_announcement_is_raised_even_when_the_message_repeats()
     {
         var raised = 0;
-        _announcer.Announced += () => raised++;
+        _announcer.Announced += _ => raised++;
 
         _announcer.Announce("Copied.");
         _announcer.Announce("Copied.");
@@ -62,7 +62,7 @@ public sealed class AnnouncerTests : BunitContext
     public void A_blank_message_is_not_announced()
     {
         var raised = 0;
-        _announcer.Announced += () => raised++;
+        _announcer.Announced += _ => raised++;
 
         _announcer.Announce("  ");
 

@@ -239,7 +239,7 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
         var cut = await OpenAsync(restSeconds: "60");
         var announced = new List<string>();
         var announcer = Services.GetRequiredService<Announcer>();
-        announcer.Announced += () => announced.Add(announcer.Message!);
+        announcer.Announced += announced.Add;
         ConfirmSet(cut, 1);
 
         Pass(TimeSpan.FromSeconds(30));
