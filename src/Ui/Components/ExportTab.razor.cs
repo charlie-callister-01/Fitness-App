@@ -38,6 +38,7 @@ public sealed partial class ExportTab : IDisposable
     [Inject] private IBuildInfo BuildInfo { get; set; } = default!;
     [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+    [Inject] private Announcer Announcer { get; set; } = default!;
 
     private DateOnly? PlanStart => Page.ActivePlan?.StartDate;
 
@@ -52,7 +53,7 @@ public sealed partial class ExportTab : IDisposable
     protected override void OnInitialized()
     {
         Page = new PageContext(Data, Clock);
-        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice);
+        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice, Announcer);
         if (string.Equals(Preset, "llm", StringComparison.OrdinalIgnoreCase))
         {
             _range = new RangeChoice(RangePreset.Custom, new DateRange(Page.Today.AddDays(-6), Page.Today));
@@ -151,7 +152,7 @@ public sealed partial class ExportTab : IDisposable
         _exportError = null;
         if (await Browser.CopyTextAsync(_result.Text))
         {
-            _exportStatus = _includeHealthData ? "Copied." : "Copied. Health data left out.";
+            ReportExported(_includeHealthData ? "Copied." : "Copied. Health data left out.");
         }
         else
         {
@@ -165,7 +166,7 @@ public sealed partial class ExportTab : IDisposable
         _exportError = null;
         if (await Browser.DownloadFileAsync(_result.FileName, _result.Text, ContentType))
         {
-            _exportStatus = $"Downloaded {_result.FileName}.";
+            ReportExported($"Downloaded {_result.FileName}.");
         }
         else
         {
@@ -179,7 +180,7 @@ public sealed partial class ExportTab : IDisposable
         _exportError = null;
         if (await Browser.ShareAsync("Fitness export", _result.Text, _result.FileName, ContentType))
         {
-            _exportStatus = "Shared.";
+            ReportExported("Shared.");
         }
         else
         {
@@ -199,12 +200,19 @@ public sealed partial class ExportTab : IDisposable
         var outcome = await _backup.RunAsync();
         if (outcome.Succeeded)
         {
-            _backupStatus = $"Backup downloaded ({outcome.FileName}).";
+            _backupStatus = BackupFlow.SuccessMessage(outcome.FileName!);
         }
         else if (outcome.Error is { } error)
         {
             _backupError = error;
         }
+    }
+
+    // The line stays on screen; the shared live region reads it out.
+    private void ReportExported(string status)
+    {
+        _exportStatus = status;
+        Announcer.Announce(status);
     }
 
     private static bool IsChecked(ChangeEventArgs e) => e.Value is bool value && value;

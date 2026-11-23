@@ -63,12 +63,23 @@ public sealed class LayoutTests : BunitContext
     }
 
     [Fact]
-    public void AFullScreenPage_HasNoTabBar()
+    public void AFullScreenPage_KeepsOnlyTheWideScreenRail()
     {
         var cut = RenderRoute(typeof(FullScreenPage));
 
-        Assert.Empty(cut.FindAll("nav"));
+        // Below 900 px the rail-only TabBar is hidden (CSS), so the phone log has no tab bar; the browser tests check the positions.
+        var nav = Assert.Single(cut.FindAll("nav"));
+        Assert.Equal("Main", nav.GetAttribute("aria-label"));
+        Assert.Contains("tabbar--rail-only", nav.ClassList);
         Assert.Contains("page body", cut.Find("main").TextContent);
+    }
+
+    [Fact]
+    public void ADefaultPage_TabBarIsNotRailOnly()
+    {
+        var cut = RenderRoute(typeof(PlainPage));
+
+        Assert.DoesNotContain("tabbar--rail-only", cut.Find("nav[aria-label='Main']").ClassList);
     }
 
     [Fact]

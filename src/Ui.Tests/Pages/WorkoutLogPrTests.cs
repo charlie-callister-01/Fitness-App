@@ -2,6 +2,7 @@ using AngleSharp.Dom;
 using Bunit;
 using Core.Model;
 using Core.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Ui.Pages;
 using Ui.Saving;
 using static Ui.Tests.Pages.PageFixture;
@@ -38,6 +39,7 @@ public sealed class WorkoutLogPrTests : BunitContext
         Log(cut, 1, "22", "8");
 
         Assert.Empty(cut.FindAll(".fa-pr"));
+        Assert.Null(Services.GetRequiredService<Announcer>().Message);
         Assert.Empty(cut.FindAll(".fa-toast"));
         Assert.Equal("Reps, Set 1", cut.Find("input[aria-label^='Reps, Set 1']").GetAttribute("aria-label"));
         Assert.Contains("0 PR", Progress(cut));
@@ -56,7 +58,8 @@ public sealed class WorkoutLogPrTests : BunitContext
         Assert.Equal("Reps, Set 1, PR", cut.Find("input[aria-label^='Reps, Set 1']").GetAttribute("aria-label"));
         var toast = cut.Find(".fa-toast");
         Assert.Equal("PR! 22 kg × 9 beats 22 × 8", toast.TextContent.Trim());
-        Assert.Equal("status", toast.GetAttribute("role"));
+        Assert.Null(toast.GetAttribute("role"));
+        Assert.Equal("PR! 22 kg × 9 beats 22 × 8", Services.GetRequiredService<Announcer>().Message);
         Assert.Contains("1 PR", Progress(cut));
     }
 

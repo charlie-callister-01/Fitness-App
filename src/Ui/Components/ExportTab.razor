@@ -59,7 +59,7 @@
 
         @if (_exportStatus is { Length: > 0 })
         {
-            <p class="fa-export__status" data-testid="export-status" role="status">@_exportStatus</p>
+            <p class="fa-export__status" data-testid="export-status">@_exportStatus</p>
         }
         @if (_exportError is { Length: > 0 })
         {
@@ -82,7 +82,7 @@
 
         @if (_backupStatus is { Length: > 0 })
         {
-            <p class="fa-export__status" data-testid="backup-status" role="status">@_backupStatus</p>
+            <p class="fa-export__status" data-testid="backup-status">@_backupStatus</p>
         }
         @if (_backupError is { Length: > 0 })
         {

@@ -1,0 +1,35 @@
+@implements IDisposable
+@inject Announcer Announcer
+
+@* The shared polite live region: once in the app shell, present from first render and visually hidden. Each announcement clears
+   it, then sets the message a moment later, so a repeated message is still read out. *@
+<div class="live-region" data-testid="live-region" role="status" aria-live="polite" aria-atomic="true">@_text</div>
+
+@code {
+    /// <summary>How long the region stays empty before the message is set, so screen readers see a change.</summary>
+    private static readonly TimeSpan ClearFor = TimeSpan.FromMilliseconds(100);
+
+    private string _text = "";
+    private int _announcement;
+
+    protected override void OnInitialized() => Announcer.Announced += OnAnnounced;
+
+    public void Dispose() => Announcer.Announced -= OnAnnounced;
+
+    private void OnAnnounced() => _ = InvokeAsync(ShowAsync);
+
+    private async Task ShowAsync()
+    {
+        var announcement = ++_announcement;
+        _text = "";
+        StateHasChanged();
+        await Task.Delay(ClearFor);
+        if (announcement != _announcement)
+        {
+            return;
+        }
+
+        _text = Announcer.Message ?? "";
+        StateHasChanged();
+    }
+}

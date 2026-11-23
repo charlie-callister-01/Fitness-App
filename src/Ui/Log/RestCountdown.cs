@@ -4,7 +4,7 @@ namespace Ui.Log;
 
 /// <summary>
 /// The rest countdown shown in the ConfirmBar. It remembers when it ends and reads <see cref="IClock"/>, so the number is right however
-/// late a redraw comes (a phone that slept); the ticker only says when to redraw. Reaching zero clears it quietly.
+/// late a redraw comes (a phone that slept); the ticker only says when to redraw. Reaching zero clears it and raises Ended (the log session announces it).
 /// </summary>
 public sealed class RestCountdown(IClock clock, ISecondTicker ticker) : IDisposable
 {
@@ -13,6 +13,9 @@ public sealed class RestCountdown(IClock clock, ISecondTicker ticker) : IDisposa
 
     /// <summary>Raised when the readout changes; may come from any thread.</summary>
     public event Action? Changed;
+
+    /// <summary>Raised once when a countdown reaches zero by itself (not when it is stopped or restarted); may come from any thread.</summary>
+    public event Action? Ended;
 
     /// <summary>"Rest 1:12" while counting down, else null.</summary>
     public string? Label
@@ -88,6 +91,7 @@ public sealed class RestCountdown(IClock clock, ISecondTicker ticker) : IDisposa
         if (!cancellation.IsCancellationRequested)
         {
             Stop();
+            Ended?.Invoke();
         }
     }
 }

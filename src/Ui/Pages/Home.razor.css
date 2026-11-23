@@ -10,7 +10,6 @@
     margin: 0;
 }
 
-.fa-home__columns,
 .fa-home__main,
 .fa-home__side {
     display: flex;
@@ -96,12 +95,19 @@
     font-weight: bold;
 }
 
-/* From 900 px: the Today side on the left, the rest on the right. */
+/* The columns themselves come from the shared fa-twocol rule in ui.css. On a phone they stack with the page's own spacing. */
+.fa-home__columns {
+    gap: var(--space-3);
+}
+
+/* Grid items would otherwise refuse to shrink below their content and push a 360 px page sideways. */
+.fa-home__main,
+.fa-home__side {
+    min-width: 0;
+}
+
 @media (min-width: 900px) {
     .fa-home__columns {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        align-items: start;
         gap: var(--space-4);
     }
 }
