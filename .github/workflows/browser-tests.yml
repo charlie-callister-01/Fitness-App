@@ -1,7 +1,7 @@
 name: Browser tests
 
 # Reusable workflow: called by ci.yml (pull requests). Runs the storage contract against the real IndexedDB
-# module in headless Chromium. Separate from build-and-test.yml, which never needs a browser: the browser
+# module, and the whole published app, in headless Chromium. Separate from build-and-test.yml, which never needs a browser: the browser
 # project is built there but skipped by `dotnet test` (see src/Web.BrowserTests/README.md).
 on:
   workflow_call:
@@ -28,9 +28,16 @@ jobs:
       - name: Install Chromium
         run: pwsh src/Web.BrowserTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
+      # The whole-app tests serve this Release publish from their fake origin (BROWSER_TESTS_APP_DIR points at it;
+      # without it the test run would publish into its own output). publish/ is git-ignored.
+      - name: Publish the app
+        run: dotnet publish src/Web -c Release -o publish/browser-app
+
       # RunBrowserTests=true opts this project in (a plain `dotnet test` skips it).
       # A failing contract case fails this step and therefore the job.
       - name: Test
+        env:
+          BROWSER_TESTS_APP_DIR: ${{ github.workspace }}/publish/browser-app
         run: >
           dotnet test src/Web.BrowserTests -c Release --no-build -p:RunBrowserTests=true
           --logger "trx;LogFileName=browser-tests.trx" --results-directory TestResults

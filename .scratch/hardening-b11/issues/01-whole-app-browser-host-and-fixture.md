@@ -6,11 +6,11 @@ Spec: `docs/specs/hardening-b11.md` (Implementation Decisions: Whole-app browser
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Browser tests can open any route of the published app from the fake origin, each test in a new context with a uniquely named database.
-- [ ] The page helper sets viewport, Theme, Mode (through the app's real preference mechanism), root text scale and reduced motion.
-- [ ] The fixture restores through the real Import/Restore UI path, and Home then shows the fixture's Plan and Today.
-- [ ] A smoke test opens Home empty and with the fixture in each of the four Theme × Mode sets.
-- [ ] The default `dotnet test` still skips browser tests; the browser-tests CI job publishes first and passes.
-- [ ] The browser tests README explains the whole-app host and fixture; `dotnet build` stays at 0 warnings.
+- [x] Browser tests can open any route of the published app from the fake origin, each test in a new context with a uniquely named database.
+- [x] The page helper sets viewport, Theme, Mode (through the app's real preference mechanism), root text scale and reduced motion.
+- [x] The fixture restores through the real Import/Restore UI path, and Home then shows the fixture's Plan and Today.
+- [x] A smoke test opens Home empty and with the fixture in each of the four Theme × Mode sets.
+- [x] The default `dotnet test` still skips browser tests; the browser-tests CI job publishes first and passes.
+- [x] The browser tests README explains the whole-app host and fixture; `dotnet build` stays at 0 warnings.
