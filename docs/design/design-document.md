@@ -77,7 +77,7 @@ Machine-readable: [`assets/tokens.json`](assets/tokens.json) and [`assets/tokens
 | `text` | `#EFE6D2` | `#241D14` | `#F2F4F6` | `#15181B` | Body text on surface and bg. |
 | `text-muted` | `#C9BDA3` | `#5A4D38` | `#A3ABB4` | `#535C66` | Secondary text: Last/Best, captions, labels. |
 | `text-heading` | `#FFD83D` | `#6B2A1E` | `#F2F4F6` | `#15181B` | Display titles (Session, screen titles). Keep dark: rune yellow with the hard shadow. |
-| `text-label` | `#FF981F` | `#8A3F00` | `#A3ABB4` | `#535C66` | Section labels and Exercise names in Keep (header orange). |
+| `text-label` | `#FF981F` | `#803A00` | `#A3ABB4` | `#535C66` | Section labels and Exercise names in Keep (header orange). |
 | `input-bg` | `#EFE6D2` | `#FFFFFF` | `#0B0D0F` | `#FFFFFF` | Set inputs. Always light-on-dark or dark-on-light at maximum contrast. |
 | `input-text` | `#141210` | `#141210` | `#F2F4F6` | `#15181B` | Typed values in Set inputs. |
 | `input-border` | `#141210` | `#3A3125` | `#6B737D` | `#7D8590` | Set input border (3:1 against its surroundings). |
@@ -119,7 +119,8 @@ Machine-readable: [`assets/tokens.json`](assets/tokens.json) and [`assets/tokens
 | `text` on `surface` | 4.5 | 8.0 | 12.5 | 15.2 | 17.8 |
 | `text-muted` on `surface` | 4.5 | 5.3 | 6.2 | 7.2 | 6.8 |
 | `text-heading` on `surface` | 3.0 | 7.1 | 8.0 | 15.2 | 17.8 |
-| `text-label` on `surface` | 4.5 | 4.6 | 5.7 | 7.2 | 6.8 |
+| `text-label` on `surface` | 4.5 | 4.6 | 6.3 | 7.2 | 6.8 |
+| `text-label` on `surface-sunken` (labels in wells) | 4.5 | 6.8 | 4.7 | 8.4 | 5.7 |
 | `input-text` on `input-bg` | 7 | 15.1 | 18.7 | 17.7 | 17.8 |
 | `input-pending` on `input-bg` | 4.5 | 6.0 | 5.9 | 8.4 | 6.8 |
 | Set input boundary: `input-bg` fill or `input-border`, whichever is higher, on `surface` | 3 | 8.0 (fill) | 9.6 (border) | 3.5 (border) | 3.7 (border) |

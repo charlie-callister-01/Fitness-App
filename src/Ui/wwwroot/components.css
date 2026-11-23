@@ -87,6 +87,8 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .fa-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .fa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--space-8); padding: 0 var(--space-3); border: var(--border-thin) solid currentColor; border-radius: var(--r-control); font-family: var(--font-label); font-size: calc(0.8125rem * var(--display-scale)); font-weight: var(--w-label); background: var(--surface); }
 .fa-chip--pr { color: var(--pr-text); } .fa-chip--done { color: var(--done-text); } .fa-chip--partial { color: var(--state-partial); } .fa-chip--skipped { color: var(--state-skipped); } .fa-chip--swapped { color: var(--state-swapped); } .fa-chip--missed { color: var(--state-missed); border-style: dashed; } .fa-chip--pain { color: var(--state-pain); }
+/* state-skipped is a 3:1 state colour, below text contrast in Keep: the word takes text-muted, the glyph and outline keep the state colour. */
+.fa-chip--skipped .fa-chip__word { color: var(--text-muted); }
 .fa-chip--today { color: var(--text-heading); }
 
 /* Nudge (C-08) */
