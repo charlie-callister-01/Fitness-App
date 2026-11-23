@@ -7,6 +7,7 @@ using Core.Rules.Units;
 using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
+using Ui.Browser;
 using Ui.Preferences;
 using Ui.Saving;
 
@@ -23,6 +24,14 @@ public sealed partial class Home : IDisposable
     private bool _weightOpen;
     private string? _pastMessage;
     private string? _weightMessage;
+    private bool _welcome;
+    private bool _showQuickThings;
+    private bool _isStandalone;
+    private bool _canInstall;
+
+    private const string QuickThingsDismissedKey = "quick-things-dismissed";
+
+    [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
 
     [Inject] private AppData Data { get; set; } = default!;
 
@@ -99,11 +108,47 @@ public sealed partial class Home : IDisposable
         Page = new PageContext(Data, Clock);
         _save = new GuardedSave(Data, Notice);
         Data.Changed += OnDataChanged;
+        Browser.InstallAvailabilityChanged += OnInstallAvailabilityChanged;
         Rebuild();
         await RefreshAsync();
     }
 
-    public void Dispose() => Data.Changed -= OnDataChanged;
+    public void Dispose()
+    {
+        Data.Changed -= OnDataChanged;
+        Browser.InstallAvailabilityChanged -= OnInstallAvailabilityChanged;
+    }
+
+    private void OnInstallAvailabilityChanged() => _ = InvokeAsync(RefreshAsync);
+
+    // First run (S-12) and Two quick things.
+    private async Task StartEmptyPlanAsync()
+    {
+        var plan = FirstRun.EmptyPlan(Ids.NewId(), Ids.NewId(), Page.Today);
+        var result = await _save.CommitAsync(Change.Put(plan));
+        if (result.IsSaved)
+        {
+            Navigation.NavigateTo($"plans/{plan.Id}");
+        }
+    }
+
+    private async Task InstallAsync()
+    {
+        await Browser.PromptInstallAsync();
+        await RefreshAsync();
+    }
+
+    private async Task RequestPersistenceAsync()
+    {
+        await Data.RequestPersistenceAsync();
+        await RefreshAsync();
+    }
+
+    private async Task DismissQuickThingsAsync()
+    {
+        await Preferences.SetAsync(QuickThingsDismissedKey, "1");
+        await RefreshAsync();
+    }
 
     private void OnDataChanged() => _ = InvokeAsync(RefreshAsync);
 
@@ -114,6 +159,12 @@ public sealed partial class Home : IDisposable
     {
         Rebuild();
         _dismissed = await Dismissals.LoadAsync(_view.NudgeKeys);
+        _welcome = FirstRun.IsEmpty(Data.Snapshot);
+        _isStandalone = await Browser.IsStandaloneAsync();
+        _canInstall = await Browser.CanInstallAsync();
+        _showQuickThings = !_welcome
+            && await Preferences.GetAsync(QuickThingsDismissedKey) != "1"
+            && FirstRun.HasQuickThingsToDo(_isStandalone, Data.Health.Persistence);
         Rebuild();
         StateHasChanged();
     }

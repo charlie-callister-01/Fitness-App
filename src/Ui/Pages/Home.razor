@@ -1,7 +1,27 @@
 @page "/"
 @using Core.Rules.Home
+@using Core.Storage
 @* Home (S-01): the Today card, the week at a glance, Nudges, Recent PRs and Weight. Everything shown comes from HomeViewBuilder; this page
    renders it and starts things. *@
+@if (_welcome)
+{
+    @* S-12 Welcome: nothing is stored yet, so Home offers the three ways to start instead of an empty week. *@
+    <div class="fa-root fa-home">
+        <section class="fa-panel fa-home__welcome" aria-label="Welcome">
+            <h1 class="fa-title fa-title--l">Welcome to the Keep</h1>
+            <EmptyState Kind="EmptyStateKind.FirstRun" Title="Nothing stored yet"
+                        Message="Your Plan and everything you log are kept only on this device. Nothing is sent anywhere." />
+            <div class="fa-home__welcome-actions">
+                <Button Variant="ButtonVariant.Primary" Href="backup?tab=import&kind=plan">Import my Plan</Button>
+                <Button Variant="ButtonVariant.Secondary" Href="backup?tab=import&kind=backup">Restore a Backup</Button>
+                <Button Variant="ButtonVariant.Secondary" Disabled="!Page.CanWrite || _save.IsBusy" OnClick="StartEmptyPlanAsync">Start with an empty Plan</Button>
+            </div>
+            <ReadOnlyWell CanWrite="Page.CanWrite" Message="@Page.ReadOnlyMessage" />
+        </section>
+    </div>
+}
+else
+{
 <div class="fa-root fa-home">
     <header class="fa-home__header">
         <div>
@@ -10,6 +30,34 @@
         </div>
         <Button Variant="ButtonVariant.Secondary" OnClick="OnLogWeight">Log weight</Button>
     </header>
+
+    @if (_showQuickThings)
+    {
+        <section class="fa-panel fa-quickthings" aria-label="Two quick things">
+            <span class="fa-label">Two quick things</span>
+            <p>Install the app and keep your data safe on this device.</p>
+            @if (!_isStandalone && _canInstall)
+            {
+                <p class="fa-muted">Installing adds the app to your home screen and lets it open without a connection.</p>
+            }
+            @if (Data.Health.Persistence == PersistenceStatus.NotGranted)
+            {
+                <p class="fa-muted">Asking the browser to keep your data stops it clearing the app's storage when space runs low.</p>
+            }
+            <div class="fa-quickthings__actions">
+                @if (!_isStandalone && _canInstall)
+                {
+                    <Button Variant="ButtonVariant.Secondary" AccessibleName="Install the app" OnClick="InstallAsync">Install</Button>
+                }
+                @if (Data.Health.Persistence == PersistenceStatus.NotGranted)
+                {
+                    <Button Variant="ButtonVariant.Secondary" AccessibleName="Keep my data on this device" OnClick="RequestPersistenceAsync">Keep my data</Button>
+                }
+                <Button Variant="ButtonVariant.Secondary" Href="backup">Back up</Button>
+                <button type="button" class="fa-home__link" aria-label="Dismiss: Two quick things" @onclick="DismissQuickThingsAsync">Dismiss</button>
+            </div>
+        </section>
+    }
 
     <div class="fa-home__columns">
         <div class="fa-home__main">
@@ -132,3 +180,4 @@
                     Saving="_save.IsBusy" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" Message="@_weightMessage"
                     OnSave="SaveWeightAsync" OnClose="CloseWeight" />
 </div>
+}
