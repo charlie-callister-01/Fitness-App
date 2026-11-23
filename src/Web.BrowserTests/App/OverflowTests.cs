@@ -2,33 +2,13 @@ using Microsoft.Playwright;
 
 namespace Web.BrowserTests.App;
 
-/// <summary>No screen scrolls sideways on a 360 px phone, empty or with the fixture, at normal text and with the root text at 200%.</summary>
+/// <summary>
+/// No screen or tab (<see cref="AppScreens"/>) scrolls sideways on a 360 px phone, empty or with the fixture, at normal text and with the
+/// root text at 200%.
+/// </summary>
 [Collection(AppCollection.Name)]
 public sealed class OverflowTests(AppFixture app)
 {
-    /// <summary>Every routed screen. Routes naming fixture records show their not-found state when the app is empty.</summary>
-    private static readonly string[] Routes =
-    [
-        "/",
-
-        // Not next to "/custom": the same page component keeps its h1 element, which GotoAsync would read as the screen being left.
-        "/custom/makeup/a-lower",
-        "/week",
-        "/weekly-review",
-        "/progress",
-        "/trophies",
-        "/more",
-        "/settings",
-        "/backup",
-        "/weight",
-        "/plans",
-        "/plans/test-plan",
-        "/exercises",
-        "/exercises/goblet-squat/guide",
-        "/custom",
-        "/log/w-2026-11-16",
-    ];
-
     // Waits until the screen has stopped changing (data loads after the h1 renders), then lists what sticks out to the right.
     private const string MeasureScript = """
         async () => {
@@ -65,22 +45,22 @@ public sealed class OverflowTests(AppFixture app)
         await using var page = await app.OpenAsync("/", new AppPageOptions { WithFixture = withFixture, TextScale = textScale });
 
         var overflowing = new List<string>();
-        foreach (var route in Routes)
+        foreach (var screen in AppScreens.All.Where(s => s.RunsWith(withFixture)))
         {
             try
             {
-                await page.GotoAsync(route);
+                await AppScreens.ShowAsync(page, screen);
             }
             catch (TimeoutException)
             {
-                overflowing.Add(route + " did not render an h1");
+                overflowing.Add(screen.Name + " did not render");
                 continue;
             }
 
             var result = await page.Page.EvaluateAsync<string>(MeasureScript);
             if (result.Length > 0)
             {
-                overflowing.Add(route + " " + result);
+                overflowing.Add(screen.Name + " " + result);
             }
         }
 
@@ -93,7 +73,7 @@ public sealed class OverflowTests(AppFixture app)
     public async Task The_picker_and_a_Workout_log_in_progress_do_not_scroll_sideways_at_360_px(double textScale)
     {
         // The fixture leaves its Morning mobility Workout open; it is finished first so Start begins a new Workout.
-        await using var page = await app.OpenAsync("/log/w-2026-11-17", new AppPageOptions { WithFixture = true, TextScale = textScale });
+        await using var page = await app.OpenAsync($"/log/{FixtureBackup.OpenWorkoutId}", new AppPageOptions { WithFixture = true, TextScale = textScale });
         var main = page.Page.Locator("#main-content");
         await main.GetByRole(AriaRole.Button, new() { Name = "Finish", Exact = true }).ClickAsync();
         await page.Page.GetByRole(AriaRole.Button, new() { Name = "No", Exact = true }).ClickAsync();

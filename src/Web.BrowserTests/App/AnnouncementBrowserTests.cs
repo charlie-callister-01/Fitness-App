@@ -9,9 +9,6 @@ namespace Web.BrowserTests.App;
 [Collection(AppCollection.Name)]
 public sealed class AnnouncementBrowserTests(AppFixture app)
 {
-    /// <summary>The fixture's Mobility flow Workout, left open (logged afterwards).</summary>
-    private const string OpenMobilityWorkoutId = "w-2026-11-17";
-
     private const string LowerSessionName = "A: Lower";
 
     private static ILocator Region(AppPage page) => page.Page.GetByTestId("live-region");
@@ -56,7 +53,7 @@ public sealed class AnnouncementBrowserTests(AppFixture app)
         await log.Clock.InstallAsync();
 
         // The fixture leaves a Mobility flow open; finish it so A: Lower can start.
-        await page.GotoAsync($"/log/{OpenMobilityWorkoutId}");
+        await page.GotoAsync($"/log/{FixtureBackup.OpenWorkoutId}");
         await FinishAsync(log);
         await page.GotoAsync("/");
         await StartLowerAsync(log);

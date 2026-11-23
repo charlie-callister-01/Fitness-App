@@ -5,6 +5,7 @@ using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Ui.Accessibility;
 using Ui.Log;
 using Ui.Preferences;
 using Ui.Saving;

@@ -29,6 +29,7 @@ public sealed class FixtureBackupTests
         Assert.NotEmpty(document.WeighIns!);
         Assert.NotEmpty(document.Badges!);
         Assert.NotEmpty(document.Guides!);
+        Assert.Contains(document.Workouts!, w => w.Id == FixtureBackup.SwappedWorkoutId && w.Entries.Any(e => e.Status == EntryStatus.Swapped));
     }
 
     [Fact]

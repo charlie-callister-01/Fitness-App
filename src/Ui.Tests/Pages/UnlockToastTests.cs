@@ -3,6 +3,7 @@ using Core.Model;
 using Core.Storage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Accessibility;
 using Ui.Components;
 using Ui.Saving;
 using static Ui.Tests.Pages.PageFixture;
@@ -49,6 +50,21 @@ public sealed class UnlockToastTests : BunitContext
 
         Assert.Equal("Badge unlocked: Twice over", Services.GetRequiredService<Announcer>().Message);
         Assert.Null(cut.Find(".fa-unlock").GetAttribute("role"));
+    }
+
+    [Fact]
+    public async Task A_toast_created_again_for_the_same_unlock_does_not_announce_it_again()
+    {
+        var announced = 0;
+        var cut = await RenderSummaryAsync(unlocks: true);
+        Services.GetRequiredService<Announcer>().Announced += () => announced++;
+        var summary = cut.Instance;
+
+        // The summary is shown again (re-opened by its URL, or the page re-created): the toast is a new component for the same unlock.
+        await DisposeComponentsAsync();
+        Render<FinishSummary>(p => p.Add(c => c.Workout, summary.Workout).Add(c => c.Data, summary.Data).Add(c => c.Today, Today));
+
+        Assert.Equal(0, announced);
     }
 
     [Fact]

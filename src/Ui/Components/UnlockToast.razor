@@ -1,6 +1,5 @@
 @using Core.Model
 @using Ui.Log
-@using Ui.Saving
 @implements IDisposable
 @* C-23 UnlockToast: a calm line on the finish summary for a newly unlocked Badge. It fades in, hides itself after 4 s and a tap opens the
    Badge. No sound, no haptics. Reduced motion switches the fade off through the global rule in ui.css. *@
@@ -24,7 +23,8 @@
 
     protected override void OnInitialized()
     {
-        Announcer.Announce($"Badge unlocked: {Badge.Name}");
+        // Once per unlock: the summary can be shown again (reopened by its URL), creating this toast again.
+        Announcer.AnnounceOnce($"badge-unlocked:{Badge.Id}", $"Badge unlocked: {Badge.Name}");
         _ = HideAfterAsync();
     }
 

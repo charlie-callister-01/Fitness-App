@@ -141,6 +141,26 @@
       "painCheck": { "id": "p-02", "status": "none" }
     },
     {
+      "id": "w-2026-11-13",
+      "date": "2026-11-13",
+      "sessionId": "c-upper",
+      "startedAt": "2026-11-13T18:00:00+00:00",
+      "endedAt": "2026-11-13T18:30:00+00:00",
+      "planned": [{ "exerciseId": "push-up", "sets": 3, "reps": 10 }],
+      "entries": [
+        {
+          "exerciseId": "plank",
+          "status": "swapped",
+          "swappedFromExerciseId": "push-up",
+          "sets": [
+            { "id": "s-13", "durationSeconds": 40 },
+            { "id": "s-14", "durationSeconds": 40 }
+          ]
+        }
+      ],
+      "painCheck": { "id": "p-04", "status": "none" }
+    },
+    {
       "id": "w-2026-11-16",
       "date": "2026-11-16",
       "sessionId": "a-lower",

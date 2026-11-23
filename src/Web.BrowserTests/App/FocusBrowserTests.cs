@@ -10,17 +10,8 @@ namespace Web.BrowserTests.App;
 [Collection(AppCollection.Name)]
 public sealed partial class FocusBrowserTests(AppFixture app)
 {
-    // Every route, including the empty, unknown-id and not-found states; with the fixture the ids below exist.
-    private static readonly string[] Routes =
-    [
-        "/", "/week", "/progress", "/trophies", "/more", "/plans", $"/plans/{FixturePlanId}", "/plans/no-such-plan", "/exercises",
-        "/exercises/goblet-squat/guide", "/exercises/no-such-exercise/guide", "/custom", "/custom/makeup/no-such-session", "/settings",
-        "/backup", "/weekly-review", "/weight", "/log/w-2026-11-09", "/log/no-such-workout", "/no-such-page",
-    ];
-
-    private const string FixturePlanId = "test-plan";
-    private const string FixtureOpenWorkoutId = "w-2026-11-17";
-
+    // Every screen's route and every not-found state; with the fixture the ids exist, empty they show their not-found states.
+    private static readonly string[] Routes = [.. AppScreens.All.Select(s => s.Route).Distinct(), .. AppScreens.NotFoundRoutes];
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -62,7 +53,7 @@ public sealed partial class FocusBrowserTests(AppFixture app)
         await Assertions.Expect(heading).ToBeFocusedAsync();
 
         // Two Guides render the same h1 element with new text.
-        await page.GotoAsync("/exercises/goblet-squat/guide");
+        await page.GotoAsync($"/exercises/{FixtureBackup.GuideExerciseId}/guide");
         await page.GotoAsync("/exercises/plank/guide");
         await Assertions.Expect(heading).ToHaveTextAsync("Plank");
         await Assertions.Expect(heading).ToBeFocusedAsync();
@@ -101,7 +92,7 @@ public sealed partial class FocusBrowserTests(AppFixture app)
     [Fact]
     public async Task Confirm_sheet_keeps_focus_inside_closes_on_Escape_and_returns_focus()
     {
-        await using var page = await app.OpenAsync("/exercises/goblet-squat/guide", new AppPageOptions { WithFixture = true });
+        await using var page = await app.OpenAsync($"/exercises/{FixtureBackup.GuideExerciseId}/guide", new AppPageOptions { WithFixture = true });
         await page.Page.Locator("#main-content").GetByRole(AriaRole.Button, new() { Name = "Edit", Exact = true }).ClickAsync();
         await page.Page.Locator("#guide-cues").FillAsync("Elbows in");
         var opener = page.Page.GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true });
@@ -120,7 +111,7 @@ public sealed partial class FocusBrowserTests(AppFixture app)
     public async Task PainCheckSheet_keeps_focus_inside_and_Escape_skips_to_the_summary_heading()
     {
         // The fixture's open "Morning mobility" Workout has every Exercise done, so Finish goes straight to the Pain check.
-        await using var page = await app.OpenAsync($"/log/{FixtureOpenWorkoutId}", new AppPageOptions { WithFixture = true });
+        await using var page = await app.OpenAsync($"/log/{FixtureBackup.OpenWorkoutId}", new AppPageOptions { WithFixture = true });
         await page.Page.GetByRole(AriaRole.Button, new() { Name = "Workout menu", Exact = true }).ClickAsync();
         await page.Page.GetByRole(AriaRole.Button, new() { NameRegex = FinishWorkout() }).ClickAsync();
         var sheet = page.Page.GetByRole(AriaRole.Dialog, new() { Name = "Any pain today?" });

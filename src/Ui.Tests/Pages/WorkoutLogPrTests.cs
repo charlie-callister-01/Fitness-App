@@ -3,6 +3,7 @@ using Bunit;
 using Core.Model;
 using Core.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Accessibility;
 using Ui.Pages;
 using Ui.Saving;
 using static Ui.Tests.Pages.PageFixture;

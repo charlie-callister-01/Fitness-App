@@ -22,3 +22,10 @@
         margin-inline: auto;
     }
 }
+
+/* The left rail takes 220 px (it carries the left safe area); the bar and column centre in what is left. */
+@media (min-width: 900px) {
+    .pushed {
+        padding-left: 220px;
+    }
+}

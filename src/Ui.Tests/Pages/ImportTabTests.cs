@@ -253,7 +253,7 @@ public sealed class ImportTabTests : BunitContext
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='import-applied']")));
         var applied = cut.Find("[data-testid='import-applied']");
         Assert.Null(applied.GetAttribute("role"));
-        var announced = Services.GetRequiredService<Ui.Saving.Announcer>().Message;
+        var announced = Services.GetRequiredService<Ui.Accessibility.Announcer>().Message;
         Assert.StartsWith("Import applied.", announced);
         Assert.All(applied.QuerySelectorAll("li"), line => Assert.Contains(line.TextContent.Trim(), announced));
 

@@ -4,8 +4,8 @@ namespace Web.BrowserTests.App;
 
 /// <summary>
 /// Design §9 by element positions: from 900 px the TabBar is a 220 px left rail and Home shows its main and side columns side by side;
-/// below 900 px the TabBar is the bottom bar and Home is one column. The Workout log keeps the rail on wide screens and stays one centred
-/// column of at most 430 px.
+/// below 900 px the TabBar is the bottom bar and Home is one column. The Workout log and pushed pages keep the rail on wide
+/// screens and have no TabBar on phones; the log stays one centred column of at most 430 px.
 /// </summary>
 [Collection(AppCollection.Name)]
 public sealed class WideLayoutTests(AppFixture app)
@@ -105,7 +105,7 @@ public sealed class WideLayoutTests(AppFixture app)
         Assert.Equal(leftGap, rightGap, 1);
 
         var bar = await BoxAsync(page.Page.Locator("#main-content .fa-confirmbar"));
-        Assert.True(bar.X >= RailWidth, "The ConfirmBar does not cover the rail");
+        Assert.False(Overlaps(bar, rail), $"The ConfirmBar ({bar.X}, {bar.Y}, {bar.Width} x {bar.Height}) overlaps the rail");
         Assert.Equal(log.X, bar.X, 1);
         Assert.Equal(log.Width, bar.Width, 1);
     }
@@ -121,6 +121,36 @@ public sealed class WideLayoutTests(AppFixture app)
         Assert.Equal(0, log.X, 1);
         Assert.Equal(360, log.Width, 1);
     }
+
+    [Theory]
+    [InlineData("Plan editor", $"/plans/{FixtureBackup.PlanId}")]
+    [InlineData("Guide", $"/exercises/{FixtureBackup.GuideExerciseId}/guide")]
+    public async Task At_1280_px_a_pushed_page_keeps_the_rail_with_its_back_bar_and_content_beside_it(string name, string route)
+    {
+        await using var page = await app.OpenAsync(route, new AppPageOptions { Width = 1280, Height = Height, WithFixture = true });
+
+        var rail = await BoxAsync(Nav(page));
+        Assert.Equal(0, rail.X, 1);
+        Assert.Equal(RailWidth, rail.Width, 1);
+
+        var back = await BoxAsync(page.Page.GetByRole(AriaRole.Button, new() { Name = "Back", Exact = true }));
+        var main = await BoxAsync(page.Page.Locator("#main-content"));
+        Assert.False(Overlaps(back, rail), $"{name}: the Back button sits beside the rail");
+        Assert.True(main.X >= RailWidth, $"{name}: the content starts beside the rail");
+    }
+
+    [Fact]
+    public async Task At_360_px_a_pushed_page_has_no_TabBar()
+    {
+        var options = new AppPageOptions { Width = 360, Height = Height, WithFixture = true };
+        await using var page = await app.OpenAsync($"/plans/{FixtureBackup.PlanId}", options);
+
+        await Assertions.Expect(Nav(page)).ToBeHiddenAsync();
+        Assert.Equal(0, (await BoxAsync(page.Page.Locator("#main-content"))).X, 1);
+    }
+
+    private static bool Overlaps(LocatorBoundingBoxResult a, LocatorBoundingBoxResult b) =>
+        a.X < b.X + b.Width - 0.5 && b.X < a.X + a.Width - 0.5 && a.Y < b.Y + b.Height - 0.5 && b.Y < a.Y + a.Height - 0.5;
 
     private static ILocator Nav(AppPage page) => page.Page.GetByRole(AriaRole.Navigation, new() { Name = "Main", Exact = true });
 

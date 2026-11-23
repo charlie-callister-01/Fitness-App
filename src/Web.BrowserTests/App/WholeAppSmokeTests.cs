@@ -10,13 +10,10 @@ public sealed class WholeAppSmokeTests(AppFixture app)
     public static TheoryData<Theme, Mode, bool> ThemeModeData()
     {
         var data = new TheoryData<Theme, Mode, bool>();
-        foreach (var theme in new[] { Theme.Keep, Theme.Clean })
+        foreach (var (theme, mode) in AppScreens.Appearances)
         {
-            foreach (var mode in new[] { Mode.Dark, Mode.Light })
-            {
-                data.Add(theme, mode, false);
-                data.Add(theme, mode, true);
-            }
+            data.Add(theme, mode, false);
+            data.Add(theme, mode, true);
         }
 
         return data;

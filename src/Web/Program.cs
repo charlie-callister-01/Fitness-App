@@ -3,6 +3,7 @@ using Core.Time;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Ui;
+using Ui.Accessibility;
 using Ui.Browser;
 using Ui.Log;
 using Web.Browser;

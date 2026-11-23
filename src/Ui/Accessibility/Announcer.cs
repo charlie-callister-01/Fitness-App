@@ -1,4 +1,6 @@
-namespace Ui.Saving;
+using Ui.Saving;
+
+namespace Ui.Accessibility;
 
 /// <summary>
 /// The one way a screen tells a screen-reader user that something happened (Badge unlocked, a PR, rest over, an export, Backup or
@@ -8,6 +10,8 @@ namespace Ui.Saving;
 /// </summary>
 public sealed class Announcer
 {
+    private readonly HashSet<string> _announcedKeys = [];
+
     /// <summary>The last message announced, or null before the first.</summary>
     public string? Message { get; private set; }
 
@@ -24,5 +28,17 @@ public sealed class Announcer
 
         Message = message;
         Announced?.Invoke();
+    }
+
+    /// <summary>
+    /// Reads <paramref name="message"/> out the first time <paramref name="key"/> is seen and never again for that key, so an event
+    /// shown by a component that can be created again (a Badge unlock on the finish summary) is announced once.
+    /// </summary>
+    public void AnnounceOnce(string key, string message)
+    {
+        if (_announcedKeys.Add(key))
+        {
+            Announce(message);
+        }
     }
 }

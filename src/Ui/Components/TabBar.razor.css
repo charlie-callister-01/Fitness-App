@@ -13,7 +13,7 @@
     min-width: 0;
 }
 
-/* The Workout log has no tab bar on a phone (design §9). */
+/* The Workout log and pushed pages have no tab bar on a phone (design §9). */
 @media (max-width: 899.98px) {
     .tabbar--rail-only {
         display: none;

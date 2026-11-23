@@ -3,6 +3,7 @@ using Core.Rules.Insight;
 using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
+using Ui.Accessibility;
 using Ui.Browser;
 using Ui.Pages;
 using Ui.Saving;
@@ -198,9 +199,9 @@ public sealed partial class ExportTab : IDisposable
         _backupStatus = null;
         _backupError = null;
         var outcome = await _backup.RunAsync();
-        if (outcome.Succeeded)
+        if (outcome.Message is { } message)
         {
-            _backupStatus = BackupFlow.SuccessMessage(outcome.FileName!);
+            _backupStatus = message;
         }
         else if (outcome.Error is { } error)
         {
