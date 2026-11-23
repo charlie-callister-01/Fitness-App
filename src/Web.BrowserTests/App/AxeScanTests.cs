@@ -12,8 +12,10 @@ namespace Web.BrowserTests.App;
 [Collection(AppCollection.Name)]
 public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
 {
-    /// <summary>A screen: its route and, for a tabbed screen, the tab to show.</summary>
-    private sealed record Screen(string Route, string? Tab = null);
+    /// <summary>A screen: its route, for a tabbed screen the tab to show, and whether it is scanned empty, with the fixture or both.</summary>
+    private sealed record Screen(string Route, string? Tab = null, Runs Runs = Runs.Both);
+
+    private enum Runs { Both, EmptyOnly, FixtureOnly }
 
     private static readonly Dictionary<string, Screen> Screens = new()
     {
@@ -23,9 +25,11 @@ public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
         ["S-03 Guide"] = new("/exercises/goblet-squat/guide"),
         ["S-04 Exercise library"] = new("/exercises"),
         ["S-05 Plans"] = new("/plans"),
-        ["S-05 Plan editor Settings"] = new("/plans/test-plan", "Settings"),
-        ["S-05 Plan editor Phases"] = new("/plans/test-plan", "Phases"),
-        ["S-05 Plan editor Sessions"] = new("/plans/test-plan", "Sessions"),
+        // With no data the Plan does not exist, so the editor shows its not-found state and has no tabs.
+        ["S-05 Plan editor, no such Plan"] = new("/plans/test-plan", Runs: Runs.EmptyOnly),
+        ["S-05 Plan editor Settings"] = new("/plans/test-plan", "Settings", Runs.FixtureOnly),
+        ["S-05 Plan editor Phases"] = new("/plans/test-plan", "Phases", Runs.FixtureOnly),
+        ["S-05 Plan editor Sessions"] = new("/plans/test-plan", "Sessions", Runs.FixtureOnly),
         ["S-06 Week"] = new("/week"),
         ["S-07 Progress"] = new("/progress", "Progress"),
         ["S-07 Benchmarks"] = new("/progress", "Benchmarks"),
@@ -48,12 +52,12 @@ public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
     public static TheoryData<string, Theme, Mode, bool> ScreenData()
     {
         var data = new TheoryData<string, Theme, Mode, bool>();
-        foreach (var screen in Screens.Keys)
+        foreach (var (name, screen) in Screens)
         {
             foreach (var (theme, mode) in Appearances)
             {
-                data.Add(screen, theme, mode, false);
-                data.Add(screen, theme, mode, true);
+                if (screen.Runs != Runs.FixtureOnly) data.Add(name, theme, mode, false);
+                if (screen.Runs != Runs.EmptyOnly) data.Add(name, theme, mode, true);
             }
         }
 
@@ -79,7 +83,7 @@ public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
     [MemberData(nameof(ScreenData))]
     public async Task Screen_has_no_serious_or_critical_axe_violations(string screen, Theme theme, Mode mode, bool withFixture)
     {
-        var (route, tab) = Screens[screen];
+        var (route, tab, _) = Screens[screen];
         await using var page = await app.OpenAsync(route, Options(theme, mode, withFixture));
         if (tab is not null)
         {
@@ -179,7 +183,7 @@ public sealed class AxeScanTests(AppFixture app, ITestOutputHelper output)
     }
 
     private static Task OpenExerciseMenuAsync(IPage page) =>
-        page.GetByRole(AriaRole.Button, new() { Name = "Menu for Cat-cow", Exact = true }).ClickAsync();
+        page.GetByRole(AriaRole.Button, new() { Name = "Menu for " }).First.ClickAsync();
 
     private async Task AssertNoBlockingViolationsAsync(IPage page)
     {

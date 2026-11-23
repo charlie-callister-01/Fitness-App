@@ -23,3 +23,8 @@ Findings from `/thermo-nuclear-code-quality-review` and architecture passes. Ope
 11. ~~**Collapse `SettingsPage` field-change boilerplate (`src/Ui/Pages/SettingsPage.razor.cs`)**~~ *(resolved on `feature/data-and-settings`)*
 12. ~~**Unify Keep/Replace toggle branch in `ImportPreview.razor` (`src/Ui/Components/ImportPreview.razor`)**~~ *(resolved on `feature/data-and-settings`)*
 13. ~~**Split `ExportImportTests.cs` (`src/Ui.Tests/Pages/ExportImportTests.cs`, currently 551 lines)**~~ *(resolved on `feature/data-and-settings`: split into `ExportTabTests.cs`, `ImportTabTests.cs`, `PromptsTabTests.cs`)*
+
+## From Hardening (B11) ticket 03 axe scans (23 Nov 2026)
+
+14. **axe moderate and minor findings:** none in the first full scan (every screen and tab x Theme x Mode x empty/fixture, plus the data-only sheets). Re-check the `AXE-BACKLOG` lines in the browser-test output when screens change.
+15. **State colours used as chip text (`src/Ui/wwwroot/components.css`):** `.fa-chip--*` colours the word with its 3:1 state token. Skipped now uses `text-muted` for the word; Swapped in Keep light (`state-swapped` on `surface` 4.0) would also fail text contrast once a Swapped chip is on a scanned screen. Give every chip word a text token (or raise the state tokens to 4.5:1) and add a Swapped Workout to the fixture.
