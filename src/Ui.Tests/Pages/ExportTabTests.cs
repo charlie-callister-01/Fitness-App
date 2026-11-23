@@ -3,7 +3,9 @@ using Core.Model;
 using Core.Storage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Accessibility;
 using Ui.Pages;
+using Ui.Saving;
 using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
@@ -131,6 +133,8 @@ public sealed class ExportTabTests : BunitContext
         Assert.Single(browser.CopiedTexts);
         Assert.StartsWith("# Training export", browser.CopiedTexts[0]);
         Assert.Equal("Copied. Health data left out.", cut.Find("[data-testid='export-status']").TextContent.Trim());
+        Assert.Equal("Copied. Health data left out.", Services.GetRequiredService<Announcer>().Message);
+        Assert.Null(cut.Find("[data-testid='export-status']").GetAttribute("role"));
 
         cut.Find("input[aria-label='Health data (Weigh-ins and Pain checks)']").Change(true);
         var summary = cut.Find("[data-testid='export-summary']").TextContent.Trim();
@@ -145,6 +149,7 @@ public sealed class ExportTabTests : BunitContext
         Assert.Equal("application/json", downloaded.ContentType);
         Assert.Contains("\"weighIns\"", downloaded.Content);
         Assert.Contains("\"painCheck\"", downloaded.Content);
+        Assert.Equal("Downloaded fitness-export-2026-08-25-to-2026-11-16.json.", Services.GetRequiredService<Announcer>().Message);
 
         cut.FindAll("button").First(b => b.TextContent.Trim() == "Copy").Click();
         Assert.Equal("Copied.", cut.Find("[data-testid='export-status']").TextContent.Trim());
@@ -166,6 +171,7 @@ public sealed class ExportTabTests : BunitContext
         cut.FindAll("button").First(b => b.TextContent.Trim() == "Share").Click();
         Assert.Single(supported.Shares);
         Assert.Equal("fitness-export-2026-08-25-to-2026-11-16.md", supported.Shares[0].FileName);
+        Assert.Equal("Shared.", Services.GetRequiredService<Announcer>().Message);
     }
 
     [Fact]
@@ -187,6 +193,8 @@ public sealed class ExportTabTests : BunitContext
         Assert.Contains("\"settings\"", downloaded.Content);
         Assert.Equal(Now, data.LastBackupAt);
         Assert.Equal("Mon 16 Nov", cut.Find("[data-testid='backup-last-date']").TextContent.Trim());
+        Assert.Equal("Backup downloaded (fitness-backup-2026-11-16.json).", Services.GetRequiredService<Announcer>().Message);
+        Assert.Null(cut.Find("[data-testid='backup-status']").GetAttribute("role"));
     }
 
     [Fact]
@@ -199,6 +207,7 @@ public sealed class ExportTabTests : BunitContext
 
         Assert.Null(data.LastBackupAt);
         Assert.Contains("Could not start", cut.Find("[data-testid='backup-error']").TextContent);
+        Assert.Null(Services.GetRequiredService<Announcer>().Message);
     }
 
     [Fact]

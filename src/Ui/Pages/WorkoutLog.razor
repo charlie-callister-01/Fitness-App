@@ -14,6 +14,7 @@
         }
         else if (Page.ReadOnlyMessage is { } unreadable && !Page.CanWrite)
         {
+            <h1 class="fa-title fa-title--l">Workout</h1>
             <p class="fa-well log__notice" role="status">@unreadable</p>
         }
         else
@@ -128,10 +129,7 @@ else
                         }
                     </div>
 
-                    @if (State.Toast is { } toast)
-                    {
-                        <p class="fa-well fa-toast" role="status">@toast</p>
-                    }
+                    <StatusLine Text="@State.Toast" Key="State.ToastKey" class="fa-well fa-toast" />
 
                     <div class="log__tools">
                         <button type="button" class="log__link" @onclick="() => State.AddSet(id)">Add Set</button>
@@ -156,5 +154,4 @@ else
                            OnSave="SaveDateAsync" OnCancel="_afterwards.Cancel" />
     <PartialPrompt Open="_finish.Phase == FinishPhase.PartialPrompt" Done="_finish.PartialCounts.Done" Planned="_finish.PartialCounts.Planned"
                    Saving="_finish.Saving" CanWrite="Page.CanWrite" ReadOnlyMessage="@Page.ReadOnlyMessage" OnFinish="ConfirmPartialAsync" OnKeepGoing="_finish.KeepGoing" />
-}
 }

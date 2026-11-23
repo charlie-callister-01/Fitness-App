@@ -22,6 +22,7 @@ public sealed partial class PlanEditor : IDisposable
     private string? _leaveTarget;
     private bool _allowLeave;
     private bool _justSaved;
+    private int _savedKey;
     private string? _trackMessage;
     private bool _addTrackOpen;
     private string _newTrackName = "";
@@ -165,6 +166,7 @@ public sealed partial class PlanEditor : IDisposable
             state.MarkSaved(plan);
             _trackMessage = null;
             _justSaved = true;
+            _savedKey++;
         }
     }
 

@@ -1,5 +1,6 @@
 using Core.Model;
 using Core.Storage;
+using Ui.Accessibility;
 using Ui.Log;
 using Ui.Preferences;
 using Ui.Saving;
@@ -20,7 +21,7 @@ public sealed class LogActionsTests
         var state = new LogEditState();
         var session = new LogSession(
             data, clock, new FakeTicker(), new RecordingWakeLock(), new RestTimerSetting(new FakeDevicePreferences()),
-            new FinishFlow(data, notice, clock, new CountingIds()), new LoggedAfterwardsFlow(data, notice), () => { });
+            new FinishFlow(data, notice, clock, new CountingIds()), new LoggedAfterwardsFlow(data, notice), new Announcer(), () => { });
         var actions = new LogActions(data, notice, new CountingIds(), state, new LogViewBuilder(data, state), session) { WorkoutId = "w-now" };
         return new Rig(actions, state, data);
     }

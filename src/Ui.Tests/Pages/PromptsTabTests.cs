@@ -2,6 +2,7 @@ using Bunit;
 using Core.Exchange;
 using Core.Model;
 using Core.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Ui.Pages;
 using static Ui.Tests.Pages.ExportTabTests;
 using static Ui.Tests.Pages.PageFixture;
@@ -47,14 +48,16 @@ public sealed class PromptsTabTests : BunitContext
 
         Assert.Single(browser.CopiedTexts);
         Assert.Equal(expectedAnalyse, browser.CopiedTexts[0]);
-        Assert.Equal("Copied.", cut.FindAll(".fa-prompts__card")[0].QuerySelector("[role='status']")!.TextContent.Trim());
+        Assert.Equal("Copied.", cut.FindAll(".fa-prompts__card")[0].QuerySelector(".fa-prompts__status")!.TextContent.Trim());
+        Assert.Equal("Copied.", Services.GetRequiredService<Ui.Accessibility.Announcer>().Message);
+        Assert.Null(cut.FindAll(".fa-prompts__card")[0].QuerySelector(".fa-prompts__status")!.GetAttribute("role"));
 
         cut.FindAll(".fa-prompts__card")[1].QuerySelectorAll("button").First(b => b.TextContent.Trim() == "Copy prompt").Click();
 
         Assert.Equal(2, browser.CopiedTexts.Count);
         Assert.Equal(PromptPack.WritePlan(data.Snapshot), browser.CopiedTexts[1]);
-        Assert.Null(cut.FindAll(".fa-prompts__card")[0].QuerySelector("[role='status']"));
-        Assert.Equal("Copied.", cut.FindAll(".fa-prompts__card")[1].QuerySelector("[role='status']")!.TextContent.Trim());
+        Assert.Null(cut.FindAll(".fa-prompts__card")[0].QuerySelector(".fa-prompts__status"));
+        Assert.Equal("Copied.", cut.FindAll(".fa-prompts__card")[1].QuerySelector(".fa-prompts__status")!.TextContent.Trim());
     }
 
     [Fact]
@@ -86,7 +89,7 @@ public sealed class PromptsTabTests : BunitContext
 
         Assert.Single(browser.CopiedTexts);
         Assert.Equal(PromptPack.WriteGuides(data.Snapshot), browser.CopiedTexts[0]);
-        Assert.Equal("Copied.", cut.FindAll(".fa-prompts__card")[2].QuerySelector("[role='status']")!.TextContent.Trim());
+        Assert.Equal("Copied.", cut.FindAll(".fa-prompts__card")[2].QuerySelector(".fa-prompts__status")!.TextContent.Trim());
 
         cut.Find($"input[aria-label='{squatName}']").Change(true);
         cut.Find($"input[aria-label='{lungeName}']").Change(false);

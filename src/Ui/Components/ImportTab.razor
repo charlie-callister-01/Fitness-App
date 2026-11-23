@@ -57,18 +57,20 @@
         </div>
     }
 
-    @if (_appliedSummary is { Count: > 0 })
-    {
-        <div class="fa-panel" data-testid="import-applied" role="status">
-            <p class="fa-label">Import applied</p>
-            <ul>
-                @foreach (var line in _appliedSummary)
-                {
-                    <li>@line</li>
-                }
-            </ul>
-        </div>
-    }
+    <StatusLine Text="@AppliedText" Key="_appliedKey">
+        @if (_appliedSummary is { Count: > 0 })
+        {
+            <div class="fa-panel" data-testid="import-applied">
+                <p class="fa-label">Import applied</p>
+                <ul>
+                    @foreach (var line in _appliedSummary)
+                    {
+                        <li>@line</li>
+                    }
+                </ul>
+            </div>
+        }
+    </StatusLine>
 
     @if (_preview is not null)
     {

@@ -6,6 +6,7 @@ using Core.Storage;
 using Core.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Ui;
+using Ui.Accessibility;
 using Ui.Browser;
 using Ui.Log;
 using Ui.Preferences;
@@ -294,6 +295,7 @@ internal static class PageFixture
         context.Services.AddSingleton(browser);
         context.Services.AddSingleton<IBrowserCapabilities>(browser);
         context.Services.AddSingleton(notice);
+        context.Services.AddSingleton<Announcer>();
         context.Services.AddSingleton<InAppHistory>();
         context.Services.AddSingleton<LogEditStates>();
         context.Services.AddSingleton(new ThemeService(data, new FakeThemeInterop(), notice));

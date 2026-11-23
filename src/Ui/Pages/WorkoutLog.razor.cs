@@ -5,6 +5,7 @@ using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Ui.Accessibility;
 using Ui.Log;
 using Ui.Preferences;
 using Ui.Saving;
@@ -36,6 +37,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
     [Inject] private IIdGenerator Ids { get; set; } = default!;
 
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+    [Inject] private Announcer Announcer { get; set; } = default!;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -77,7 +79,7 @@ public sealed partial class WorkoutLog : ComponentBase, IDisposable
         _builder = new LogViewBuilder(Data, State);
         _finish = new FinishFlow(Data, Notice, Clock, Ids);
         _afterwards = new LoggedAfterwardsFlow(Data, Notice);
-        _session = new LogSession(Data, Clock, Ticker, WakeLock, RestSetting, _finish, _afterwards, OnDataChanged);
+        _session = new LogSession(Data, Clock, Ticker, WakeLock, RestSetting, _finish, _afterwards, Announcer, OnDataChanged);
         _actions = new LogActions(Data, Notice, Ids, State, _builder, _session);
     }
 

@@ -251,6 +251,11 @@ public sealed class ImportTabTests : BunitContext
 
         cut.FindAll("button").First(b => b.TextContent.Trim() == "Apply").Click();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='import-applied']")));
+        var applied = cut.Find("[data-testid='import-applied']");
+        Assert.Null(applied.GetAttribute("role"));
+        var announced = Services.GetRequiredService<Ui.Accessibility.Announcer>().Message;
+        Assert.StartsWith("Import applied.", announced);
+        Assert.All(applied.QuerySelectorAll("li"), line => Assert.Contains(line.TextContent.Trim(), announced));
 
         var savedSquat = data.Snapshot.Guides.Single(g => g.ExerciseId == Squat);
         Assert.Equal("New works", savedSquat.Works);

@@ -432,6 +432,30 @@ public sealed class HomeTests : BunitContext
     }
 
     [Fact]
+    public async Task Home_groups_the_week_and_Nudges_in_the_main_column_and_PRs_and_Weight_in_the_side_column()
+    {
+        var data = await OpenSeededAsync(plan: MultiTrackHomePlan());
+        var cut = await RenderHomeAsync(data, Now.AddDays(2));
+
+        // The shared wide-first two-column rule (design §9, S-01-home-desktop.png); one column in this order below 900 px.
+        var columns = cut.Find(".fa-home__columns");
+        Assert.Contains("fa-twocol", columns.ClassList);
+        Assert.Contains("fa-twocol--wide-first", columns.ClassList);
+        Assert.Equal(["fa-home__main", "fa-home__side"], columns.Children.Select(c => c.ClassName));
+
+        var main = cut.Find(".fa-home__main");
+        Assert.NotNull(main.QuerySelector("section[aria-label='Today']"));
+        Assert.NotNull(main.QuerySelector(".fa-weekstrip"));
+        Assert.NotNull(main.QuerySelector(".fa-orbrow"));
+        Assert.Equal(2, main.QuerySelectorAll(".fa-nudge").Length);
+
+        var side = cut.Find(".fa-home__side");
+        Assert.NotNull(side.QuerySelector("section[aria-label='Recent PRs']"));
+        Assert.NotNull(side.QuerySelector("section[aria-label='Weight']"));
+        Assert.Null(side.QuerySelector(".fa-nudge, .fa-orbrow"));
+    }
+
+    [Fact]
     public async Task Read_only_disables_the_daily_Track_card_and_extra_weekly_Track_week_line()
     {
         var store = new InMemoryDataStore();

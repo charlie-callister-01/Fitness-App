@@ -37,6 +37,7 @@ public sealed partial class ImportTab : IDisposable
     private List<string> _errors = [];
     private List<string> _notices = [];
     private IReadOnlyList<string>? _appliedSummary;
+    private int _appliedKey;
     private bool _applying;
 
     [Parameter] public ImportKind? InitialKind { get; set; }
@@ -62,6 +63,9 @@ public sealed partial class ImportTab : IDisposable
     public void Dispose() => Data.Changed -= OnDataChanged;
 
     private void OnDataChanged() => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>What the applied result says out loud; the panel shows the same summary lines.</summary>
+    private string? AppliedText => _appliedSummary is { } summary ? string.Join(" ", ["Import applied.", .. summary]) : null;
 
     private void OnTextInput(ChangeEventArgs e)
     {
@@ -176,6 +180,7 @@ public sealed partial class ImportTab : IDisposable
             {
                 case ApplyOutcome.Applied applied:
                     _appliedSummary = applied.Summary;
+                    _appliedKey++;
                     _preview = null;
                     _inspected = null;
                     _notices = [];

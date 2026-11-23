@@ -1,4 +1,4 @@
-/* Phone: fixed bottom bar. From 900 px: a 220 px left rail. Skin (fa-tabbar, fa-tab) comes from components.css. */
+/* Phone: fixed bottom bar. From 900 px: a left rail of --rail-width. Skin (fa-tabbar, fa-tab) comes from components.css. */
 .tabbar {
     position: fixed;
     inset: auto 0 0 0;
@@ -13,10 +13,17 @@
     min-width: 0;
 }
 
+/* The Workout log and pushed pages have no tab bar on a phone (design §9). */
+@media (max-width: 899.98px) {
+    .tabbar--rail-only {
+        display: none;
+    }
+}
+
 @media (min-width: 900px) {
     .tabbar {
         inset: 0 auto 0 0;
-        width: 220px;
+        width: var(--rail-width);
         display: flex;
         flex-direction: column;
         gap: var(--space-2);
@@ -30,6 +37,6 @@
         gap: var(--space-3);
         padding: 0 var(--space-4);
         height: var(--tap-log);
-        font-size: calc(14px * var(--display-scale));
+        font-size: calc(0.875rem * var(--display-scale));
     }
 }

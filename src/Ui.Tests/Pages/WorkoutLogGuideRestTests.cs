@@ -4,6 +4,7 @@ using Core.Model;
 using Core.Storage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Accessibility;
 using Ui.Pages;
 using Ui.Saving;
 using static Ui.Tests.Pages.PageFixture;
@@ -230,6 +231,43 @@ public sealed class WorkoutLogGuideRestTests : BunitContext
         cut.WaitForAssertion(() => Assert.Null(Rest(cut)));
         Assert.Equal(0, Services.GetRequiredService<FakeTicker>().Waiting);
         Assert.Empty(cut.FindAll("[role='alert']"));
+    }
+
+    [Fact]
+    public async Task Reaching_zero_announces_rest_over_once_and_not_each_second()
+    {
+        var cut = await OpenAsync(restSeconds: "60");
+        var announced = new List<string>();
+        var announcer = Services.GetRequiredService<Announcer>();
+        announcer.Announced += announced.Add;
+        ConfirmSet(cut, 1);
+
+        Pass(TimeSpan.FromSeconds(30));
+        cut.WaitForAssertion(() => Assert.Equal("Rest 0:30", Rest(cut)));
+        Assert.Empty(announced);
+        Assert.Equal("off", cut.Find(".fa-confirmbar__rest").GetAttribute("aria-live"));
+
+        Pass(TimeSpan.FromSeconds(30));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Null(Rest(cut));
+            Assert.Equal(["Rest over"], announced);
+        });
+    }
+
+    [Fact]
+    public async Task A_countdown_cut_short_by_another_Set_or_Off_announces_nothing()
+    {
+        var cut = await OpenAsync(restSeconds: "90");
+        var announcer = Services.GetRequiredService<Announcer>();
+        ConfirmSet(cut, 1);
+        ConfirmSet(cut, 2);
+
+        cut.Find("button[aria-label='Workout menu']").Click();
+        cut.FindAll("[role='dialog'] [role='group'][aria-label='Rest timer'] button").Single(b => b.TextContent.Trim() == "Off").Click();
+
+        Assert.Null(Rest(cut));
+        Assert.Null(announcer.Message);
     }
 
     [Fact]

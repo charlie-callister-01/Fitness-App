@@ -3,7 +3,9 @@ using Core.Model;
 using Core.Storage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Accessibility;
 using Ui.Components;
+using Ui.Saving;
 using static Ui.Tests.Pages.PageFixture;
 
 namespace Ui.Tests.Pages;
@@ -32,13 +34,37 @@ public sealed class UnlockToastTests : BunitContext
     }
 
     [Fact]
-    public async Task A_newly_unlocked_Badge_shows_a_status_toast_that_links_to_the_Badge()
+    public async Task A_newly_unlocked_Badge_shows_a_toast_that_links_to_the_Badge()
     {
         var cut = await RenderSummaryAsync(unlocks: true);
 
-        var toast = cut.Find(".fa-unlock[role='status']");
+        var toast = cut.Find(".fa-unlock");
         Assert.Contains("Twice over", toast.TextContent);
         Assert.Equal("trophies?badge=first-two", toast.GetAttribute("href"));
+    }
+
+    [Fact]
+    public async Task A_newly_unlocked_Badge_is_announced_once_through_the_shared_region_not_by_the_toast()
+    {
+        var cut = await RenderSummaryAsync(unlocks: true);
+
+        Assert.Equal("Badge unlocked: Twice over", Services.GetRequiredService<Announcer>().Message);
+        Assert.Null(cut.Find(".fa-unlock").GetAttribute("role"));
+    }
+
+    [Fact]
+    public async Task A_toast_created_again_for_the_same_unlock_does_not_announce_it_again()
+    {
+        var announced = 0;
+        var cut = await RenderSummaryAsync(unlocks: true);
+        Services.GetRequiredService<Announcer>().Announced += _ => announced++;
+        var summary = cut.Instance;
+
+        // The summary is shown again (re-opened by its URL, or the page re-created): the toast is a new component for the same unlock.
+        await DisposeComponentsAsync();
+        Render<FinishSummary>(p => p.Add(c => c.Workout, summary.Workout).Add(c => c.Data, summary.Data).Add(c => c.Today, Today));
+
+        Assert.Equal(0, announced);
     }
 
     [Fact]

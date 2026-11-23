@@ -26,6 +26,7 @@
     private ElementReference _dialog;
     private IJSObjectReference? _module;
     private int? _attached;
+    private bool _syncing;
 
     [Parameter]
     public bool Open { get; set; }
@@ -50,16 +51,46 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // A render that lands while a JS call is awaited must not attach a second time (that leaks a Tab trap); the running pass
+        // keeps going until the attached state matches Open.
+        if (_syncing)
+        {
+            return;
+        }
+
+        _syncing = true;
+        try
+        {
+            while (await SyncOnceAsync())
+            {
+            }
+        }
+        finally
+        {
+            _syncing = false;
+        }
+    }
+
+    // One step towards the attached state matching Open; false once it already matches. The ordering is deliberately asymmetric:
+    // attach records the handle only after JS returns it (there is none before), and the _syncing guard keeps a render landing
+    // meanwhile from attaching twice; detach clears the handle before the await, so DisposeAsync during that call does not detach again.
+    private async Task<bool> SyncOnceAsync()
+    {
         if (Open && _attached is null)
         {
             _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-            _attached = await _module.InvokeAsync<int>("attach", _dialog, Opener);
+            _attached = await _module.InvokeAsync<int>("attach", _dialog, Opener, ScreenHeading.Selector);
+            return true;
         }
-        else if (!Open && _attached is { } handle && _module is not null)
+
+        if (!Open && _attached is { } handle && _module is not null)
         {
             _attached = null;
             await _module.InvokeVoidAsync("detach", handle);
+            return true;
         }
+
+        return false;
     }
 
     private Task CloseAsync() => OnClose.InvokeAsync();

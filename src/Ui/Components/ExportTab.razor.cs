@@ -27,8 +27,10 @@ public sealed partial class ExportTab : IDisposable
     private ExportResult _result = default!;
     private bool _canShare;
     private string? _exportStatus;
+    private int _exportStatusKey;
     private string? _exportError;
     private string? _backupStatus;
+    private int _backupStatusKey;
     private string? _backupError;
 
     [Parameter] public string? Preset { get; set; }
@@ -151,7 +153,7 @@ public sealed partial class ExportTab : IDisposable
         _exportError = null;
         if (await Browser.CopyTextAsync(_result.Text))
         {
-            _exportStatus = _includeHealthData ? "Copied." : "Copied. Health data left out.";
+            ReportExported(_includeHealthData ? "Copied." : "Copied. Health data left out.");
         }
         else
         {
@@ -165,7 +167,7 @@ public sealed partial class ExportTab : IDisposable
         _exportError = null;
         if (await Browser.DownloadFileAsync(_result.FileName, _result.Text, ContentType))
         {
-            _exportStatus = $"Downloaded {_result.FileName}.";
+            ReportExported($"Downloaded {_result.FileName}.");
         }
         else
         {
@@ -179,7 +181,7 @@ public sealed partial class ExportTab : IDisposable
         _exportError = null;
         if (await Browser.ShareAsync("Fitness export", _result.Text, _result.FileName, ContentType))
         {
-            _exportStatus = "Shared.";
+            ReportExported("Shared.");
         }
         else
         {
@@ -197,14 +199,22 @@ public sealed partial class ExportTab : IDisposable
         _backupStatus = null;
         _backupError = null;
         var outcome = await _backup.RunAsync();
-        if (outcome.Succeeded)
+        if (outcome.Message is { } message)
         {
-            _backupStatus = $"Backup downloaded ({outcome.FileName}).";
+            _backupStatus = message;
+            _backupStatusKey++;
         }
         else if (outcome.Error is { } error)
         {
             _backupError = error;
         }
+    }
+
+    // The StatusLine shows it and reads it out.
+    private void ReportExported(string status)
+    {
+        _exportStatus = status;
+        _exportStatusKey++;
     }
 
     private static bool IsChecked(ChangeEventArgs e) => e.Value is bool value && value;

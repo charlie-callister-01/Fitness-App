@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
+    <!-- axe-core, pinned: its axe.min.js is an embedded resource, so the scans never fetch it at run time. -->
+    <PackageReference Include="Deque.AxeCore.Commons" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Playwright" />
@@ -22,6 +24,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
+    <!-- The whole-app tests pick Theme and Mode by the Settings screen's own labels. -->
+    <ProjectReference Include="..\Ui\Ui.csproj" />
     <!-- The shared contract suite (DataStoreContract) lives here; its subclasses in this project run it against IndexedDB. -->
     <ProjectReference Include="..\Core.Tests\Core.Tests.csproj" />
     <!-- Same compile-in as Web.Tests: the Web host is a WebAssembly app project and cannot be referenced. -->
@@ -33,6 +37,8 @@
     <Content Include="..\Web\wwwroot\js\*.js" Link="wwwroot\js\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- The host page, so a test can check how it loads theme.js. -->
     <Content Include="..\Web\wwwroot\index.html" Link="wwwroot\index.html" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The whole-app tests' fixture Backup, restored through the app's Import tab. -->
+    <Content Include="App\fixture-backup.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

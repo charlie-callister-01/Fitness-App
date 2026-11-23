@@ -4,6 +4,7 @@ using Core.Storage;
 using Core.Tests.Storage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Ui.Accessibility;
 using Ui.Pages;
 using Ui.Saving;
 using static Ui.Tests.Pages.PageFixture;
@@ -96,6 +97,7 @@ public sealed class PlanEditorTests : BunitContext
         Assert.Equal(1.25, saved.WeightIncrementKg);
         cut.WaitForAssertion(() => Assert.True(SaveButton(cut).HasAttribute("disabled")));
         Assert.Contains("Saved.", cut.Markup);
+        Assert.Equal("Plan saved.", Services.GetRequiredService<Announcer>().Message);
     }
 
     [Theory]

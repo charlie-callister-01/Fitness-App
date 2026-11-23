@@ -107,7 +107,7 @@ public sealed class LogActions
                 {
                     _state.Confirmed(key);
                     _session.StartRest(Open is { LoggedAfterwards: true });
-                    _state.Toast = Open is { } saved ? _builder.ToastFor(saved, info.ExerciseId, row.Index) : null;
+                    _state.ShowToast(Open is { } saved ? _builder.ToastFor(saved, info.ExerciseId, row.Index) : null);
                 }
 
                 break;

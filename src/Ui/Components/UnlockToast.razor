@@ -5,7 +5,7 @@
    Badge. No sound, no haptics. Reduced motion switches the fade off through the global rule in ui.css. *@
 @if (_visible)
 {
-    <a class="fa-well fa-unlock fa-unlocktoast" role="status" href="trophies?badge=@Uri.EscapeDataString(Badge.Id)">Badge unlocked: <b>@Badge.Name</b></a>
+    <a class="fa-well fa-unlock fa-unlocktoast" href="trophies?badge=@Uri.EscapeDataString(Badge.Id)">Badge unlocked: <b>@Badge.Name</b></a>
 }
 
 @code {
@@ -19,7 +19,14 @@
 
     [Inject] private ISecondTicker Ticker { get; set; } = default!;
 
-    protected override void OnInitialized() => _ = HideAfterAsync();
+    [Inject] private Announcer Announcer { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        // Once per unlock: the summary can be shown again (reopened by its URL), creating this toast again.
+        Announcer.AnnounceOnce($"badge-unlocked:{Badge.Id}", $"Badge unlocked: {Badge.Name}");
+        _ = HideAfterAsync();
+    }
 
     public void Dispose() => _cancel.Cancel();
 

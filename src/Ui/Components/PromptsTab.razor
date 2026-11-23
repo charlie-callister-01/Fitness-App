@@ -5,10 +5,7 @@
         <div class="fa-prompts__actions">
             <Button Variant="ButtonVariant.Primary" Glyph="IconName.Copy" OnClick="CopyAnalyseAsync">Copy prompt</Button>
         </div>
-        @if (_statusCard == PromptCard.Analyse)
-        {
-            <p class="fa-prompts__status" role="status">@_statusMessage</p>
-        }
+        <StatusLine Text="@StatusFor(PromptCard.Analyse)" Key="_statusKey" class="fa-prompts__status" />
         @if (_errorCard == PromptCard.Analyse)
         {
             <p class="fa-prompts__error" role="alert">@_errorMessage</p>
@@ -21,10 +18,7 @@
         <div class="fa-prompts__actions">
             <Button Variant="ButtonVariant.Primary" Glyph="IconName.Copy" OnClick="CopyPlanAsync">Copy prompt</Button>
         </div>
-        @if (_statusCard == PromptCard.Plan)
-        {
-            <p class="fa-prompts__status" role="status">@_statusMessage</p>
-        }
+        <StatusLine Text="@StatusFor(PromptCard.Plan)" Key="_statusKey" class="fa-prompts__status" />
         @if (_errorCard == PromptCard.Plan)
         {
             <p class="fa-prompts__error" role="alert">@_errorMessage</p>
@@ -61,10 +55,7 @@
         <div class="fa-prompts__actions">
             <Button Variant="ButtonVariant.Primary" Glyph="IconName.Copy" OnClick="CopyGuidesAsync">Copy prompt</Button>
         </div>
-        @if (_statusCard == PromptCard.Guides)
-        {
-            <p class="fa-prompts__status" role="status">@_statusMessage</p>
-        }
+        <StatusLine Text="@StatusFor(PromptCard.Guides)" Key="_statusKey" class="fa-prompts__status" />
         @if (_errorCard == PromptCard.Guides)
         {
             <p class="fa-prompts__error" role="alert">@_errorMessage</p>

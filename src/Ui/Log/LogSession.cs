@@ -1,7 +1,9 @@
 using Core.Model;
 using Core.Storage;
 using Core.Time;
+using Ui.Accessibility;
 using Ui.Preferences;
+using Ui.Saving;
 
 namespace Ui.Log;
 
@@ -16,24 +18,27 @@ public sealed class LogSession : IDisposable
     private readonly RestTimerSetting _restSetting;
     private readonly FinishFlow _finish;
     private readonly LoggedAfterwardsFlow _afterwards;
+    private readonly Announcer _announcer;
     private readonly Action _redraw;
     private bool _screenLocked;
 
     /// <param name="redraw">Asks the page to draw again; may be called from any thread.</param>
     public LogSession(
         AppData data, IClock clock, ISecondTicker ticker, IWakeLock wakeLock, RestTimerSetting restSetting,
-        FinishFlow finish, LoggedAfterwardsFlow afterwards, Action redraw)
+        FinishFlow finish, LoggedAfterwardsFlow afterwards, Announcer announcer, Action redraw)
     {
         _data = data;
         _wakeLock = wakeLock;
         _restSetting = restSetting;
         _finish = finish;
         _afterwards = afterwards;
+        _announcer = announcer;
         _redraw = redraw;
         Rest = new RestCountdown(clock, ticker);
 
         data.Changed += redraw;
         Rest.Changed += redraw;
+        Rest.Ended += OnRestEnded;
         finish.Changed += redraw;
         finish.Finished += Rest.Stop;
         afterwards.Changed += redraw;
@@ -69,6 +74,7 @@ public sealed class LogSession : IDisposable
     {
         _data.Changed -= _redraw;
         Rest.Changed -= _redraw;
+        Rest.Ended -= OnRestEnded;
         _finish.Changed -= _redraw;
         _finish.Finished -= Rest.Stop;
         _afterwards.Changed -= _redraw;
@@ -81,6 +87,9 @@ public sealed class LogSession : IDisposable
             _ = _wakeLock.ReleaseAsync();
         }
     }
+
+    // Announced once, politely, when the countdown reaches zero; the readout itself stays aria-live="off".
+    private void OnRestEnded() => _announcer.Announce("Rest over");
 
     private void OnRestSettingChanged()
     {

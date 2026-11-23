@@ -5,6 +5,7 @@ using Core.Rules.Units;
 using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
+using Ui.Accessibility;
 using Ui.Browser;
 using Ui.Saving;
 using Ui.Theming;
@@ -37,6 +38,7 @@ public sealed partial class SettingsPage : IDisposable
     [Inject] private AppData Data { get; set; } = default!;
     [Inject] private IClock Clock { get; set; } = default!;
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+    [Inject] private Announcer Announcer { get; set; } = default!;
     [Inject] private ThemeService Themes { get; set; } = default!;
     [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
     [Inject] private IBuildInfo BuildInfo { get; set; } = default!;
@@ -184,6 +186,12 @@ public sealed partial class SettingsPage : IDisposable
         _backupError = null;
         var outcome = await _backup.RunAsync();
         _backupError = outcome.Error;
+
+        // Settings shows no Backup line (the Last backed up date changes), so the success is only read out.
+        if (outcome.Message is { } message)
+        {
+            Announcer.Announce(message);
+        }
     }
 
     private async Task RequestPersistenceAsync()

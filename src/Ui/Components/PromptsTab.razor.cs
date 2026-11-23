@@ -5,6 +5,7 @@ using Core.Time;
 using Microsoft.AspNetCore.Components;
 using Ui.Browser;
 using Ui.Pages;
+using Ui.Saving;
 
 namespace Ui.Components;
 
@@ -25,6 +26,7 @@ public sealed partial class PromptsTab : IDisposable
     private HashSet<string> _selectedGuideExercises = [];
     private PromptCard? _statusCard;
     private string? _statusMessage;
+    private int _statusKey;
     private PromptCard? _errorCard;
     private string? _errorMessage;
 
@@ -107,6 +109,7 @@ public sealed partial class PromptsTab : IDisposable
         {
             _statusCard = card;
             _statusMessage = "Copied.";
+            _statusKey++;
         }
         else
         {
@@ -114,6 +117,8 @@ public sealed partial class PromptsTab : IDisposable
             _errorMessage = "Could not copy to the clipboard.";
         }
     }
+
+    private string? StatusFor(PromptCard card) => _statusCard == card ? _statusMessage : null;
 
     private void ClearFeedback()
     {
