@@ -37,6 +37,7 @@ public sealed partial class SettingsPage : IDisposable
     [Inject] private AppData Data { get; set; } = default!;
     [Inject] private IClock Clock { get; set; } = default!;
     [Inject] private SaveFailureNotice Notice { get; set; } = default!;
+    [Inject] private Announcer Announcer { get; set; } = default!;
     [Inject] private ThemeService Themes { get; set; } = default!;
     [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
     [Inject] private IBuildInfo BuildInfo { get; set; } = default!;
@@ -70,7 +71,7 @@ public sealed partial class SettingsPage : IDisposable
     {
         Page = new PageContext(Data, Clock);
         _save = new GuardedSave(Data, Notice);
-        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice);
+        _backup = new BackupFlow(Data, Clock, BuildInfo, Browser, Notice, Announcer);
         SyncDraftsFromSnapshot();
         Data.Changed += OnDataChanged;
         Themes.Changed += OnThemeChanged;

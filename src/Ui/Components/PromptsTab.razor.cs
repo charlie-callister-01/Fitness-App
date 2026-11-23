@@ -4,6 +4,7 @@ using Core.Storage;
 using Core.Time;
 using Microsoft.AspNetCore.Components;
 using Ui.Browser;
+using Ui.Saving;
 using Ui.Pages;
 
 namespace Ui.Components;
@@ -32,6 +33,7 @@ public sealed partial class PromptsTab : IDisposable
     [Inject] private IClock Clock { get; set; } = default!;
     [Inject] private IBuildInfo BuildInfo { get; set; } = default!;
     [Inject] private IBrowserCapabilities Browser { get; set; } = default!;
+    [Inject] private Announcer Announcer { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -107,6 +109,7 @@ public sealed partial class PromptsTab : IDisposable
         {
             _statusCard = card;
             _statusMessage = "Copied.";
+            Announcer.Announce(_statusMessage);
         }
         else
         {

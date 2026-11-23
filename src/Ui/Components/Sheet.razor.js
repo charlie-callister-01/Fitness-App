@@ -47,7 +47,20 @@ export function detach(handle) {
     if (!entry) return;
     open.delete(handle);
     document.removeEventListener('keydown', entry.onKeyDown, true);
-    if (entry.opener && entry.opener.isConnected && typeof entry.opener.focus === 'function') {
-        entry.opener.focus();
+    const opener = entry.opener;
+    if (opener && opener !== document.body && opener.isConnected && typeof opener.focus === 'function') {
+        opener.focus();
+    } else if (open.size === 0) {
+        focusHeading();
     }
+}
+
+// There is no opener to return to (it was the page body, or it has gone because the screen changed, as on Finish before the Pain
+// check): the screen's heading takes focus, as
+// it does after navigation, rather than leaving it on the page body.
+function focusHeading() {
+    const heading = document.querySelector('#main-content h1');
+    if (!heading) return;
+    if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
 }

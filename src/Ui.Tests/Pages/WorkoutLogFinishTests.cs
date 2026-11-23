@@ -341,7 +341,7 @@ public sealed class WorkoutLogFinishTests : BunitContext
         Assert.Contains("RPE 7", rows[0].TextContent);
         Assert.Contains("Swapped", rows[1].TextContent);
         Assert.Contains("was Walking lunge", rows[1].TextContent);
-        Assert.Contains("Twice over", cut.Find(".fa-unlock[role='status']").TextContent);
+        Assert.Contains("Twice over", cut.Find(".fa-unlock").TextContent);
     }
 
     [Fact]

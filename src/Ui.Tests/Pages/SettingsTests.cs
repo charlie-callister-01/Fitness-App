@@ -132,6 +132,7 @@ public sealed class SettingsTests : BunitContext
         Assert.NotNull(ExchangeFormat.Read(downloaded.Content).Document);
         Assert.Equal(PageFixture.Now, data.LastBackupAt);
         Assert.DoesNotContain("Never", cut.Find("[data-testid='last-backup']").TextContent);
+        Assert.Equal($"Backup downloaded ({downloaded.FileName}).", Services.GetRequiredService<Ui.Saving.Announcer>().Message);
 
         // Request persistent storage updates status
         env.Persistence = PersistenceStatus.Granted;

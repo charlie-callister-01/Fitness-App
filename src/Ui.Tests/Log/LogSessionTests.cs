@@ -25,7 +25,7 @@ public sealed class LogSessionTests
         var changes = new List<int>();
         var session = new LogSession(
             data, clock, ticker, wake, setting, new FinishFlow(data, notice, clock, new CountingIds()),
-            new LoggedAfterwardsFlow(data, notice), () => changes.Add(1));
+            new LoggedAfterwardsFlow(data, notice), new Announcer(), () => changes.Add(1));
         return new Rig(session, wake, ticker, setting, data, changes);
     }
 

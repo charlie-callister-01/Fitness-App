@@ -96,6 +96,7 @@ public sealed class PlanEditorTests : BunitContext
         Assert.Equal(1.25, saved.WeightIncrementKg);
         cut.WaitForAssertion(() => Assert.True(SaveButton(cut).HasAttribute("disabled")));
         Assert.Contains("Saved.", cut.Markup);
+        Assert.Equal("Plan saved.", Services.GetRequiredService<Announcer>().Message);
     }
 
     [Theory]

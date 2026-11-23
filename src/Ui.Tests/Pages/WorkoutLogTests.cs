@@ -524,6 +524,7 @@ public sealed class WorkoutLogTests : BunitContext
         var cut = await OpenLogAsync(unreadable);
 
         Assert.Contains("could not be read", cut.Find(".log__notice").TextContent);
+        Assert.Equal("Workout", Assert.Single(cut.FindAll("h1")).TextContent); // the router focuses the page's one h1
         Assert.Equal("./", cut.Find("a.fa-btn").GetAttribute("href"));
         Assert.Empty(cut.FindAll(".fa-setrow"));
     }

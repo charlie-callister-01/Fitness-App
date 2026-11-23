@@ -97,10 +97,14 @@ public sealed class AppPage : IAsyncDisposable
             return;
         }
 
-        // The screen being left is marked, so the wait cannot mistake it for the new one.
-        await Page.EvaluateAsync("route => { const h = document.querySelector('#main-content h1'); if (h) h.__leaving = true; Blazor.navigateTo(route); }", route);
+        // The screen being left is marked and focus is dropped, so the wait cannot mistake it for the new one. A screen that keeps the
+        // same h1 element (two routes of one page) counts as arrived once the router has focused that h1 again.
+        await Page.EvaluateAsync(
+            "route => { const h = document.querySelector('#main-content h1'); if (h) h.__leaving = true; document.activeElement?.blur(); Blazor.navigateTo(route); }",
+            route);
         await Page.WaitForFunctionAsync(
-            "route => { const h = document.querySelector('#main-content h1'); return h !== null && !h.__leaving && location.pathname + location.search === route; }",
+            "route => { const h = document.querySelector('#main-content h1'); " +
+            "return h !== null && (!h.__leaving || document.activeElement === h) && location.pathname + location.search === route; }",
             route);
     }
 

@@ -25,6 +25,7 @@ builder.Services.AddSingleton<IBuildInfo, AssemblyBuildInfo>();
 builder.Services.AddStorage();
 builder.Services.AddSingleton<IThemeInterop, ThemeInterop>();
 builder.Services.AddSingleton<SaveFailureNotice>();
+builder.Services.AddSingleton<Announcer>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<IDevicePreferences, LocalStorageDevicePreferences>();
 builder.Services.AddSingleton<RestTimerSetting>();

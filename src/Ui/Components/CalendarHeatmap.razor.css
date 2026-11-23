@@ -34,8 +34,8 @@
 .fa-heat__phase {
     overflow: hidden;
     padding: var(--space-1) var(--space-2);
-    font-size: 12px;
-    line-height: 16px;
+    font-size: 0.75rem;
+    line-height: 1.333;
     white-space: nowrap;
     text-overflow: ellipsis;
     color: var(--text);
@@ -117,8 +117,8 @@ button.fa-heat__cell {
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 0.875rem;
+    line-height: 1.429;
     color: var(--text-muted);
 }
 
